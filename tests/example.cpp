@@ -1,0 +1,33 @@
+#include "ArgLite/Base.hpp"
+#include <iostream>
+#include <string>
+
+using namespace std;
+using ArgLite::Parser;
+
+int main(int argc, char **argv) {
+    Parser::setDescription("A simple program to demonstrate ArgLite.");
+    Parser::preprocess(argc, argv);
+
+    auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
+    auto count      = Parser::getInt("n,count", "Number of iterations.", 10);
+    auto rate       = Parser::getDouble("r", "Speed rate.");
+    auto outputPath = Parser::getString("o,out-path", "Output file Path.", "output.txt");
+    auto outputFile = Parser::getPositional("output-file", "The output file name.");
+    auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
+
+    Parser::tryToPrintHelp();
+    Parser::tryToPrintInvalidOpts();
+
+    cout << "Verbose    : " << verbose << '\n';
+    cout << "Count      : " << count << '\n';
+    cout << "Rate       : " << rate << '\n';
+    cout << "Output Path: " << outputPath << '\n';
+    cout << "Output file: " << outputFile << '\n';
+    cout << "Input files:" << '\n';
+    for (const auto &it : inputFiles) {
+        cout << it << '\n';
+    }
+
+    return 0;
+}
