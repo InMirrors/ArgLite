@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -118,8 +119,8 @@ private:
     };
 
     struct OptionHelpInfo {
-        std::string shortOpt;
-        std::string longOpt;
+        std::string shortOpt; // Prepended with "-"
+        std::string longOpt;  // Prepended with "--"
         std::string description;
         std::string defaultValue;
     };
@@ -133,9 +134,10 @@ private:
     // Internal data storage
     static inline std::string programDescription_;
     static inline std::string programName_;
-    static inline int         argc_          = 0;
-    static inline char      **argv_          = nullptr;
-    static inline size_t      positionalIdx_ = 0;
+    static inline int         argc_              = 0;
+    static inline char      **argv_              = nullptr;
+    static inline size_t      positionalIdx_     = 0;
+    static inline size_t      descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
     // Containers
     static inline std::unordered_map<std::string, OptionInfo> options_;
     static inline std::vector<OptionHelpInfo>                 optionHelpEntries_;
@@ -274,7 +276,7 @@ inline void Parser::tryToPrintHelp() {
     if ((options_.count("-h") != 0) || (options_.count("--help")) != 0) {
         optionHelpEntries_.push_back({"-h", "--help", "Show this help message and exit", ""});
         printHelp();
-        exit(0);
+        std::exit(EXIT_SUCCESS);
     }
 }
 
@@ -287,7 +289,7 @@ inline void Parser::tryToPrintInvalidOpts() {
         for (const auto &pair : options_) {
             std::cerr << "Error: Unrecognized option '" << pair.first << "'" << '\n';
         }
-        exit(1);
+        std::exit(EXIT_SUCCESS);
     }
 }
 
@@ -449,7 +451,7 @@ inline std::string Parser::parseOptName(const std::string &optName) {
     return result;
 }
 
-// Parses option name (o,out) and saves the results in shortOpt and longOpt
+// Parses option name (o,out) and saves the results in shortOpt (-o) and longOpt (--out)
 inline void Parser::parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt) {
     if (optName.empty()) {
         std::cerr << "Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
@@ -536,53 +538,41 @@ inline void Parser::printHelp() {
 
     // Positional Arguments
     if (!positionalHelpEntries_.empty()) {
-        std::cout << "\nPositional Arguments:" << '\n';
+        std::cout << "\nPositional Arguments:\n";
         size_t maxNameWidth = 0;
         for (const auto &p : positionalHelpEntries_) {
-            if (p.name.length() > maxNameWidth) {
-                maxNameWidth = p.name.length();
-            }
+            maxNameWidth = std::max(maxNameWidth, p.name.length());
         }
         for (const auto &p : positionalHelpEntries_) {
-            std::cout << "  " << std::left << std::setw(maxNameWidth + 2) << p.name << p.description << '\n';
+            std::cout << "  " << std::left << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name << p.description << '\n';
         }
     }
 
     // Options
     if (!optionHelpEntries_.empty()) {
         std::cout << "\nOptions:" << '\n';
-        size_t maxOptWidth = 0;
-        for (const auto &o : optionHelpEntries_) {
-            size_t currentWidth = 0;
-            if (!o.shortOpt.empty()) currentWidth += o.shortOpt.length();
-            if (!o.longOpt.empty()) currentWidth += o.longOpt.length();
-            if (!o.shortOpt.empty() && !o.longOpt.empty()) currentWidth += 2; // for ", "
-            if (currentWidth > maxOptWidth) {
-                maxOptWidth = currentWidth;
-            }
-        }
-        maxOptWidth += 4; // for padding around short-only or long-only options
-        const size_t descriptionIndent = 25;
 
         for (const auto &o : optionHelpEntries_) {
-            std::stringstream ss;
-            ss << "  ";
+            std::string optStr("  ");
             if (!o.shortOpt.empty()) {
-                ss << o.shortOpt;
-                if (!o.longOpt.empty()) ss << ", ";
+                optStr += o.shortOpt;
+                if (!o.longOpt.empty()) { optStr += ", "; }
             } else {
-                ss << "    "; // Pad for alignment
+                optStr += "    "; // Pad for alignment
             }
-            ss << o.longOpt;
+            optStr += o.longOpt;
 
-            std::string optStr = ss.str();
-            std::cout << std::left << std::setw(descriptionIndent) << optStr;
+            std::cout << std::left << std::setw(static_cast<int>(descriptionIndent_)) << optStr;
 
-            std::string desc = o.description;
+            std::string descStr = o.description;
             if (!o.defaultValue.empty()) {
-                desc += " [default: " + o.defaultValue + "]";
+                descStr += " [default: " + o.defaultValue + "]";
             }
-            std::cout << desc << '\n';
+            if (optStr.length() > descriptionIndent_ - 2) { // the option string is too long, start a new line
+                std::cout << '\n'
+                          << std::left << std::setw(static_cast<int>(descriptionIndent_)) << "";
+            }
+            std::cout << descStr << '\n';
         }
     }
 }
