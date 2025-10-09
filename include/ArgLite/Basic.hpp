@@ -107,6 +107,16 @@ public:
     static inline void tryToPrintInvalidOpts();
 
 private:
+    // Stores option information for subsequent get/hasFlag calls.
+    // key: Option name (e.g., "-o", "--output").
+    // value: index > 0: Index of the argument in argv;
+    // index < 0: Index of the flag option in argv;
+    // index == 0: Default value, usually indicating --opt=val form.
+    struct OptionInfo {
+        int         argvIndex;
+        std::string valueFromEquals; // Only used for --opt=val form
+    };
+
     struct OptionHelpInfo {
         std::string shortOpt;
         std::string longOpt;
@@ -118,16 +128,6 @@ private:
         std::string name;
         std::string description;
         bool        required;
-    };
-
-    // Stores option information for subsequent get/hasFlag calls.
-    // key: Option name (e.g., "-o", "--output").
-    // value: index > 0: Index of the argument in argv;
-    // index < 0: Index of the flag option in argv;
-    // index == 0: Default value, usually indicating --opt=val form.
-    struct OptionInfo {
-        int         argvIndex;
-        std::string valueFromEquals; // Only used for --opt=val form
     };
 
     // Internal data storage
@@ -211,8 +211,9 @@ inline void Parser::preprocess(int argc, char **argv) { // NOLINT(readability-fu
                     options_[key] = {-i, ""}; // Flag
                 }
             }
-        } else if (arg.rfind("-", 0) == 0) { // Short option(s)
-            if (arg.length() > 2) {          // Bundled flags, e.g., -abc
+        } else if (arg.rfind('-', 0) == 0) { // Short option(s)
+            // Bundled flags, e.g., -abc
+            if (arg.length() > 2) {
                 for (size_t j = 1; j < arg.length(); ++j) {
                     std::string key = "-";
                     key += arg[j];
@@ -270,7 +271,7 @@ inline std::vector<std::string> Parser::getRemainingPositionals(const std::strin
 }
 
 inline void Parser::tryToPrintHelp() {
-    if (options_.count("-h") || options_.count("--help")) {
+    if ((options_.count("-h") != 0) || (options_.count("--help")) != 0) {
         optionHelpEntries_.push_back({"-h", "--help", "Show this help message and exit", ""});
         printHelp();
         exit(0);
