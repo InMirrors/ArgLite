@@ -11,8 +11,8 @@ int main(int argc, char **argv) {
     Parser::preprocess(argc, argv);
 
     auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
-    auto count      = Parser::getInt("n,count", "Number of iterations.", 10);
-    auto rate       = Parser::getDouble("r", "Speed rate.");
+    auto count      = Parser::getInt("n,count", "Number of iterations.");
+    auto rate       = Parser::getDouble("r", "Speed rate.", 123.0);
     auto outputPath = Parser::getString("o,out-path", "Output file Path.", "output.txt");
     auto debug      = Parser::getBool("d,whether-enable-debug-mode", "Whether enable debug mode.");
     auto outputFile = Parser::getPositional("output-file", "The output file name.");

@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -162,13 +161,12 @@ private:
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, std::vector<int> &positionalArgsIndices = positionalArgsIndices_, std::vector<PositionalHelpInfo> &positionalHelpEntries = positionalHelpEntries_);
     // Other functions
     static inline void                         printErrorAndExit(const std::string &message);
+    static inline std::string                  doubleToStr(double value);
     static inline std::string                  parseOptName(const std::string &optName);
     static inline void                         parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt);
     static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt);
     static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr);
     static inline void                         printHelp();
-    template <typename T>
-    static inline std::string T_to_string(const T &val);
 };
 
 // ========================================================================
@@ -345,7 +343,7 @@ inline long long Parser::getInt_(
     std::unordered_map<std::string, OptionInfo> &options,
     std::vector<OptionHelpInfo>                 &optionHelpEntries) {
 
-    auto [found, valueStr] = getValueStr(optName, description, T_to_string(defaultValue));
+    auto [found, valueStr] = getValueStr(optName, description, std::to_string(defaultValue));
     if (!found) {
         return defaultValue;
     }
@@ -362,7 +360,7 @@ inline double Parser::getDouble_(
     std::unordered_map<std::string, OptionInfo> &options,
     std::vector<OptionHelpInfo>                 &optionHelpEntries) {
 
-    auto [found, valueStr] = getValueStr(optName, description, T_to_string(defaultValue));
+    auto [found, valueStr] = getValueStr(optName, description, doubleToStr(defaultValue));
     if (!found) {
         return defaultValue;
     }
@@ -434,6 +432,15 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
 inline void Parser::printErrorAndExit(const std::string &message) {
     std::cerr << "Error: " << message << '\n';
     exit(1);
+}
+
+inline std::string Parser::doubleToStr(double value) {
+    auto result = std::to_string(value);
+    if (auto pos = result.find('.'); pos != std::string::npos && result.back() == '0') {
+        result.erase(pos + 1);
+        if (result.back() == '.') { result += '0'; } // 1. to 1.0
+    }
+    return result;
 }
 
 // Parses option name (e.g., "o,out") and return formatted string (e.g., "-o, --out")
@@ -584,13 +591,6 @@ inline void Parser::printHelp() {
             std::cout << descStr << '\n';
         }
     }
-}
-
-template <typename T>
-inline std::string Parser::T_to_string(const T &val) {
-    std::stringstream ss;
-    ss << val;
-    return ss.str();
 }
 
 } // namespace ArgLite
