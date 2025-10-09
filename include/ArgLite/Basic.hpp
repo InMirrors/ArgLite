@@ -95,6 +95,13 @@ public:
     static inline std::vector<std::string> getRemainingPositionals(const std::string &name, const std::string &description, bool required = true);
 
     /**
+     * @brief Changes the description indent of option descriptions in the help message. Default is 25.
+     * @details This function should be called before tryToPrintHelp.
+     * @param indent The new description indent.
+     */
+    static inline void changeDescriptionIndent(size_t indent);
+
+    /**
      * @brief If the user provides -h or --help, prints the help message and exits the program normally.
      * @details Recommended to be called after all get/hasFlag calls, and before tryToPrintInvalidOpts.
      */
@@ -271,6 +278,8 @@ inline std::string Parser::getPositional(const std::string &name, const std::str
 inline std::vector<std::string> Parser::getRemainingPositionals(const std::string &name, const std::string &description, bool required) {
     return getRemainingPositionals_(name, description, required);
 }
+
+inline void Parser::changeDescriptionIndent(size_t indent) { descriptionIndent_ = indent; }
 
 inline void Parser::tryToPrintHelp() {
     if ((options_.count("-h") != 0) || (options_.count("--help")) != 0) {
