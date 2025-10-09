@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -152,7 +153,8 @@ private:
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, std::vector<int> &positionalArgsIndices = positionalArgsIndices_, std::vector<PositionalHelpInfo> &positionalHelpEntries = positionalHelpEntries_);
     // Other functions
     static inline void                         printErrorAndExit(const std::string &message);
-    static inline void                         parseOptName(const std::string &names, std::string &shortOpt, std::string &longOpt);
+    static inline std::string                  parseOptName(const std::string &optName);
+    static inline void                         parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt);
     static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt);
     static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr);
     static inline void                         printHelp();
@@ -167,7 +169,7 @@ inline void Parser::setDescription(const std::string &description) {
     programDescription_ = description;
 }
 
-inline void Parser::preprocess(int argc, char **argv) {
+inline void Parser::preprocess(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
     argc_ = argc;
     argv_ = argv;
     if (argc > 0) {
@@ -338,11 +340,7 @@ inline long long Parser::getInt_(
     try {
         return std::stoll(valueStr);
     } catch (const std::exception &) {
-        std::string shortOpt;
-        std::string longOpt;
-        parseOptName(optName, shortOpt, longOpt);
-        std::string optName = !longOpt.empty() ? longOpt : shortOpt;
-        printErrorAndExit("Invalid value for option '" + optName + "'. Expected an integer, but got '" + valueStr + "'.");
+        printErrorAndExit("Invalid value for option '" + parseOptName(optName) + "'. Expected an integer, but got '" + valueStr + "'.");
     }
     return 0; // Should not reach here
 }
@@ -359,11 +357,7 @@ inline double Parser::getDouble_(
     try {
         return std::stod(valueStr);
     } catch (const std::exception &) {
-        std::string shortOpt;
-        std::string longOpt;
-        parseOptName(optName, shortOpt, longOpt);
-        std::string optName = !longOpt.empty() ? longOpt : shortOpt;
-        printErrorAndExit("Invalid value for option '" + optName + "'. Expected a number, but got '" + valueStr + "'.");
+        printErrorAndExit("Invalid value for option '" + parseOptName(optName) + "'. Expected a number, but got '" + valueStr + "'.");
     }
     return 0.0; // Should not reach here
 }
@@ -386,11 +380,7 @@ inline bool Parser::getBool_(
         return false;
     }
 
-    std::string shortOpt;
-    std::string longOpt;
-    parseOptName(optName, shortOpt, longOpt);
-    std::string opt = !longOpt.empty() ? longOpt : shortOpt;
-    printErrorAndExit("Invalid value for option '" + opt + "'. Expected a boolean, but got '" + valueStr + "'.");
+    printErrorAndExit("Invalid value for option '" + parseOptName(optName) + "'. Expected a boolean, but got '" + valueStr + "'.");
     return false; // Should not reach here
 }
 
@@ -434,17 +424,53 @@ inline void Parser::printErrorAndExit(const std::string &message) {
     exit(1);
 }
 
-inline void Parser::parseOptName(const std::string &names, std::string &shortOpt, std::string &longOpt) {
-    size_t commaPos = names.find(',');
-    if (commaPos == std::string::npos) {
-        if (names.length() > 1) longOpt = "--" + names;
-        else shortOpt = "-" + names;
-    } else {
-        shortOpt = "-" + names.substr(0, commaPos);
-        longOpt  = "--" + names.substr(commaPos + 1);
+// Parses option name (e.g., "o,out") and return formatted string (e.g., "-o, --out")
+inline std::string Parser::parseOptName(const std::string &optName) {
+    if (optName.empty()) {
+        std::cerr << "Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
+        std::exit(EXIT_FAILURE);
     }
+
+    std::string result;
+
+    if (optName.length() == 1) { // Short option only
+        result.append("-").append(optName);
+        return result;
+    }
+
+    if (optName.length() > 1 && optName[1] != ',') { // Long option only
+        result.append("--").append(optName);
+        return result;
+    }
+
+    // Short and long options combined
+    result.append("-").append(optName.substr(0, 1)).append(", --").append(optName.substr(2));
+    return result;
 }
 
+// Parses option name (o,out) and saves the results in shortOpt and longOpt
+inline void Parser::parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt) {
+    if (optName.empty()) {
+        std::cerr << "Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
+        std::exit(EXIT_FAILURE);
+    }
+
+    if (optName.length() == 1) { // Short option only
+        shortOpt = "-" + optName;
+        return;
+    }
+
+    if (optName.length() > 1 && optName[1] != ',') { // Long option only
+        longOpt = "--" + optName;
+        return;
+    }
+
+    // Short and long options combined
+    shortOpt = "-" + optName.substr(0, 1);
+    longOpt  = "--" + optName.substr(2);
+}
+
+// Finds the option in the options_ map
 inline std::pair<bool, Parser::OptionInfo> Parser::findOption(const std::string &shortOpt, const std::string &longOpt) {
     auto longIt  = longOpt.empty() ? options_.end() : options_.find(longOpt);
     auto shortIt = shortOpt.empty() ? options_.end() : options_.find(shortOpt);
@@ -468,6 +494,7 @@ inline std::pair<bool, Parser::OptionInfo> Parser::findOption(const std::string 
     return {true, shortIt->second};
 }
 
+// Uses the option name to get a value string from the options_ map.
 inline std::pair<bool, std::string> Parser::getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr) {
     std::string shortOpt;
     std::string longOpt;

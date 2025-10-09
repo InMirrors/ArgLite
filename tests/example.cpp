@@ -1,4 +1,5 @@
 #include "ArgLite/Base.hpp"
+#include <ios>
 #include <iostream>
 #include <string>
 
@@ -19,15 +20,13 @@ int main(int argc, char **argv) {
     Parser::tryToPrintHelp();
     Parser::tryToPrintInvalidOpts();
 
-    cout << "Verbose    : " << verbose << '\n';
+    cout << "Verbose    : " << boolalpha << verbose << '\n';
     cout << "Count      : " << count << '\n';
     cout << "Rate       : " << rate << '\n';
     cout << "Output Path: " << outputPath << '\n';
     cout << "Output file: " << outputFile << '\n';
     cout << "Input files:" << '\n';
-    for (const auto &it : inputFiles) {
-        cout << it << '\n';
-    }
+    for (const auto &it : inputFiles) { cout << it << '\n'; }
 
     return 0;
 }
