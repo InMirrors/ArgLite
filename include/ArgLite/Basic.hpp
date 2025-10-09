@@ -35,7 +35,7 @@ public:
 
     /**
      * @brief Gets the value of a string option.
-     * @param names Option names (e.g.optN "o", "output" or "o,output").
+     * @param names Option names (e.g., "o", "output" or "o,output").
      * @param description Option description.
      * @param defaultValue The default value to return if the option is not provided on the command line.
      * @return The parsed string value or the default value.
@@ -46,7 +46,7 @@ public:
      * @brief Gets the value of an integer option.
      * @param names Option names (e.g., "n", "count" or "n,count").
      * @param description Option description.
-     * optNparam defaultValue The default value.
+     * @param defaultValue The default value.
      * @return The parsed integer value or the default value. If the provided value cannot be converted to an integer, the program will report an error and exit.
      */
     static inline long long getInt(const std::string &optName, const std::string &description, long long defaultValue = 0);
@@ -55,14 +55,14 @@ public:
      * @brief Gets the value of a floating-point option.
      * @param names Option names (e.g., "r", "rate" or "r,rate").
      * @param description Option description.
-     * optNparam defaultValue The default value.
+     * @param defaultValue The default value.
      * @return The parsed floating-point value or the default value. If the provided value cannot be converted to a floating-point number, the program will report an error and exit.
      */
     static inline double getDouble(const std::string &optName, const std::string &description, double defaultValue = 0.0);
 
     /**
      * @brief Gets the value of a boolean option.
-     * @details "1", "true", "yes"optN "on" (case-insensitive) will be parsed as true.
+     * @details "1", "true", "yes", "on" (case-insensitive) will be parsed as true.
      *          "0", "false", "no", "off" (case-insensitive) will be parsed as false.
      *          Other values will cause the program to report an error and exit.
      * @param names Option names (e.g., "e", "enable" or "e,enable").
@@ -74,7 +74,7 @@ public:
 
     /**
      * @brief Gets a positional argument.
-     * @details Must be called after all optNet/hasFlag calls. Should be called in order.
+     * @details Must be called after all get/hasFlag calls. Should be called in order.
      * @param name Argument name, used for the help message (e.g., "input-file").
      * @param description Argument description.
      * @param required If true and the user does not provide the argument, the program will report an error and exit.
@@ -120,10 +120,10 @@ private:
     };
 
     // Stores option information for subsequent get/hasFlag calls.
-    // key: Option name (e.g., "-o", "--output")
+    // key: Option name (e.g., "-o", "--output").
     // value: index > 0: Index of the argument in argv;
     // index < 0: Index of the flag option in argv;
-    // index == 0: Default value, probably indicating the option is absent.
+    // index == 0: Default value, usually indicating --opt=val form.
     struct OptionInfo {
         int         argvIndex;
         std::string valueFromEquals; // Only used for --opt=val form
@@ -152,7 +152,7 @@ private:
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, std::vector<int> &positionalArgsIndices = positionalArgsIndices_, std::vector<PositionalHelpInfo> &positionalHelpEntries = positionalHelpEntries_);
     // Other functions
     static inline void                         printErrorAndExit(const std::string &message);
-    static inline void                         parseNames(const std::string &names, std::string &shortOpt, std::string &longOpt);
+    static inline void                         parseOptName(const std::string &names, std::string &shortOpt, std::string &longOpt);
     static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt);
     static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr);
     static inline void                         printHelp();
@@ -197,7 +197,7 @@ inline void Parser::preprocess(int argc, char **argv) {
             std::string key = arg;
             std::string value;
             size_t      equalsPos = arg.find('=');
-            if (equalsPos != std::string::npos) {
+            if (equalsPos != std::string::npos) { // --opt=val form
                 key           = arg.substr(0, equalsPos);
                 value         = arg.substr(equalsPos + 1);
                 options_[key] = {0, value};
@@ -298,7 +298,7 @@ inline bool Parser::hasFlag_(
 
     std::string shortOpt;
     std::string longOpt;
-    parseNames(optName, shortOpt, longOpt);
+    parseOptName(optName, shortOpt, longOpt);
     optionHelpEntries.push_back({shortOpt, longOpt, description, ""});
 
     auto [found, info] = findOption(shortOpt, longOpt);
@@ -340,7 +340,7 @@ inline long long Parser::getInt_(
     } catch (const std::exception &) {
         std::string shortOpt;
         std::string longOpt;
-        parseNames(optName, shortOpt, longOpt);
+        parseOptName(optName, shortOpt, longOpt);
         std::string optName = !longOpt.empty() ? longOpt : shortOpt;
         printErrorAndExit("Invalid value for option '" + optName + "'. Expected an integer, but got '" + valueStr + "'.");
     }
@@ -361,7 +361,7 @@ inline double Parser::getDouble_(
     } catch (const std::exception &) {
         std::string shortOpt;
         std::string longOpt;
-        parseNames(optName, shortOpt, longOpt);
+        parseOptName(optName, shortOpt, longOpt);
         std::string optName = !longOpt.empty() ? longOpt : shortOpt;
         printErrorAndExit("Invalid value for option '" + optName + "'. Expected a number, but got '" + valueStr + "'.");
     }
@@ -388,7 +388,7 @@ inline bool Parser::getBool_(
 
     std::string shortOpt;
     std::string longOpt;
-    parseNames(optName, shortOpt, longOpt);
+    parseOptName(optName, shortOpt, longOpt);
     std::string opt = !longOpt.empty() ? longOpt : shortOpt;
     printErrorAndExit("Invalid value for option '" + opt + "'. Expected a boolean, but got '" + valueStr + "'.");
     return false; // Should not reach here
@@ -434,7 +434,7 @@ inline void Parser::printErrorAndExit(const std::string &message) {
     exit(1);
 }
 
-inline void Parser::parseNames(const std::string &names, std::string &shortOpt, std::string &longOpt) {
+inline void Parser::parseOptName(const std::string &names, std::string &shortOpt, std::string &longOpt) {
     size_t commaPos = names.find(',');
     if (commaPos == std::string::npos) {
         if (names.length() > 1) longOpt = "--" + names;
@@ -471,22 +471,22 @@ inline std::pair<bool, Parser::OptionInfo> Parser::findOption(const std::string 
 inline std::pair<bool, std::string> Parser::getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr) {
     std::string shortOpt;
     std::string longOpt;
-    parseNames(optName, shortOpt, longOpt);
+    parseOptName(optName, shortOpt, longOpt);
     optionHelpEntries_.push_back({shortOpt, longOpt, description, defaultValueStr});
 
-    auto [found, info] = findOption(shortOpt, longOpt);
+    auto [found, optInfo] = findOption(shortOpt, longOpt);
 
     if (found) {
         if (!shortOpt.empty()) options_.erase(shortOpt);
         if (!longOpt.empty()) options_.erase(longOpt);
 
-        if (info.argvIndex < 0) { // It's a flag but a value was expected
+        if (optInfo.argvIndex < 0) { // It's a flag but a value was expected
             printErrorAndExit("Option '" + (!longOpt.empty() ? longOpt : shortOpt) + "' does not take a value.");
         }
-        if (info.argvIndex == 0) { // From --opt=val
-            return {true, info.valueFromEquals};
+        if (optInfo.argvIndex == 0) { // From --opt=val
+            return {true, optInfo.valueFromEquals};
         }
-        return {true, argv_[info.argvIndex]};
+        return {true, argv_[optInfo.argvIndex]};
     }
 
     return {false, defaultValueStr};
