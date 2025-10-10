@@ -538,7 +538,8 @@ inline std::pair<bool, std::string> Parser::getValueStr(
         if (!longOpt.empty()) data.options.erase(longOpt);
 
         if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
-            data.errorMessages.push_back("Option '" + (!longOpt.empty() ? longOpt : shortOpt) + "' requires a value.");
+            data.errorMessages.push_back("Option '" + parseOptName(optName) + "' requires a value.");
+            return {false, ""};
         }
         if (optInfo.argvIndex == 0) { // From --opt=val
             return {true, optInfo.valueFromEquals};
