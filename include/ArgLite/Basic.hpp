@@ -164,12 +164,15 @@ private:
     static inline std::string              getPositional_(const std::string &name, const std::string &description, bool required = true, InternalData &data = data_);
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, InternalData &data = data_);
     // Other functions
+    static inline void                         preprocess_(int argc, char **argv, InternalData &data = data_);
     static inline void                         printErrorAndExit(const std::string &message);
     static inline std::string                  doubleToStr(double value);
     static inline std::string                  parseOptName(const std::string &optName);
     static inline void                         parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt);
     static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
     static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
+    static inline void                         tryToPrintHelp_(InternalData &data = data_);
+    static inline void                         tryToPrintInvalidOpts_(InternalData &data = data_);
     static inline void                         printHelp(InternalData &data = data_);
 };
 
@@ -180,77 +183,8 @@ inline void Parser::setDescription(const std::string &description) {
     programDescription_ = description;
 }
 
-inline void Parser::preprocess(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
-    data_.argc = argc;
-    data_.argv = argv;
-    if (argc > 0) {
-        programName_ = argv[0];
-        // Extract the basename
-        size_t last_slash_pos = programName_.find_last_of("/\\");
-        if (std::string::npos != last_slash_pos) {
-            programName_.erase(0, last_slash_pos + 1);
-        }
-    }
-
-    bool allPositional = false;
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-
-        if (allPositional) {
-            data_.positionalArgsIndices.push_back(i);
-            continue;
-        }
-
-        if (arg == "--") {
-            allPositional = true;
-            continue;
-        }
-
-        if (arg.rfind("--", 0) == 0) { // Long option
-            std::string key = arg;
-            std::string value;
-            size_t      equalsPos = arg.find('=');
-            if (equalsPos != std::string::npos) { // --opt=val form
-                key                = arg.substr(0, equalsPos);
-                value              = arg.substr(equalsPos + 1);
-                data_.options[key] = {0, value};
-            } else {
-                if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    data_.options[key] = {i + 1, ""};
-                    i++; // Consume next arg as value
-                } else {
-                    data_.options[key] = {-i, ""}; // Flag
-                }
-            }
-        } else if (arg.rfind('-', 0) == 0) { // Short option(s)
-            // Bundled flags, e.g., -abc
-            if (arg.length() > 2) {
-                for (size_t j = 1; j < arg.length(); ++j) {
-                    std::string key = "-";
-                    key += arg[j];
-                    if (j == arg.length() - 1) { // Last char might have a value
-                        if (i + 1 < argc && argv[i + 1][0] != '-') {
-                            data_.options[key] = {i + 1, ""};
-                            i++;
-                        } else {
-                            data_.options[key] = {-i, ""}; // Flag
-                        }
-                    } else {
-                        data_.options[key] = {-i, ""}; // All but the last are flags
-                    }
-                }
-            } else { // Single short option, e.g., -a
-                if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    data_.options[arg] = {i + 1, ""};
-                    i++;
-                } else {
-                    data_.options[arg] = {-i, ""}; // Flag
-                }
-            }
-        } else { // Positional
-            data_.positionalArgsIndices.push_back(i);
-        }
-    }
+inline void Parser::preprocess(int argc, char **argv) {
+    preprocess_(argc, argv);
 }
 
 inline bool Parser::hasFlag(const std::string &optName, const std::string &description) {
@@ -284,27 +218,87 @@ inline std::vector<std::string> Parser::getRemainingPositionals(const std::strin
 inline void Parser::changeDescriptionIndent(size_t indent) { descriptionIndent_ = indent; }
 
 inline void Parser::tryToPrintHelp() {
-    if ((data_.options.count("-h") != 0) || (data_.options.count("--help")) != 0) {
-        data_.optionHelpEntries.push_back({"-h", "--help", "Show this help message and exit", ""});
-        printHelp();
-        std::exit(EXIT_SUCCESS);
-    }
+    tryToPrintHelp_();
 }
 
 inline void Parser::tryToPrintInvalidOpts() {
-    // Remove help options as they are handled by tryToPrintHelp
-    data_.options.erase("-h");
-    data_.options.erase("--help");
-
-    if (!data_.options.empty()) {
-        for (const auto &pair : data_.options) {
-            std::cerr << "Error: Unrecognized option '" << pair.first << "'" << '\n';
-        }
-        std::exit(EXIT_SUCCESS);
-    }
+    tryToPrintInvalidOpts_();
 }
 
 // === Private Helper Implementations ===
+
+inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // NOLINT(readability-function-cognitive-complexity)
+    data.argc = argc;
+    data.argv = argv;
+    if (argc > 0) {
+        programName_ = argv[0];
+        // Extract the basename
+        size_t last_slash_pos = programName_.find_last_of("/\\");
+        if (std::string::npos != last_slash_pos) {
+            programName_.erase(0, last_slash_pos + 1);
+        }
+    }
+
+    bool allPositional = false;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+
+        if (allPositional) {
+            data.positionalArgsIndices.push_back(i);
+            continue;
+        }
+
+        if (arg == "--") {
+            allPositional = true;
+            continue;
+        }
+
+        if (arg.rfind("--", 0) == 0) { // Long option
+            std::string key = arg;
+            std::string value;
+            size_t      equalsPos = arg.find('=');
+            if (equalsPos != std::string::npos) { // --opt=val form
+                key               = arg.substr(0, equalsPos);
+                value             = arg.substr(equalsPos + 1);
+                data.options[key] = {0, value};
+            } else {
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    data.options[key] = {i + 1, ""};
+                    i++; // Consume next arg as value
+                } else {
+                    data.options[key] = {-i, ""}; // Flag
+                }
+            }
+        } else if (arg.rfind('-', 0) == 0) { // Short option(s)
+            // Bundled flags, e.g., -abc
+            if (arg.length() > 2) {
+                for (size_t j = 1; j < arg.length(); ++j) {
+                    std::string key = "-";
+                    key += arg[j];
+                    if (j == arg.length() - 1) { // Last char might have a value
+                        if (i + 1 < argc && argv[i + 1][0] != '-') {
+                            data.options[key] = {i + 1, ""};
+                            i++;
+                        } else {
+                            data.options[key] = {-i, ""}; // Flag
+                        }
+                    } else {
+                        data.options[key] = {-i, ""}; // All but the last are flags
+                    }
+                }
+            } else { // Single short option, e.g., -a
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    data.options[arg] = {i + 1, ""};
+                    i++;
+                } else {
+                    data.options[arg] = {-i, ""}; // Flag
+                }
+            }
+        } else { // Positional
+            data.positionalArgsIndices.push_back(i);
+        }
+    }
+}
 
 inline bool Parser::hasFlag_(
     const std::string &optName, const std::string &description, InternalData &data) {
@@ -536,6 +530,27 @@ inline std::pair<bool, std::string> Parser::getValueStr(
     }
 
     return {false, defaultValueStr};
+}
+
+inline void Parser::tryToPrintHelp_(InternalData &data) {
+    if ((data.options.count("-h") != 0) || (data.options.count("--help")) != 0) {
+        data.optionHelpEntries.push_back({"-h", "--help", "Show this help message and exit", ""});
+        printHelp();
+        std::exit(EXIT_SUCCESS);
+    }
+}
+
+inline void Parser::tryToPrintInvalidOpts_(InternalData &data) {
+    // Remove help options as they are handled by tryToPrintHelp
+    data.options.erase("-h");
+    data.options.erase("--help");
+
+    if (!data.options.empty()) {
+        for (const auto &pair : data.options) {
+            std::cerr << "Error: Unrecognized option '" << pair.first << "'" << '\n';
+        }
+        std::exit(EXIT_SUCCESS);
+    }
 }
 
 inline void Parser::printHelp(InternalData &data) {
