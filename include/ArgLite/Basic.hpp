@@ -365,7 +365,7 @@ inline double Parser::getDouble_(
     try {
         return std::stod(valueStr);
     } catch (const std::exception &) {
-        printErrorAndExit("Invalid value for option '" + parseOptName(optName) + "'. Expected a number, but got '" + valueStr + "'.");
+        printErrorAndExit("Invalid value for option '" + parseOptName(optName) + "'. Expected a double, but got '" + valueStr + "'.");
     }
     return 0.0; // Should not reach here
 }
