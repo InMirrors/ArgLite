@@ -1,109 +1,19 @@
-import subprocess
 import sys
 import os
+import test_utils
+from test_utils import colored_print, test_case, reset_test_counter
 
 # Define the path to the binary executable
 # Assuming the binary is located in the 'bin/' directory at the project root
-BINARY_PATH = os.path.join(os.path.dirname(__file__), '..', 'bin', 'example')
-# Ensure BINARY_PATH is an absolute path and unify slashes for cross-platform compatibility
-BINARY_PATH = os.path.abspath(BINARY_PATH).replace('\\', '/')
+_local_binary_path = os.path.join(os.path.dirname(__file__), '..', 'bin', 'example')
+# Ensure _local_binary_path is an absolute path and unify slashes for cross-platform compatibility
+_local_binary_path = os.path.abspath(_local_binary_path).replace('\\', '/')
 
-# --- Color Output Configuration ---
-ENABLE_COLOR_OUTPUT = True
-
-# ANSI color codes
-COLORS = {
-    "reset": "\033[0m",
-    "blue": "\033[94m",
-    "green": "\033[92m",
-    "red": "\033[91m",
-    "yellow": "\033[93m",
-    "cyan": "\033[96m",
-    "magenta": "\033[95m",
-    "bold": "\033[1m",
-    "underline": "\033[4m"
-}
-
-def colored_print(text, color=None, end='\n', file=sys.stdout):
-    """
-    Prints text with optional ANSI color.
-    """
-    if ENABLE_COLOR_OUTPUT and color in COLORS:
-        print(f"{COLORS[color]}{text}{COLORS['reset']}", end=end, file=file)
-    else:
-        print(text, end=end, file=file)
-
-# --- End Color Output Configuration ---
-
-def run_binary(args):
-    """
-    Runs the binary executable and captures its stdout, stderr, and return code.
-    """
-    command = [BINARY_PATH] + args
-    colored_print(f"Executing: {' '.join(command)}", color="blue")
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False, encoding='utf-8')
-        return result.stdout, result.stderr, result.returncode
-    except FileNotFoundError:
-        colored_print(f"Error: Binary not found at {BINARY_PATH}. Please ensure it is compiled and placed there.", color="red", file=sys.stderr)
-        sys.exit(1)
-    except Exception as e:
-        colored_print(f"An error occurred: {e}", color="red", file=sys.stderr)
-        sys.exit(1)
-
-test_counter = 0
-def test_case(name, args, expected_output_substrings: list[str]=[], expected_error_keywords: list[str]=[], expected_return_code=0):
-    """
-    Runs a test case and validates the results.
-    expected_error_keywords: A list of keywords that must be present in stderr.
-    """
-    global test_counter
-    test_counter += 1
-    colored_print(f"\n--- [{test_counter}] {name} ---", color="cyan", end='\n')
-    stdout, stderr, returncode = run_binary(args)
-
-    colored_print("STDOUT:", color="blue")
-    print(stdout)
-    colored_print("STDERR:", color="blue")
-    print(stderr)
-    colored_print(f"Return Code: {returncode}", color="blue")
-
-    success = True
-
-    if expected_output_substrings:
-        for sub in expected_output_substrings:
-            if sub not in stdout:
-                colored_print(f"FAIL: Expected output substring '{sub}' not found in STDOUT.", color="red", file=sys.stderr)
-                success = False
-            else:
-                colored_print(f"PASS: Expected output substring '{sub}' found in STDOUT.", color="green")
-
-    if expected_error_keywords:
-        for keyword in expected_error_keywords:
-            if keyword.lower() not in stderr.lower():
-                colored_print(f"FAIL: Expected error keyword '{keyword}' not found in STDERR.", color="red", file=sys.stderr)
-                success = False
-            else:
-                colored_print(f"PASS: Expected error keyword '{keyword}' found in STDERR.", color="green")
-    elif stderr: # If no expected errors, but stderr is not empty, consider it a failure
-        colored_print(f"FAIL: Unexpected content in STDERR: {stderr}", color="red", file=sys.stderr)
-        success = False
-
-    if returncode != expected_return_code:
-        colored_print(f"FAIL: Expected return code {expected_return_code}, got {returncode}.", color="red", file=sys.stderr)
-        success = False
-    else:
-        colored_print(f"PASS: Return code is {returncode}.", color="green")
-
-    if success:
-        colored_print(f"--- Test Case {test_counter} '{name}' PASSED ---\n", color="green")
-    else:
-        colored_print(f"--- Test Case {test_counter} '{name}' FAILED ---\n", color="red", file=sys.stderr)
-    return success
+# Set the global BINARY_PATH in test_utils
+test_utils.BINARY_PATH = _local_binary_path
 
 def main():
-    global test_counter
-    test_counter = 0 # Reset counter for main execution
+    reset_test_counter() # Reset counter for main execution
     all_tests_passed = True
 
     # --- Normal usage test cases ---
