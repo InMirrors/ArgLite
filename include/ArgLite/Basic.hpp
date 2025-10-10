@@ -110,8 +110,9 @@ public:
      * @brief Checks and reports all unknown options that were not processed by get/hasFlag.
      * @details If unknown options exist, prints an error message and exits the program abnormally.
      *          This function should be called after all argument retrieval function calls.
+     * @return Returns true if there are any unknown options, false otherwise.
      */
-    static inline void tryToPrintInvalidOpts();
+    static inline bool tryToPrintInvalidOpts();
 
 private:
     // Stores option information for subsequent get/hasFlag calls.
@@ -172,7 +173,7 @@ private:
     static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
     static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
     static inline void                         tryToPrintHelp_(InternalData &data = data_);
-    static inline void                         tryToPrintInvalidOpts_(InternalData &data = data_);
+    static inline bool                         tryToPrintInvalidOpts_(InternalData &data = data_);
     static inline void                         printHelp(InternalData &data = data_);
 };
 
@@ -221,8 +222,8 @@ inline void Parser::tryToPrintHelp() {
     tryToPrintHelp_();
 }
 
-inline void Parser::tryToPrintInvalidOpts() {
-    tryToPrintInvalidOpts_();
+inline bool Parser::tryToPrintInvalidOpts() {
+    return tryToPrintInvalidOpts_();
 }
 
 // === Private Helper Implementations ===
@@ -435,7 +436,7 @@ inline std::string Parser::doubleToStr(double value) {
 // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
 inline std::string Parser::parseOptName(const std::string &optName) {
     if (optName.empty()) {
-        std::cerr << "Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
+        std::cerr << "[ArgLite] Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
         std::exit(EXIT_FAILURE);
     }
 
@@ -540,7 +541,7 @@ inline void Parser::tryToPrintHelp_(InternalData &data) {
     }
 }
 
-inline void Parser::tryToPrintInvalidOpts_(InternalData &data) {
+inline bool Parser::tryToPrintInvalidOpts_(InternalData &data) {
     // Remove help options as they are handled by tryToPrintHelp
     data.options.erase("-h");
     data.options.erase("--help");
@@ -549,8 +550,10 @@ inline void Parser::tryToPrintInvalidOpts_(InternalData &data) {
         for (const auto &pair : data.options) {
             std::cerr << "Error: Unrecognized option '" << pair.first << "'" << '\n';
         }
-        std::exit(EXIT_SUCCESS);
+        return true;
     }
+
+    return false;
 }
 
 inline void Parser::printHelp(InternalData &data) {
