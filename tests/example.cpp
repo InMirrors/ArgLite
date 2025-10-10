@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
     Parser::changeDescriptionIndent(20);
     Parser::tryToPrintHelp();
     Parser::tryToPrintInvalidOpts();
+    Parser::finalize();
 
     cout << "Verbose    : " << boolalpha << verbose << '\n';
     cout << "Switch 1   : " << switch1 << '\n';

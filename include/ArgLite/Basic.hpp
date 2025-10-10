@@ -114,6 +114,12 @@ public:
      */
     static inline bool tryToPrintInvalidOpts();
 
+    /**
+     * @brief Finalizes the parser. This function should be called at the end of parsing.
+     * @details This function will print any error messages and exit the program if there are any.
+     */
+    static inline void finalize();
+
 private:
     // Stores option information for subsequent get/hasFlag calls.
     // key: Option name (e.g., "-o", "--output").
@@ -147,6 +153,7 @@ private:
         std::vector<OptionHelpInfo>                 optionHelpEntries;
         std::vector<int>                            positionalArgsIndices;
         std::vector<PositionalHelpInfo>             positionalHelpEntries;
+        std::vector<std::string>                    errorMessages;
     };
 
     // Internal data storage
@@ -166,7 +173,7 @@ private:
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, InternalData &data = data_);
     // Other functions
     static inline void                         preprocess_(int argc, char **argv, InternalData &data = data_);
-    static inline void                         printErrorAndExit(const std::string &message);
+    static inline void                         appendOptValErrorMsg(InternalData &data, const std::string &optName, const std::string &typeName, const std::string &valueStr);
     static inline std::string                  doubleToStr(double value);
     static inline std::string                  parseOptName(const std::string &optName);
     static inline void                         parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt);
@@ -175,6 +182,7 @@ private:
     static inline void                         tryToPrintHelp_(InternalData &data = data_);
     static inline bool                         tryToPrintInvalidOpts_(InternalData &data = data_);
     static inline void                         printHelp(InternalData &data = data_);
+    static inline void                         finalize_(const std::vector<std::string> &errorMessages);
 };
 
 // ========================================================================
@@ -218,13 +226,11 @@ inline std::vector<std::string> Parser::getRemainingPositionals(const std::strin
 
 inline void Parser::changeDescriptionIndent(size_t indent) { descriptionIndent_ = indent; }
 
-inline void Parser::tryToPrintHelp() {
-    tryToPrintHelp_();
-}
+inline void Parser::tryToPrintHelp() { tryToPrintHelp_(); }
 
-inline bool Parser::tryToPrintInvalidOpts() {
-    return tryToPrintInvalidOpts_();
-}
+inline bool Parser::tryToPrintInvalidOpts() { return tryToPrintInvalidOpts_(); }
+
+inline void Parser::finalize() { finalize_(data_.errorMessages); }
 
 // === Private Helper Implementations ===
 
@@ -344,7 +350,7 @@ inline long long Parser::getInt_(
     try {
         return std::stoll(valueStr);
     } catch (const std::exception &) {
-        printErrorAndExit("Invalid value for option '" + parseOptName(optName) + "'. Expected an integer, but got '" + valueStr + "'.");
+        appendOptValErrorMsg(data, parseOptName(optName), "integer", valueStr);
     }
     return 0; // Should not reach here
 }
@@ -360,7 +366,7 @@ inline double Parser::getDouble_(
     try {
         return std::stod(valueStr);
     } catch (const std::exception &) {
-        printErrorAndExit("Invalid value for option '" + parseOptName(optName) + "'. Expected a double, but got '" + valueStr + "'.");
+        appendOptValErrorMsg(data, parseOptName(optName), "double", valueStr);
     }
     return 0.0; // Should not reach here
 }
@@ -382,7 +388,7 @@ inline bool Parser::getBool_(
         return false;
     }
 
-    printErrorAndExit("Invalid value for option '" + parseOptName(optName) + "'. Expected a boolean, but got '" + valueStr + "'.");
+    appendOptValErrorMsg(data, parseOptName(optName), "boolean", valueStr);
     return false; // Should not reach here
 }
 
@@ -397,7 +403,7 @@ inline std::string Parser::getPositional_(
         return data.argv[argvIdx];
     }
     if (isRequired) {
-        printErrorAndExit("Missing required positional argument '" + name + "'.");
+        data.errorMessages.push_back("Missing required positional argument '" + name + "'.");
     }
     return "";
 }
@@ -414,14 +420,24 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
         data.positionalIdx++;
     }
     if (required && remaining.empty()) {
-        printErrorAndExit("Missing required positional argument(s) '" + name + "'.");
+        data.errorMessages.push_back("Missing required positional argument(s) '" + name + "'.");
     }
     return remaining;
 }
 
-inline void Parser::printErrorAndExit(const std::string &message) {
-    std::cerr << "Error: " << message << '\n';
-    exit(1);
+inline void Parser::appendOptValErrorMsg(
+    InternalData      &data,
+    const std::string &optName, const std::string &typeName, const std::string &valueStr) {
+
+    std::string errorStr;
+    errorStr += "Invalid value for option '";
+    errorStr += parseOptName(optName);
+    errorStr += "'. Expected a ";
+    errorStr += typeName;
+    errorStr += ", but got '";
+    errorStr += valueStr;
+    errorStr += "'.";
+    data.errorMessages.push_back(std::move(errorStr));
 }
 
 inline std::string Parser::doubleToStr(double value) {
@@ -521,8 +537,8 @@ inline std::pair<bool, std::string> Parser::getValueStr(
         if (!shortOpt.empty()) data.options.erase(shortOpt);
         if (!longOpt.empty()) data.options.erase(longOpt);
 
-        if (optInfo.argvIndex < 0) { // It's a flag but a value was expected
-            printErrorAndExit("Option '" + (!longOpt.empty() ? longOpt : shortOpt) + "' does not take a value.");
+        if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
+            data.errorMessages.push_back("Option '" + (!longOpt.empty() ? longOpt : shortOpt) + "' requires a value.");
         }
         if (optInfo.argvIndex == 0) { // From --opt=val
             return {true, optInfo.valueFromEquals};
@@ -609,6 +625,15 @@ inline void Parser::printHelp(InternalData &data) {
             std::cout << descStr << '\n';
         }
     }
+}
+inline void Parser::finalize_(const std::vector<std::string> &errorMessages) {
+    if (errorMessages.empty()) { return; }
+
+    std::cerr << "Errors occurred while parsing command-line arguments. The following is a list of error messages:\n";
+    for (const auto &msg : errorMessages) {
+        std::cerr << "Error: " << msg << '\n';
+    }
+    std::exit(EXIT_FAILURE);
 }
 
 } // namespace ArgLite
