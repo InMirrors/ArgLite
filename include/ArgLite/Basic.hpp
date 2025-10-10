@@ -137,36 +137,40 @@ private:
         bool        required;
     };
 
+    struct InternalData {
+        int    argc;
+        char **argv;
+        size_t positionalIdx;
+        // Containers
+        std::unordered_map<std::string, OptionInfo> options;
+        std::vector<OptionHelpInfo>                 optionHelpEntries;
+        std::vector<int>                            positionalArgsIndices;
+        std::vector<PositionalHelpInfo>             positionalHelpEntries;
+    };
+
     // Internal data storage
-    static inline std::string programDescription_;
-    static inline std::string programName_;
-    static inline int         argc_              = 0;
-    static inline char      **argv_              = nullptr;
-    static inline size_t      positionalIdx_     = 0;
-    static inline size_t      descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
-    // Containers
-    static inline std::unordered_map<std::string, OptionInfo> options_;
-    static inline std::vector<OptionHelpInfo>                 optionHelpEntries_;
-    static inline std::vector<int>                            positionalArgsIndices_;
-    static inline std::vector<PositionalHelpInfo>             positionalHelpEntries_;
+    static inline std::string  programDescription_;
+    static inline std::string  programName_;
+    static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
+    static inline InternalData data_;
 
     // Internal helper functions
-    // Get functions, containers can be changed
-    static inline bool                     hasFlag_(const std::string &optName, const std::string &description, std::unordered_map<std::string, OptionInfo> &options = options_, std::vector<OptionHelpInfo> &optionHelpEntries = optionHelpEntries_, std::vector<int> &positionalArgsIndices = positionalArgsIndices_);
-    static inline std::string              getString_(const std::string &optName, const std::string &description, const std::string &defaultValue = "", std::unordered_map<std::string, OptionInfo> &options = options_, std::vector<OptionHelpInfo> &optionHelpEntries = optionHelpEntries_);
-    static inline long long                getInt_(const std::string &optName, const std::string &description, long long defaultValue = 0, std::unordered_map<std::string, OptionInfo> &options = options_, std::vector<OptionHelpInfo> &optionHelpEntries = optionHelpEntries_);
-    static inline double                   getDouble_(const std::string &optName, const std::string &description, double defaultValue = 0.0, std::unordered_map<std::string, OptionInfo> &options = options_, std::vector<OptionHelpInfo> &optionHelpEntries = optionHelpEntries_);
-    static inline bool                     getBool_(const std::string &optName, const std::string &description, bool defaultValue = false, std::unordered_map<std::string, OptionInfo> &options = options_, std::vector<OptionHelpInfo> &optionHelpEntries = optionHelpEntries_);
-    static inline std::string              getPositional_(const std::string &name, const std::string &description, bool required = true, std::vector<int> &positionalArgsIndices = positionalArgsIndices_, std::vector<PositionalHelpInfo> &positionalHelpEntries = positionalHelpEntries_);
-    static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, std::vector<int> &positionalArgsIndices = positionalArgsIndices_, std::vector<PositionalHelpInfo> &positionalHelpEntries = positionalHelpEntries_);
+    // Get functions, internal data can be changed
+    static inline bool                     hasFlag_(const std::string &optName, const std::string &description, InternalData &data = data_);
+    static inline std::string              getString_(const std::string &optName, const std::string &description, const std::string &defaultValue = "", InternalData &data = data_);
+    static inline long long                getInt_(const std::string &optName, const std::string &description, long long defaultValue = 0, InternalData &data = data_);
+    static inline double                   getDouble_(const std::string &optName, const std::string &description, double defaultValue = 0.0, InternalData &data = data_);
+    static inline bool                     getBool_(const std::string &optName, const std::string &description, bool defaultValue = false, InternalData &data = data_);
+    static inline std::string              getPositional_(const std::string &name, const std::string &description, bool required = true, InternalData &data = data_);
+    static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, InternalData &data = data_);
     // Other functions
     static inline void                         printErrorAndExit(const std::string &message);
     static inline std::string                  doubleToStr(double value);
     static inline std::string                  parseOptName(const std::string &optName);
     static inline void                         parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt);
-    static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt);
-    static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr);
-    static inline void                         printHelp();
+    static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
+    static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
+    static inline void                         printHelp(InternalData &data = data_);
 };
 
 // ========================================================================
@@ -177,8 +181,8 @@ inline void Parser::setDescription(const std::string &description) {
 }
 
 inline void Parser::preprocess(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
-    argc_ = argc;
-    argv_ = argv;
+    data_.argc = argc;
+    data_.argv = argv;
     if (argc > 0) {
         programName_ = argv[0];
         // Extract the basename
@@ -193,7 +197,7 @@ inline void Parser::preprocess(int argc, char **argv) { // NOLINT(readability-fu
         std::string arg = argv[i];
 
         if (allPositional) {
-            positionalArgsIndices_.push_back(i);
+            data_.positionalArgsIndices.push_back(i);
             continue;
         }
 
@@ -207,15 +211,15 @@ inline void Parser::preprocess(int argc, char **argv) { // NOLINT(readability-fu
             std::string value;
             size_t      equalsPos = arg.find('=');
             if (equalsPos != std::string::npos) { // --opt=val form
-                key           = arg.substr(0, equalsPos);
-                value         = arg.substr(equalsPos + 1);
-                options_[key] = {0, value};
+                key                = arg.substr(0, equalsPos);
+                value              = arg.substr(equalsPos + 1);
+                data_.options[key] = {0, value};
             } else {
                 if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    options_[key] = {i + 1, ""};
+                    data_.options[key] = {i + 1, ""};
                     i++; // Consume next arg as value
                 } else {
-                    options_[key] = {-i, ""}; // Flag
+                    data_.options[key] = {-i, ""}; // Flag
                 }
             }
         } else if (arg.rfind('-', 0) == 0) { // Short option(s)
@@ -226,25 +230,25 @@ inline void Parser::preprocess(int argc, char **argv) { // NOLINT(readability-fu
                     key += arg[j];
                     if (j == arg.length() - 1) { // Last char might have a value
                         if (i + 1 < argc && argv[i + 1][0] != '-') {
-                            options_[key] = {i + 1, ""};
+                            data_.options[key] = {i + 1, ""};
                             i++;
                         } else {
-                            options_[key] = {-i, ""}; // Flag
+                            data_.options[key] = {-i, ""}; // Flag
                         }
                     } else {
-                        options_[key] = {-i, ""}; // All but the last are flags
+                        data_.options[key] = {-i, ""}; // All but the last are flags
                     }
                 }
             } else { // Single short option, e.g., -a
                 if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    options_[arg] = {i + 1, ""};
+                    data_.options[arg] = {i + 1, ""};
                     i++;
                 } else {
-                    options_[arg] = {-i, ""}; // Flag
+                    data_.options[arg] = {-i, ""}; // Flag
                 }
             }
         } else { // Positional
-            positionalArgsIndices_.push_back(i);
+            data_.positionalArgsIndices.push_back(i);
         }
     }
 }
@@ -280,8 +284,8 @@ inline std::vector<std::string> Parser::getRemainingPositionals(const std::strin
 inline void Parser::changeDescriptionIndent(size_t indent) { descriptionIndent_ = indent; }
 
 inline void Parser::tryToPrintHelp() {
-    if ((options_.count("-h") != 0) || (options_.count("--help")) != 0) {
-        optionHelpEntries_.push_back({"-h", "--help", "Show this help message and exit", ""});
+    if ((data_.options.count("-h") != 0) || (data_.options.count("--help")) != 0) {
+        data_.optionHelpEntries.push_back({"-h", "--help", "Show this help message and exit", ""});
         printHelp();
         std::exit(EXIT_SUCCESS);
     }
@@ -289,11 +293,11 @@ inline void Parser::tryToPrintHelp() {
 
 inline void Parser::tryToPrintInvalidOpts() {
     // Remove help options as they are handled by tryToPrintHelp
-    options_.erase("-h");
-    options_.erase("--help");
+    data_.options.erase("-h");
+    data_.options.erase("--help");
 
-    if (!options_.empty()) {
-        for (const auto &pair : options_) {
+    if (!data_.options.empty()) {
+        for (const auto &pair : data_.options) {
             std::cerr << "Error: Unrecognized option '" << pair.first << "'" << '\n';
         }
         std::exit(EXIT_SUCCESS);
@@ -303,27 +307,24 @@ inline void Parser::tryToPrintInvalidOpts() {
 // === Private Helper Implementations ===
 
 inline bool Parser::hasFlag_(
-    const std::string &optName, const std::string &description,
-    std::unordered_map<std::string, OptionInfo> &options,
-    std::vector<OptionHelpInfo>                 &optionHelpEntries,
-    std::vector<int>                            &positionalArgsIndices) {
+    const std::string &optName, const std::string &description, InternalData &data) {
 
     std::string shortOpt;
     std::string longOpt;
     parseOptName(optName, shortOpt, longOpt);
-    optionHelpEntries.push_back({shortOpt, longOpt, description, ""});
+    data.optionHelpEntries.push_back({shortOpt, longOpt, description, ""});
 
-    auto [found, info] = findOption(shortOpt, longOpt);
+    auto [found, info] = findOption(shortOpt, longOpt, data);
 
     if (found) {
         // A flag was passed with a value, e.g., -f 123. The value is likely a positional arg.
         if (info.argvIndex > 0) {
-            positionalArgsIndices.push_back(info.argvIndex);
+            data.positionalArgsIndices.push_back(info.argvIndex);
             // Keep positional args sorted by their original index to maintain order
-            std::sort(positionalArgsIndices.begin(), positionalArgsIndices.end());
+            std::sort(data.positionalArgsIndices.begin(), data.positionalArgsIndices.end());
         }
-        if (!shortOpt.empty()) options.erase(shortOpt);
-        if (!longOpt.empty()) options.erase(longOpt);
+        if (!shortOpt.empty()) data.options.erase(shortOpt);
+        if (!longOpt.empty()) data.options.erase(longOpt);
     }
 
     return found;
@@ -331,19 +332,17 @@ inline bool Parser::hasFlag_(
 
 inline std::string Parser::getString_(
     const std::string &optName, const std::string &description, const std::string &defaultValue,
-    std::unordered_map<std::string, OptionInfo> &options,
-    std::vector<OptionHelpInfo>                 &optionHelpEntries) {
+    InternalData &data) {
 
-    auto [found, value] = getValueStr(optName, description, defaultValue);
+    auto [found, value] = getValueStr(optName, description, defaultValue, data);
     return value;
 }
 
 inline long long Parser::getInt_(
     const std::string &optName, const std::string &description, long long defaultValue,
-    std::unordered_map<std::string, OptionInfo> &options,
-    std::vector<OptionHelpInfo>                 &optionHelpEntries) {
+    InternalData &data) {
 
-    auto [found, valueStr] = getValueStr(optName, description, std::to_string(defaultValue));
+    auto [found, valueStr] = getValueStr(optName, description, std::to_string(defaultValue), data);
     if (!found) {
         return defaultValue;
     }
@@ -357,10 +356,9 @@ inline long long Parser::getInt_(
 
 inline double Parser::getDouble_(
     const std::string &optName, const std::string &description, double defaultValue,
-    std::unordered_map<std::string, OptionInfo> &options,
-    std::vector<OptionHelpInfo>                 &optionHelpEntries) {
+    InternalData &data) {
 
-    auto [found, valueStr] = getValueStr(optName, description, doubleToStr(defaultValue));
+    auto [found, valueStr] = getValueStr(optName, description, doubleToStr(defaultValue), data);
     if (!found) {
         return defaultValue;
     }
@@ -374,10 +372,9 @@ inline double Parser::getDouble_(
 
 inline bool Parser::getBool_(
     const std::string &optName, const std::string &description, bool defaultValue,
-    std::unordered_map<std::string, OptionInfo> &options,
-    std::vector<OptionHelpInfo>                 &optionHelpEntries) {
+    InternalData &data) {
 
-    auto [found, valueStr] = getValueStr(optName, description, defaultValue ? "true" : "false");
+    auto [found, valueStr] = getValueStr(optName, description, defaultValue ? "true" : "false", data);
     if (!found) {
         return defaultValue;
     }
@@ -396,14 +393,13 @@ inline bool Parser::getBool_(
 
 inline std::string Parser::getPositional_(
     const std::string &name, const std::string &description, bool isRequired,
-    std::vector<int>                &positionalArgsIndices,
-    std::vector<PositionalHelpInfo> &positionalHelpEntries) {
+    InternalData &data) {
 
-    positionalHelpEntries_.push_back({name, description, isRequired});
-    if (positionalIdx_ < positionalArgsIndices_.size()) {
-        int argv_idx = positionalArgsIndices_[positionalIdx_];
-        positionalIdx_++;
-        return argv_[argv_idx];
+    data.positionalHelpEntries.push_back({name, description, isRequired});
+    if (data.positionalIdx < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
+        data.positionalIdx++;
+        return data.argv[argvIdx];
     }
     if (isRequired) {
         printErrorAndExit("Missing required positional argument '" + name + "'.");
@@ -413,15 +409,14 @@ inline std::string Parser::getPositional_(
 
 inline std::vector<std::string> Parser::getRemainingPositionals_(
     const std::string &name, const std::string &description, bool required,
-    std::vector<int>                &positionalArgsIndices,
-    std::vector<PositionalHelpInfo> &positionalHelpEntries) {
+    InternalData &data) {
 
-    positionalHelpEntries_.push_back({name, description, required});
+    data.positionalHelpEntries.push_back({name, description, required});
     std::vector<std::string> remaining;
-    while (positionalIdx_ < positionalArgsIndices_.size()) {
-        int argv_idx = positionalArgsIndices_[positionalIdx_];
-        remaining.push_back(argv_[argv_idx]);
-        positionalIdx_++;
+    while (data.positionalIdx < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
+        remaining.emplace_back(data.argv[argvIdx]);
+        data.positionalIdx++;
     }
     if (required && remaining.empty()) {
         printErrorAndExit("Missing required positional argument(s) '" + name + "'.");
@@ -443,7 +438,7 @@ inline std::string Parser::doubleToStr(double value) {
     return result;
 }
 
-// Parses option name (e.g., "o,out") and return formatted string (e.g., "-o, --out")
+// Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
 inline std::string Parser::parseOptName(const std::string &optName) {
     if (optName.empty()) {
         std::cerr << "Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
@@ -470,7 +465,7 @@ inline std::string Parser::parseOptName(const std::string &optName) {
 // Parses option name (o,out) and saves the results in shortOpt (-o) and longOpt (--out)
 inline void Parser::parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt) {
     if (optName.empty()) {
-        std::cerr << "Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
+        std::cerr << "[ArgLite] Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
         std::exit(EXIT_FAILURE);
     }
 
@@ -490,12 +485,14 @@ inline void Parser::parseOptName(const std::string &optName, std::string &shortO
 }
 
 // Finds the option in the options_ map
-inline std::pair<bool, Parser::OptionInfo> Parser::findOption(const std::string &shortOpt, const std::string &longOpt) {
-    auto longIt  = longOpt.empty() ? options_.end() : options_.find(longOpt);
-    auto shortIt = shortOpt.empty() ? options_.end() : options_.find(shortOpt);
+inline std::pair<bool, Parser::OptionInfo> Parser::findOption(
+    const std::string &shortOpt, const std::string &longOpt, InternalData &data) {
 
-    bool longFound  = longIt != options_.end();
-    bool shortFound = shortIt != options_.end();
+    auto longIt  = longOpt.empty() ? data.options.end() : data.options.find(longOpt);
+    auto shortIt = shortOpt.empty() ? data.options.end() : data.options.find(shortOpt);
+
+    bool longFound  = longIt != data.options.end();
+    bool shortFound = shortIt != data.options.end();
 
     if (!longFound && !shortFound) {
         return {false, {0, ""}};
@@ -514,17 +511,20 @@ inline std::pair<bool, Parser::OptionInfo> Parser::findOption(const std::string 
 }
 
 // Uses the option name to get a value string from the options_ map.
-inline std::pair<bool, std::string> Parser::getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr) {
+inline std::pair<bool, std::string> Parser::getValueStr(
+    const std::string &optName, const std::string &description,
+    const std::string &defaultValueStr, InternalData &data) {
+
     std::string shortOpt;
     std::string longOpt;
     parseOptName(optName, shortOpt, longOpt);
-    optionHelpEntries_.push_back({shortOpt, longOpt, description, defaultValueStr});
+    data.optionHelpEntries.push_back({shortOpt, longOpt, description, defaultValueStr});
 
-    auto [found, optInfo] = findOption(shortOpt, longOpt);
+    auto [found, optInfo] = findOption(shortOpt, longOpt, data);
 
     if (found) {
-        if (!shortOpt.empty()) options_.erase(shortOpt);
-        if (!longOpt.empty()) options_.erase(longOpt);
+        if (!shortOpt.empty()) data.options.erase(shortOpt);
+        if (!longOpt.empty()) data.options.erase(longOpt);
 
         if (optInfo.argvIndex < 0) { // It's a flag but a value was expected
             printErrorAndExit("Option '" + (!longOpt.empty() ? longOpt : shortOpt) + "' does not take a value.");
@@ -532,13 +532,13 @@ inline std::pair<bool, std::string> Parser::getValueStr(const std::string &optNa
         if (optInfo.argvIndex == 0) { // From --opt=val
             return {true, optInfo.valueFromEquals};
         }
-        return {true, argv_[optInfo.argvIndex]};
+        return {true, data.argv[optInfo.argvIndex]};
     }
 
     return {false, defaultValueStr};
 }
 
-inline void Parser::printHelp() {
+inline void Parser::printHelp(InternalData &data) {
     if (!programDescription_.empty()) {
         std::cout << programDescription_ << '\n'
                   << '\n';
@@ -546,29 +546,29 @@ inline void Parser::printHelp() {
 
     // Usage line
     std::cout << "Usage: " << programName_;
-    if (!optionHelpEntries_.empty()) std::cout << " [OPTIONS]";
-    for (const auto &p : positionalHelpEntries_) {
+    if (!data.optionHelpEntries.empty()) std::cout << " [OPTIONS]";
+    for (const auto &p : data.positionalHelpEntries) {
         std::cout << " " << (p.required ? "" : "[") << p.name << (p.required ? "" : "]");
     }
     std::cout << '\n';
 
     // Positional Arguments
-    if (!positionalHelpEntries_.empty()) {
+    if (!data.positionalHelpEntries.empty()) {
         std::cout << "\nPositional Arguments:\n";
         size_t maxNameWidth = 0;
-        for (const auto &p : positionalHelpEntries_) {
+        for (const auto &p : data.positionalHelpEntries) {
             maxNameWidth = std::max(maxNameWidth, p.name.length());
         }
-        for (const auto &p : positionalHelpEntries_) {
+        for (const auto &p : data.positionalHelpEntries) {
             std::cout << "  " << std::left << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name << p.description << '\n';
         }
     }
 
     // Options
-    if (!optionHelpEntries_.empty()) {
+    if (!data.optionHelpEntries.empty()) {
         std::cout << "\nOptions:" << '\n';
 
-        for (const auto &o : optionHelpEntries_) {
+        for (const auto &o : data.optionHelpEntries) {
             std::string optStr("  ");
             if (!o.shortOpt.empty()) {
                 optStr += o.shortOpt;
