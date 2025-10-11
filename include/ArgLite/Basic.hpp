@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace ArgLite {
@@ -173,19 +174,21 @@ private:
     static inline bool                     getBool_(const std::string &optName, const std::string &description, bool defaultValue = false, InternalData &data = data_);
     static inline std::string              getPositional_(const std::string &name, const std::string &description, bool required = true, InternalData &data = data_);
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, InternalData &data = data_);
-    // Other functions
-    static inline void                         preprocess_(int argc, char **argv, InternalData &data = data_);
-    static inline void                         appendOptValErrorMsg(InternalData &data, const std::string &optName, const std::string &typeName, const std::string &valueStr);
-    static inline std::string                  doubleToStr(double value);
-    static inline std::string                  parseOptName(const std::string &optName);
-    static inline void                         parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt);
-    static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
-    static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
-    static inline void                         fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options);
-    static inline void                         tryToPrintHelp_(InternalData &data = data_);
-    static inline bool                         tryToPrintInvalidOpts_(InternalData &data = data_);
-    static inline void                         printHelp(InternalData &data = data_);
-    static inline bool                         finalize_(const std::vector<std::string> &errorMessages, bool notExit = false);
+    // Helper functions for get functions
+    static inline void        appendOptValErrorMsg(InternalData &data, const std::string &optName, const std::string &typeName, const std::string &valueStr);
+    static inline std::string doubleToStr(double value);
+    static inline void        fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options);
+    // Helper functions for get functions with long return types
+    static inline std::string                         parseOptName(const std::string &optName);
+    static inline std::pair<std::string, std::string> parseOptNameAsPair(const std::string &optName);
+    static inline std::pair<bool, OptionInfo>         findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
+    static inline std::pair<bool, std::string>        getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
+    // Other helper functions
+    static inline void preprocess_(int argc, char **argv, InternalData &data = data_);
+    static inline void tryToPrintHelp_(InternalData &data = data_);
+    static inline bool tryToPrintInvalidOpts_(InternalData &data = data_);
+    static inline void printHelp(InternalData &data = data_);
+    static inline bool finalize_(const std::vector<std::string> &errorMessages, bool notExit = false);
 };
 
 // ========================================================================
@@ -313,9 +316,7 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
 inline bool Parser::hasFlag_(
     const std::string &optName, const std::string &description, InternalData &data) {
 
-    std::string shortOpt;
-    std::string longOpt;
-    parseOptName(optName, shortOpt, longOpt);
+    auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
     data.optionHelpEntries.push_back({shortOpt, longOpt, description, ""});
 
     auto [found, info] = findOption(shortOpt, longOpt, data);
@@ -461,43 +462,44 @@ inline std::string Parser::parseOptName(const std::string &optName) {
         std::exit(EXIT_FAILURE);
     }
 
-    std::string result;
+    auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
 
-    if (optName.length() == 1) { // Short option only
-        result.append("-").append(optName);
-        return result;
+    if (longOpt.empty()) { // Short option only
+        return shortOpt;
     }
 
-    if (optName.length() > 1 && optName[1] != ',') { // Long option only
-        result.append("--").append(optName);
-        return result;
+    if (shortOpt.empty()) { // Long option only
+        return longOpt;
     }
 
     // Short and long options combined
-    result.append("-").append(optName.substr(0, 1)).append(", --").append(optName.substr(2));
-    return result;
+    return shortOpt + ", " + longOpt;
 }
 
 // Parses option name (o,out) and saves the results in shortOpt (-o) and longOpt (--out)
-inline void Parser::parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt) {
+inline std::pair<std::string, std::string> Parser::parseOptNameAsPair(const std::string &optName) {
     if (optName.empty()) {
         std::cerr << "[ArgLite] Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
         std::exit(EXIT_FAILURE);
     }
 
-    if (optName.length() == 1) { // Short option only
+    std::string shortOpt;
+    std::string longOpt;
+    // Short option only
+    if (optName.length() == 1) {
         shortOpt = "-" + optName;
-        return;
     }
-
-    if (optName.length() > 1 && optName[1] != ',') { // Long option only
+    // Long option only
+    else if (optName.length() > 1 && optName[1] != ',') {
         longOpt = "--" + optName;
-        return;
+    }
+    // Short and long options combined
+    else {
+        shortOpt = "-" + optName.substr(0, 1);
+        longOpt  = "--" + optName.substr(2);
     }
 
-    // Short and long options combined
-    shortOpt = "-" + optName.substr(0, 1);
-    longOpt  = "--" + optName.substr(2);
+    return {shortOpt, longOpt};
 }
 
 // Finds the option in the options_ map
@@ -531,9 +533,7 @@ inline std::pair<bool, std::string> Parser::getValueStr(
     const std::string &optName, const std::string &description,
     const std::string &defaultValueStr, InternalData &data) {
 
-    std::string shortOpt;
-    std::string longOpt;
-    parseOptName(optName, shortOpt, longOpt);
+    auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
     data.optionHelpEntries.push_back({shortOpt, longOpt, description, defaultValueStr});
 
     auto [found, optInfo] = findOption(shortOpt, longOpt, data);
