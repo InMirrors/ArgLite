@@ -179,6 +179,7 @@ private:
     static inline void                         parseOptName(const std::string &optName, std::string &shortOpt, std::string &longOpt);
     static inline std::pair<bool, OptionInfo>  findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
     static inline std::pair<bool, std::string> getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
+    static inline void                         fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options);
     static inline void                         tryToPrintHelp_(InternalData &data = data_);
     static inline bool                         tryToPrintInvalidOpts_(InternalData &data = data_);
     static inline void                         printHelp(InternalData &data = data_);
@@ -321,8 +322,6 @@ inline bool Parser::hasFlag_(
         // A flag was passed with a value, e.g., -f 123. The value is likely a positional arg.
         if (info.argvIndex > 0) {
             data.positionalArgsIndices.push_back(info.argvIndex);
-            // Keep positional args sorted by their original index to maintain order
-            std::sort(data.positionalArgsIndices.begin(), data.positionalArgsIndices.end());
         }
         if (!shortOpt.empty()) data.options.erase(shortOpt);
         if (!longOpt.empty()) data.options.erase(longOpt);
@@ -396,6 +395,8 @@ inline std::string Parser::getPositional_(
     const std::string &name, const std::string &description, bool isRequired,
     InternalData &data) {
 
+    fixPositionalArgsArray(data.positionalArgsIndices, data.options);
+
     data.positionalHelpEntries.push_back({name, description, isRequired});
     if (data.positionalIdx < data.positionalArgsIndices.size()) {
         int argvIdx = data.positionalArgsIndices[data.positionalIdx];
@@ -411,6 +412,8 @@ inline std::string Parser::getPositional_(
 inline std::vector<std::string> Parser::getRemainingPositionals_(
     const std::string &name, const std::string &description, bool required,
     InternalData &data) {
+
+    fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
     data.positionalHelpEntries.push_back({name, description, required});
     std::vector<std::string> remaining;
@@ -548,6 +551,19 @@ inline std::pair<bool, std::string> Parser::getValueStr(
     }
 
     return {false, defaultValueStr};
+}
+
+inline void Parser::fixPositionalArgsArray(
+    std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options) {
+    for (auto &it : options) {
+        if (it.second.argvIndex > 0) { // Unrecognized option that consumed a positional arg
+            positionalArgsIndices.push_back(it.second.argvIndex);
+            it.second.argvIndex = 0; // Remove the option from the options_ map
+        }
+    }
+
+    // Keep positional args sorted by their original index to maintain order
+    std::sort(positionalArgsIndices.begin(), positionalArgsIndices.end());
 }
 
 inline void Parser::tryToPrintHelp_(InternalData &data) {
