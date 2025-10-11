@@ -116,9 +116,11 @@ public:
 
     /**
      * @brief Finalizes the parser. This function should be called at the end of parsing.
-     * @details This function will print any error messages and exit the program if there are any.
+     * @details This function will print error messages and exit the program if there are any and notExit is true.
+     * @param notExit If true, the program will not exit after printing any error messages. Default is false.
+     * @return Returns true if there are no error messages, false if there are any and notExit is true.
      */
-    static inline void finalize();
+    static inline bool finalize(bool notExit = false);
 
 private:
     // Stores option information for subsequent get/hasFlag calls.
@@ -183,7 +185,7 @@ private:
     static inline void                         tryToPrintHelp_(InternalData &data = data_);
     static inline bool                         tryToPrintInvalidOpts_(InternalData &data = data_);
     static inline void                         printHelp(InternalData &data = data_);
-    static inline void                         finalize_(const std::vector<std::string> &errorMessages);
+    static inline bool                         finalize_(const std::vector<std::string> &errorMessages, bool notExit = false);
 };
 
 // ========================================================================
@@ -231,7 +233,7 @@ inline void Parser::tryToPrintHelp() { tryToPrintHelp_(); }
 
 inline bool Parser::tryToPrintInvalidOpts() { return tryToPrintInvalidOpts_(); }
 
-inline void Parser::finalize() { finalize_(data_.errorMessages); }
+inline bool Parser::finalize(bool notExit) { return finalize_(data_.errorMessages, notExit); }
 
 // === Private Helper Implementations ===
 
@@ -643,13 +645,15 @@ inline void Parser::printHelp(InternalData &data) {
         }
     }
 }
-inline void Parser::finalize_(const std::vector<std::string> &errorMessages) {
-    if (errorMessages.empty()) { return; }
+inline bool Parser::finalize_(const std::vector<std::string> &errorMessages, bool notExit) {
+    if (errorMessages.empty()) { return false; }
 
     std::cerr << "Errors occurred while parsing command-line arguments. The following is a list of error messages:\n";
     for (const auto &msg : errorMessages) {
         std::cerr << "Error: " << msg << '\n';
     }
+
+    if (notExit) { return true; }
     std::exit(EXIT_FAILURE);
 }
 
