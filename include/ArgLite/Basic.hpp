@@ -112,17 +112,27 @@ public:
      * @brief Checks and reports all unknown options that were not processed by get/hasFlag.
      * @details If unknown options exist, prints an error message and exits the program abnormally.
      *          This function should be called after all argument retrieval function calls.
-     * @return Returns true if there are any unknown options, false otherwise.
+     * @param notExit If true, the program will not exit after printing any invalid options. Default is false.
+     * @return Returns true if there are any unknown options and notExit is false, false otherwise.
      */
-    static inline bool tryToPrintInvalidOpts();
+    static inline bool tryToPrintInvalidOpts(bool notExit = false);
 
     /**
      * @brief Finalizes the parser. This function should be called at the end of parsing.
      * @details This function will print error messages and exit the program if there are any and notExit is true.
      * @param notExit If true, the program will not exit after printing any error messages. Default is false.
-     * @return Returns true if there are no error messages, false if there are any and notExit is true.
+     * @return Returns true if there are any error messages and notExit is false, false otherwise.
      */
     static inline bool finalize(bool notExit = false);
+
+    /**
+     * @brief Runs tryToPrintHelp, tryToPrintInvalidOpts, and finalize in sequence.
+     * @param notExit If true, the program will not exit after printing any invalid options
+                      or any error messages. Default is false.
+     * @return Returns true if there are any invalid options or any error messages and notExit is false,
+               false otherwise.
+     */
+    static inline bool runAllPostprocess(bool notExit = false);
 
 private:
     // Stores option information for subsequent get/hasFlag calls.
@@ -187,9 +197,10 @@ private:
     // Other helper functions
     static inline void preprocess_(int argc, char **argv, InternalData &data = data_);
     static inline void tryToPrintHelp_(InternalData &data = data_);
-    static inline bool tryToPrintInvalidOpts_(InternalData &data = data_);
-    static inline void printHelp(InternalData &data = data_);
+    static inline bool tryToPrintInvalidOpts_(InternalData &data = data_, bool notExit = false);
+    static inline void printHelp(const InternalData &data = data_);
     static inline bool finalize_(const std::vector<std::string> &errorMessages, bool notExit = false);
+    static inline bool runAllPostprocess_(InternalData &data, bool notExit = false);
 };
 
 // ========================================================================
@@ -235,9 +246,11 @@ inline void Parser::changeDescriptionIndent(size_t indent) { descriptionIndent_ 
 
 inline void Parser::tryToPrintHelp() { tryToPrintHelp_(); }
 
-inline bool Parser::tryToPrintInvalidOpts() { return tryToPrintInvalidOpts_(); }
+inline bool Parser::tryToPrintInvalidOpts(bool notExit) { return tryToPrintInvalidOpts_(data_, notExit); }
 
 inline bool Parser::finalize(bool notExit) { return finalize_(data_.errorMessages, notExit); }
+
+inline bool Parser::runAllPostprocess(bool notExit) { return runAllPostprocess_(data_, notExit); }
 
 // === Private Helper Implementations ===
 
@@ -575,7 +588,7 @@ inline void Parser::tryToPrintHelp_(InternalData &data) {
     }
 }
 
-inline bool Parser::tryToPrintInvalidOpts_(InternalData &data) {
+inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
     // Remove help options as they are handled by tryToPrintHelp
     data.options.erase("-h");
     data.options.erase("--help");
@@ -584,13 +597,14 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data) {
         for (const auto &pair : data.options) {
             std::cerr << "Error: Unrecognized option '" << pair.first << "'" << '\n';
         }
+        if (!notExit) { std::exit(EXIT_FAILURE); }
         return true;
     }
 
     return false;
 }
 
-inline void Parser::printHelp(InternalData &data) {
+inline void Parser::printHelp(const InternalData &data) {
     if (!programDescription_.empty()) {
         std::cout << programDescription_ << '\n'
                   << '\n';
@@ -644,6 +658,7 @@ inline void Parser::printHelp(InternalData &data) {
         }
     }
 }
+
 inline bool Parser::finalize_(const std::vector<std::string> &errorMessages, bool notExit) {
     if (errorMessages.empty()) { return false; }
 
@@ -654,6 +669,17 @@ inline bool Parser::finalize_(const std::vector<std::string> &errorMessages, boo
 
     if (notExit) { return true; }
     std::exit(EXIT_FAILURE);
+}
+
+inline bool Parser::runAllPostprocess_(InternalData &data, bool notExit) {
+    tryToPrintHelp_(data);
+    auto hasInvalidOpts = tryToPrintInvalidOpts_(data, true);
+    auto hasError       = finalize_(data.errorMessages, true);
+
+    if (!notExit && (hasInvalidOpts || hasError)) {
+        std::exit(EXIT_FAILURE);
+    }
+    return hasInvalidOpts || hasError;
 }
 
 } // namespace ArgLite
