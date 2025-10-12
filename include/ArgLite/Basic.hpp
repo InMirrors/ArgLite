@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -186,9 +187,10 @@ private:
     static inline std::string              getPositional_(const std::string &name, const std::string &description, bool required = true, InternalData &data = data_);
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, InternalData &data = data_);
     // Helper functions for get functions
-    static inline void        appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
-    static inline std::string doubleToStr(double value);
-    static inline void        fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options);
+    static inline void appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
+    static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options);
+    template <typename T>
+    static inline std::string toString(const T &val);
     // Helper functions for get functions with long return types
     static inline std::string                         parseOptName(std::string_view optName);
     static inline std::pair<std::string, std::string> parseOptNameAsPair(std::string_view optName);
@@ -359,7 +361,7 @@ inline long long Parser::getInt_(
     std::string_view optName, const std::string &description, long long defaultValue,
     InternalData &data) {
 
-    auto [found, valueStr] = getValueStr(optName, description, std::to_string(defaultValue), data);
+    auto [found, valueStr] = getValueStr(optName, description, toString(defaultValue), data);
     if (!found) {
         return defaultValue;
     }
@@ -375,7 +377,7 @@ inline double Parser::getDouble_(
     std::string_view optName, const std::string &description, double defaultValue,
     InternalData &data) {
 
-    auto [found, valueStr] = getValueStr(optName, description, doubleToStr(defaultValue), data);
+    auto [found, valueStr] = getValueStr(optName, description, toString(defaultValue), data);
     if (!found) {
         return defaultValue;
     }
@@ -460,11 +462,15 @@ inline void Parser::appendOptValErrorMsg(
     data.errorMessages.push_back(std::move(errorStr));
 }
 
-inline std::string Parser::doubleToStr(double value) {
-    auto result = std::to_string(value);
-    if (auto pos = result.find('.'); pos != std::string::npos && result.back() == '0') {
-        result.erase(pos + 1);
-        if (result.back() == '.') { result += '0'; } // 1. to 1.0
+template <typename T>
+inline std::string Parser::toString(const T &val) {
+    std::stringstream ss;
+    ss << val;
+    std::string result(ss.str());
+    if constexpr (std::is_floating_point_v<T>) {
+        if (result.find('.') == std::string::npos) {
+            result.append(".0");
+        }
     }
     return result;
 }
