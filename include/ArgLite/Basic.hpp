@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -33,7 +34,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
-    static inline bool hasFlag(const std::string &optName, const std::string &description);
+    static inline bool hasFlag(std::string_view optName, const std::string &description);
 
     /**
      * @brief Gets the value of a string option.
@@ -42,7 +43,7 @@ public:
      * @param defaultValue The default value to return if the option is not provided on the command line.
      * @return The parsed string value or the default value.
      */
-    static inline std::string getString(const std::string &optName, const std::string &description, const std::string &defaultValue = "");
+    static inline std::string getString(std::string_view optName, const std::string &description, const std::string &defaultValue = "");
 
     /**
      * @brief Gets the value of an integer option.
@@ -51,7 +52,7 @@ public:
      * @param defaultValue The default value.
      * @return The parsed integer value or the default value. If the provided value cannot be converted to an integer, the program will report an error and exit.
      */
-    static inline long long getInt(const std::string &optName, const std::string &description, long long defaultValue = 0);
+    static inline long long getInt(std::string_view optName, const std::string &description, long long defaultValue = 0);
 
     /**
      * @brief Gets the value of a floating-point option.
@@ -60,7 +61,7 @@ public:
      * @param defaultValue The default value.
      * @return The parsed floating-point value or the default value. If the provided value cannot be converted to a floating-point number, the program will report an error and exit.
      */
-    static inline double getDouble(const std::string &optName, const std::string &description, double defaultValue = 0.0);
+    static inline double getDouble(std::string_view optName, const std::string &description, double defaultValue = 0.0);
 
     /**
      * @brief Gets the value of a boolean option.
@@ -72,7 +73,7 @@ public:
      * @param defaultValue The default value.
      * @return The parsed boolean value or the default value.
      */
-    static inline bool getBool(const std::string &optName, const std::string &description, bool defaultValue = false);
+    static inline bool getBool(std::string_view optName, const std::string &description, bool defaultValue = false);
 
     /**
      * @brief Gets a positional argument.
@@ -167,22 +168,22 @@ private:
 
     // Internal helper functions
     // Get functions, internal data can be changed
-    static inline bool                     hasFlag_(const std::string &optName, const std::string &description, InternalData &data = data_);
-    static inline std::string              getString_(const std::string &optName, const std::string &description, const std::string &defaultValue = "", InternalData &data = data_);
-    static inline long long                getInt_(const std::string &optName, const std::string &description, long long defaultValue = 0, InternalData &data = data_);
-    static inline double                   getDouble_(const std::string &optName, const std::string &description, double defaultValue = 0.0, InternalData &data = data_);
-    static inline bool                     getBool_(const std::string &optName, const std::string &description, bool defaultValue = false, InternalData &data = data_);
+    static inline bool                     hasFlag_(std::string_view optName, const std::string &description, InternalData &data = data_);
+    static inline std::string              getString_(std::string_view optName, const std::string &description, const std::string &defaultValue = "", InternalData &data = data_);
+    static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue = 0, InternalData &data = data_);
+    static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue = 0.0, InternalData &data = data_);
+    static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue = false, InternalData &data = data_);
     static inline std::string              getPositional_(const std::string &name, const std::string &description, bool required = true, InternalData &data = data_);
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, InternalData &data = data_);
     // Helper functions for get functions
-    static inline void        appendOptValErrorMsg(InternalData &data, const std::string &optName, const std::string &typeName, const std::string &valueStr);
+    static inline void        appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
     static inline std::string doubleToStr(double value);
     static inline void        fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options);
     // Helper functions for get functions with long return types
-    static inline std::string                         parseOptName(const std::string &optName);
-    static inline std::pair<std::string, std::string> parseOptNameAsPair(const std::string &optName);
+    static inline std::string                         parseOptName(std::string_view optName);
+    static inline std::pair<std::string, std::string> parseOptNameAsPair(std::string_view optName);
     static inline std::pair<bool, OptionInfo>         findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
-    static inline std::pair<bool, std::string>        getValueStr(const std::string &optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
+    static inline std::pair<bool, std::string>        getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
     // Other helper functions
     static inline void preprocess_(int argc, char **argv, InternalData &data = data_);
     static inline void tryToPrintHelp_(InternalData &data = data_);
@@ -202,23 +203,23 @@ inline void Parser::preprocess(int argc, char **argv) {
     preprocess_(argc, argv);
 }
 
-inline bool Parser::hasFlag(const std::string &optName, const std::string &description) {
+inline bool Parser::hasFlag(std::string_view optName, const std::string &description) {
     return hasFlag_(optName, description);
 }
 
-inline std::string Parser::getString(const std::string &optName, const std::string &description, const std::string &defaultValue) {
+inline std::string Parser::getString(std::string_view optName, const std::string &description, const std::string &defaultValue) {
     return getString_(optName, description, defaultValue);
 }
 
-inline long long Parser::getInt(const std::string &optName, const std::string &description, long long defaultValue) {
+inline long long Parser::getInt(std::string_view optName, const std::string &description, long long defaultValue) {
     return Parser::getInt_(optName, description, defaultValue);
 }
 
-inline double Parser::getDouble(const std::string &optName, const std::string &description, double defaultValue) {
+inline double Parser::getDouble(std::string_view optName, const std::string &description, double defaultValue) {
     return getDouble_(optName, description, defaultValue);
 }
 
-inline bool Parser::getBool(const std::string &optName, const std::string &description, bool defaultValue) {
+inline bool Parser::getBool(std::string_view optName, const std::string &description, bool defaultValue) {
     return getBool_(optName, description, defaultValue);
 }
 
@@ -314,7 +315,7 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
 }
 
 inline bool Parser::hasFlag_(
-    const std::string &optName, const std::string &description, InternalData &data) {
+    std::string_view optName, const std::string &description, InternalData &data) {
 
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
     data.optionHelpEntries.push_back({shortOpt, longOpt, description, ""});
@@ -334,7 +335,7 @@ inline bool Parser::hasFlag_(
 }
 
 inline std::string Parser::getString_(
-    const std::string &optName, const std::string &description, const std::string &defaultValue,
+    std::string_view optName, const std::string &description, const std::string &defaultValue,
     InternalData &data) {
 
     auto [found, value] = getValueStr(optName, description, defaultValue, data);
@@ -342,7 +343,7 @@ inline std::string Parser::getString_(
 }
 
 inline long long Parser::getInt_(
-    const std::string &optName, const std::string &description, long long defaultValue,
+    std::string_view optName, const std::string &description, long long defaultValue,
     InternalData &data) {
 
     auto [found, valueStr] = getValueStr(optName, description, std::to_string(defaultValue), data);
@@ -358,7 +359,7 @@ inline long long Parser::getInt_(
 }
 
 inline double Parser::getDouble_(
-    const std::string &optName, const std::string &description, double defaultValue,
+    std::string_view optName, const std::string &description, double defaultValue,
     InternalData &data) {
 
     auto [found, valueStr] = getValueStr(optName, description, doubleToStr(defaultValue), data);
@@ -374,7 +375,7 @@ inline double Parser::getDouble_(
 }
 
 inline bool Parser::getBool_(
-    const std::string &optName, const std::string &description, bool defaultValue,
+    std::string_view optName, const std::string &description, bool defaultValue,
     InternalData &data) {
 
     auto [found, valueStr] = getValueStr(optName, description, defaultValue ? "true" : "false", data);
@@ -432,8 +433,8 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
 }
 
 inline void Parser::appendOptValErrorMsg(
-    InternalData      &data,
-    const std::string &optName, const std::string &typeName, const std::string &valueStr) {
+    InternalData    &data,
+    std::string_view optName, const std::string &typeName, const std::string &valueStr) {
 
     std::string errorStr;
     errorStr += "Invalid value for option '";
@@ -456,7 +457,7 @@ inline std::string Parser::doubleToStr(double value) {
 }
 
 // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
-inline std::string Parser::parseOptName(const std::string &optName) {
+inline std::string Parser::parseOptName(std::string_view optName) {
     if (optName.empty()) {
         std::cerr << "[ArgLite] Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
         std::exit(EXIT_FAILURE);
@@ -464,20 +465,18 @@ inline std::string Parser::parseOptName(const std::string &optName) {
 
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
 
-    if (longOpt.empty()) { // Short option only
-        return shortOpt;
-    }
+    // Short option only
+    if (longOpt.empty()) { return shortOpt; }
 
-    if (shortOpt.empty()) { // Long option only
-        return longOpt;
-    }
+    // Long option only
+    if (shortOpt.empty()) { return longOpt; }
 
     // Short and long options combined
     return shortOpt + ", " + longOpt;
 }
 
 // Parses option name (o,out) and saves the results in shortOpt (-o) and longOpt (--out)
-inline std::pair<std::string, std::string> Parser::parseOptNameAsPair(const std::string &optName) {
+inline std::pair<std::string, std::string> Parser::parseOptNameAsPair(std::string_view optName) {
     if (optName.empty()) {
         std::cerr << "[ArgLite] Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
         std::exit(EXIT_FAILURE);
@@ -487,16 +486,16 @@ inline std::pair<std::string, std::string> Parser::parseOptNameAsPair(const std:
     std::string longOpt;
     // Short option only
     if (optName.length() == 1) {
-        shortOpt = "-" + optName;
+        shortOpt.append("-").append(optName);
     }
     // Long option only
     else if (optName.length() > 1 && optName[1] != ',') {
-        longOpt = "--" + optName;
+        longOpt.append("--").append(optName);
     }
     // Short and long options combined
     else {
-        shortOpt = "-" + optName.substr(0, 1);
-        longOpt  = "--" + optName.substr(2);
+        shortOpt.append("-").append(optName.substr(0, 1));
+        longOpt.append("--").append(optName.substr(2));
     }
 
     return {shortOpt, longOpt};
@@ -530,7 +529,7 @@ inline std::pair<bool, Parser::OptionInfo> Parser::findOption(
 
 // Uses the option name to get a value string from the options_ map.
 inline std::pair<bool, std::string> Parser::getValueStr(
-    const std::string &optName, const std::string &description,
+    std::string_view optName, const std::string &description,
     const std::string &defaultValueStr, InternalData &data) {
 
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
