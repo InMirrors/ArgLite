@@ -205,6 +205,10 @@ private:
     static inline void tryToPrintHelp_(InternalData &data = data_);
     static inline bool tryToPrintInvalidOpts_(InternalData &data = data_, bool notExit = false);
     static inline void printHelp(const InternalData &data = data_);
+    static inline void printHelpDescription(std::string_view description);
+    static inline void printHelpUsage(const InternalData &data, std::string_view cmdName);
+    static inline void printHelpPositional(const InternalData &data);
+    static inline void printHelpOptions(const InternalData &data);
     static inline bool finalize_(const std::vector<std::string> &errorMessages, bool notExit = false);
     static inline bool runAllPostprocess_(InternalData &data, bool notExit = false);
 
@@ -616,20 +620,29 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
 }
 
 inline void Parser::printHelp(const InternalData &data) {
-    if (!programDescription_.empty()) {
-        std::cout << programDescription_ << '\n'
+    printHelpDescription(programDescription_);
+    printHelpUsage(data, programName_);
+    printHelpPositional(data);
+    printHelpOptions(data);
+}
+
+inline void Parser::printHelpDescription(std::string_view description) {
+    if (!description.empty()) {
+        std::cout << description << '\n'
                   << '\n';
     }
+}
 
-    // Usage line
-    std::cout << "Usage: " << programName_;
+inline void Parser::printHelpUsage(const InternalData &data, std::string_view cmdName) {
+    std::cout << "Usage: " << cmdName;
     if (!data.optionHelpEntries.empty()) std::cout << " [OPTIONS]";
     for (const auto &p : data.positionalHelpEntries) {
         std::cout << " " << (p.required ? "" : "[") << p.name << (p.required ? "" : "]");
     }
     std::cout << '\n';
+}
 
-    // Positional Arguments
+inline void Parser::printHelpPositional(const InternalData &data) {
     if (!data.positionalHelpEntries.empty()) {
         std::cout << "\nPositional Arguments:\n";
         size_t maxNameWidth = 0;
@@ -640,8 +653,9 @@ inline void Parser::printHelp(const InternalData &data) {
             std::cout << "  " << std::left << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name << p.description << '\n';
         }
     }
+}
 
-    // Options
+inline void Parser::printHelpOptions(const InternalData &data) {
     if (!data.optionHelpEntries.empty()) {
         std::cout << "\nOptions:" << '\n';
 
