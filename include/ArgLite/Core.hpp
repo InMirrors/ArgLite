@@ -12,6 +12,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef ARGLITE_ENABLE_FORMATTER
+#include "Formatter.hpp"
+#endif
+
 namespace ArgLite {
 
 class Parser {
@@ -203,6 +207,12 @@ private:
     static inline void printHelp(const InternalData &data = data_);
     static inline bool finalize_(const std::vector<std::string> &errorMessages, bool notExit = false);
     static inline bool runAllPostprocess_(InternalData &data, bool notExit = false);
+
+#ifdef ARGLITE_ENABLE_FORMATTER
+    static inline const std::string ERROR_STR = Formatter::red("Error: ");
+#else
+    static inline const std::string ERROR_STR = "Error: ";
+#endif
 };
 
 // ========================================================================
@@ -477,11 +487,6 @@ inline std::string Parser::toString(const T &val) {
 
 // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
 inline std::string Parser::parseOptName(std::string_view optName) {
-    if (optName.empty()) {
-        std::cerr << "[ArgLite] Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
-        std::exit(EXIT_FAILURE);
-    }
-
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
 
     // Short option only
@@ -601,7 +606,7 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
 
     if (!data.options.empty()) {
         for (const auto &pair : data.options) {
-            std::cerr << "Error: Unrecognized option '" << pair.first << "'" << '\n';
+            std::cerr << ERROR_STR << "Unrecognized option '" << pair.first << "'" << '\n';
         }
         if (!notExit) { std::exit(EXIT_FAILURE); }
         return true;
@@ -670,7 +675,7 @@ inline bool Parser::finalize_(const std::vector<std::string> &errorMessages, boo
 
     std::cerr << "Errors occurred while parsing command-line arguments. The following is a list of error messages:\n";
     for (const auto &msg : errorMessages) {
-        std::cerr << "Error: " << msg << '\n';
+        std::cerr << ERROR_STR << msg << '\n';
     }
 
     if (notExit) { return true; }

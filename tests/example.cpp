@@ -1,4 +1,6 @@
-#include "ArgLite/Base.hpp"
+#define ARGLITE_ENABLE_FORMATTER
+
+#include "ArgLite/Core.hpp"
 #include <ios>
 #include <iostream>
 #include <string>
