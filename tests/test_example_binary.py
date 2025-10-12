@@ -159,7 +159,7 @@ def main():
         "Invalid option",
         ["--invalid-option", "output.txt", "input.txt"],
         expected_error_keywords=["Invalid", "option", "--invalid-option"],
-        expected_return_code=0
+        expected_return_code=1
     )
 
     # Invalid option with a value
@@ -167,7 +167,7 @@ def main():
         "Invalid option with a value",
         ["--invalid-option", "value", "output.txt", "input.txt"],
         expected_error_keywords=["Invalid", "option", "--invalid-option"],
-        expected_return_code=0
+        expected_return_code=1
     )
 
     # Option argument type mismatch for --count (e.g., passing non-integer)
