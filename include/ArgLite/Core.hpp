@@ -1,3 +1,4 @@
+#define ARGLITE_ENABLE_FORMATTER
 #pragma once
 
 #include <algorithm>
@@ -634,7 +635,12 @@ inline void Parser::printHelpDescription(std::string_view description) {
 }
 
 inline void Parser::printHelpUsage(const InternalData &data, std::string_view cmdName) {
-    std::cout << "Usage: " << cmdName;
+    std::cout << "Usage: ";
+#ifdef ARGLITE_ENABLE_FORMATTER
+    std::cout << Formatter::bold(cmdName);
+#else
+    std::cout << cmdName;
+#endif
     if (!data.optionHelpEntries.empty()) std::cout << " [OPTIONS]";
     for (const auto &p : data.positionalHelpEntries) {
         std::cout << " " << (p.required ? "" : "[") << p.name << (p.required ? "" : "]");
@@ -644,7 +650,12 @@ inline void Parser::printHelpUsage(const InternalData &data, std::string_view cm
 
 inline void Parser::printHelpPositional(const InternalData &data) {
     if (!data.positionalHelpEntries.empty()) {
+#ifdef ARGLITE_ENABLE_FORMATTER
+        std::cout << '\n'
+                  << Formatter::boldUnderline("Positional Arguments:") << '\n';
+#else
         std::cout << "\nPositional Arguments:\n";
+#endif
         size_t maxNameWidth = 0;
         for (const auto &p : data.positionalHelpEntries) {
             maxNameWidth = std::max(maxNameWidth, p.name.length());
@@ -657,7 +668,12 @@ inline void Parser::printHelpPositional(const InternalData &data) {
 
 inline void Parser::printHelpOptions(const InternalData &data) {
     if (!data.optionHelpEntries.empty()) {
-        std::cout << "\nOptions:" << '\n';
+#ifdef ARGLITE_ENABLE_FORMATTER
+        std::cout << '\n'
+                  << Formatter::boldUnderline("Options:") << '\n';
+#else
+        std::cout << "\nOptions:\n";
+#endif
 
         for (const auto &o : data.optionHelpEntries) {
             std::string optStr("  ");
