@@ -383,7 +383,7 @@ inline long long Parser::getInt_(
     try {
         return std::stoll(valueStr);
     } catch (const std::exception &) {
-        appendOptValErrorMsg(data, parseOptName(optName), "integer", valueStr);
+        appendOptValErrorMsg(data, optName, "integer", valueStr);
     }
     return 0; // Should not reach here
 }
@@ -399,7 +399,7 @@ inline double Parser::getDouble_(
     try {
         return std::stod(valueStr);
     } catch (const std::exception &) {
-        appendOptValErrorMsg(data, parseOptName(optName), "double", valueStr);
+        appendOptValErrorMsg(data, optName, "double", valueStr);
     }
     return 0.0; // Should not reach here
 }
