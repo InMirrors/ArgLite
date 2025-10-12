@@ -408,7 +408,7 @@ inline std::string Parser::getPositional_(
         return data.argv[argvIdx];
     }
     if (isRequired) {
-        data.errorMessages.push_back("Missing required positional argument '" + name + "'.");
+        data.errorMessages.push_back(std::string("Missing required positional argument '").append(name).append("'."));
     }
     return "";
 }
@@ -427,7 +427,7 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
         data.positionalIdx++;
     }
     if (required && remaining.empty()) {
-        data.errorMessages.push_back("Missing required positional argument(s) '" + name + "'.");
+        data.errorMessages.push_back(std::string("Missing required positional argument(s) '").append(name).append("'."));
     }
     return remaining;
 }
@@ -472,7 +472,7 @@ inline std::string Parser::parseOptName(std::string_view optName) {
     if (shortOpt.empty()) { return longOpt; }
 
     // Short and long options combined
-    return shortOpt + ", " + longOpt;
+    return std::string(shortOpt).append(", ").append(longOpt);
 }
 
 // Parses option name (o,out) and saves the results in shortOpt (-o) and longOpt (--out)
@@ -542,7 +542,7 @@ inline std::pair<bool, std::string> Parser::getValueStr(
         if (!longOpt.empty()) data.options.erase(longOpt);
 
         if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
-            data.errorMessages.push_back("Option '" + parseOptName(optName) + "' requires a value.");
+            data.errorMessages.push_back(std::string("Option '").append(parseOptName(optName)).append("' requires a value."));
             return {false, ""};
         }
         if (optInfo.argvIndex == 0) { // From --opt=val
@@ -634,7 +634,7 @@ inline void Parser::printHelp(InternalData &data) {
 
             std::string descStr = o.description;
             if (!o.defaultValue.empty()) {
-                descStr += " [default: " + o.defaultValue + "]";
+                descStr += std::string(" [default: ").append(o.defaultValue).append("]");
             }
             if (optStr.length() > descriptionIndent_ - 2) { // the option string is too long, start a new line
                 std::cout << '\n'
