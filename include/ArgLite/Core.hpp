@@ -88,7 +88,7 @@ public:
      * @param required If true and the user does not provide the argument, the program will report an error and exit.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
-    static inline std::string getPositional(const std::string &name, const std::string &description, bool required = true);
+    static inline std::string getPositional(const std::string &posName, const std::string &description, bool required = true);
 
     /**
      * @brief Gets all remaining positional arguments.
@@ -98,7 +98,7 @@ public:
      * @param required If true and there are no remaining arguments, the program will report an error and exit.
      * @return A string vector containing all remaining arguments.
      */
-    static inline std::vector<std::string> getRemainingPositionals(const std::string &name, const std::string &description, bool required = true);
+    static inline std::vector<std::string> getRemainingPositionals(const std::string &posName, const std::string &description, bool required = true);
 
     /**
      * @brief Changes the description indent of option descriptions in the help message. Default is 25.
@@ -188,10 +188,11 @@ private:
     static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue = 0, InternalData &data = data_);
     static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue = 0.0, InternalData &data = data_);
     static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue = false, InternalData &data = data_);
-    static inline std::string              getPositional_(const std::string &name, const std::string &description, bool required = true, InternalData &data = data_);
-    static inline std::vector<std::string> getRemainingPositionals_(const std::string &name, const std::string &description, bool isRequired = true, InternalData &data = data_);
+    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required = true, InternalData &data = data_);
+    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired = true, InternalData &data = data_);
     // Helper functions for get functions
     static inline void appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
+    static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
     static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options);
     template <typename T>
     static inline std::string toString(const T &val);
@@ -250,12 +251,12 @@ inline bool Parser::getBool(std::string_view optName, const std::string &descrip
     return getBool_(optName, description, defaultValue);
 }
 
-inline std::string Parser::getPositional(const std::string &name, const std::string &description, bool isRequired) {
-    return getPositional_(name, description, isRequired);
+inline std::string Parser::getPositional(const std::string &posName, const std::string &description, bool isRequired) {
+    return getPositional_(posName, description, isRequired);
 }
 
-inline std::vector<std::string> Parser::getRemainingPositionals(const std::string &name, const std::string &description, bool required) {
-    return getRemainingPositionals_(name, description, required);
+inline std::vector<std::string> Parser::getRemainingPositionals(const std::string &posName, const std::string &description, bool required) {
+    return getRemainingPositionals_(posName, description, required);
 }
 
 inline void Parser::changeDescriptionIndent(size_t indent) { descriptionIndent_ = indent; }
@@ -425,30 +426,30 @@ inline bool Parser::getBool_(
 }
 
 inline std::string Parser::getPositional_(
-    const std::string &name, const std::string &description, bool isRequired,
+    const std::string &posName, const std::string &description, bool isRequired,
     InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
-    data.positionalHelpEntries.push_back({name, description, isRequired});
+    data.positionalHelpEntries.push_back({posName, description, isRequired});
     if (data.positionalIdx < data.positionalArgsIndices.size()) {
         int argvIdx = data.positionalArgsIndices[data.positionalIdx];
         data.positionalIdx++;
         return data.argv[argvIdx];
     }
     if (isRequired) {
-        data.errorMessages.push_back(std::string("Missing required positional argument '").append(name).append("'."));
+        appendPosValErrorMsg(data, posName, "Missing required positional argument '");
     }
     return "";
 }
 
 inline std::vector<std::string> Parser::getRemainingPositionals_(
-    const std::string &name, const std::string &description, bool required,
+    const std::string &posName, const std::string &description, bool required,
     InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
-    data.positionalHelpEntries.push_back({name, description, required});
+    data.positionalHelpEntries.push_back({posName, description, required});
     std::vector<std::string> remaining;
     while (data.positionalIdx < data.positionalArgsIndices.size()) {
         int argvIdx = data.positionalArgsIndices[data.positionalIdx];
@@ -456,7 +457,7 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
         data.positionalIdx++;
     }
     if (required && remaining.empty()) {
-        data.errorMessages.push_back(std::string("Missing required positional argument(s) '").append(name).append("'."));
+        appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
     }
     return remaining;
 }
@@ -467,13 +468,36 @@ inline void Parser::appendOptValErrorMsg(
 
     std::string errorStr;
     errorStr += "Invalid value for option '";
+#ifdef ARGLITE_ENABLE_FORMATTER
+    errorStr += Formatter::bold(parseOptName(optName));
+#else
     errorStr += parseOptName(optName);
+#endif
     errorStr += "'. Expected a ";
+#ifdef ARGLITE_ENABLE_FORMATTER
+    errorStr += Formatter::bold(typeName);
+#else
     errorStr += typeName;
+#endif
     errorStr += ", but got '";
+#ifdef ARGLITE_ENABLE_FORMATTER
+    errorStr += Formatter::bold(valueStr);
+#else
     errorStr += valueStr;
+#endif
     errorStr += "'.";
     data.errorMessages.push_back(std::move(errorStr));
+}
+
+inline void Parser::appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg) {
+    std::string msg(errorMsg);
+#ifdef ARGLITE_ENABLE_FORMATTER
+    msg.append(Formatter::bold(posName));
+#else
+    msg.append(posName);
+#endif
+    msg.append("'.");
+    data.errorMessages.push_back(std::move(msg));
 }
 
 template <typename T>
@@ -570,7 +594,14 @@ inline std::pair<bool, std::string> Parser::getValueStr(
         if (!longOpt.empty()) data.options.erase(longOpt);
 
         if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
-            data.errorMessages.push_back(std::string("Option '").append(parseOptName(optName)).append("' requires a value."));
+            std::string msg("Option '");
+#ifdef ARGLITE_ENABLE_FORMATTER
+            msg.append(Formatter::bold(parseOptName(optName)));
+#else
+            msg.append(parseOptName(optName));
+#endif
+            msg.append("' requires a value.");
+            data.errorMessages.push_back(std::move(msg));
             return {false, ""};
         }
         if (optInfo.argvIndex == 0) { // From --opt=val
@@ -610,7 +641,13 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
 
     if (!data.options.empty()) {
         for (const auto &pair : data.options) {
-            std::cerr << ERROR_STR << "Unrecognized option '" << pair.first << "'" << '\n';
+            std::cerr << ERROR_STR << "Unrecognized option '";
+#ifdef ARGLITE_ENABLE_FORMATTER
+            std::cerr << Formatter::bold(pair.first);
+#else
+            std::cerr << pair.first;
+#endif
+            std::cerr << "'\n";
         }
         if (!notExit) { std::exit(EXIT_FAILURE); }
         return true;
@@ -702,7 +739,8 @@ inline void Parser::printHelpOptions(const InternalData &data) {
 inline bool Parser::finalize_(const std::vector<std::string> &errorMessages, bool notExit) {
     if (errorMessages.empty()) { return false; }
 
-    std::cerr << "Errors occurred while parsing command-line arguments. The following is a list of error messages:\n";
+    std::cerr << "Errors occurred while parsing command-line arguments.\n";
+    std::cerr << "The following is a list of error messages:\n";
     for (const auto &msg : errorMessages) {
         std::cerr << ERROR_STR << msg << '\n';
     }
