@@ -1,4 +1,3 @@
-#define ARGLITE_ENABLE_FORMATTER
 #pragma once
 
 #include <algorithm>
