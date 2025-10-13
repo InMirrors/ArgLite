@@ -139,6 +139,8 @@ public:
      */
     static inline bool runAllPostprocess(bool notExit = false);
 
+    Parser() = delete;
+
 private:
     // Stores option information for subsequent get/hasFlag calls.
     // key: Option name (e.g., "-o", "--output").
