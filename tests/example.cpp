@@ -10,6 +10,7 @@ using ArgLite::Parser;
 
 int main(int argc, char **argv) {
     Parser::setDescription("A simple program to demonstrate ArgLite.");
+    Parser::setShortNonFlagOptsStr("nr");
     Parser::preprocess(argc, argv);
 
     auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");

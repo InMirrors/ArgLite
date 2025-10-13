@@ -24,7 +24,17 @@ public:
      * @brief Sets the program description, used for the first line of the help message.
      * @param description The program's description text.
      */
-    static inline void setDescription(const std::string &description);
+    static inline void setDescription(std::string_view description);
+
+    /**
+     * @brief Sets which short options require a value.
+     * @details To pass short options like `-n 123` as a single argument `-n123`,
+                provide the short option names as a string to this function.
+                You don't have to call it, but if you do, call it before `preprocess()`.
+     * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
+                                  For example, if `-n` and `-r` require values, pass `nr`.
+     */
+    static inline void setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr);
 
     /**
      * @brief Preprocesses the command-line arguments. This is the first step in using this library.
@@ -55,7 +65,7 @@ public:
      * @param names Option names (e.g., "n", "count" or "n,count").
      * @param description Option description.
      * @param defaultValue The default value.
-     * @return The parsed integer value or the default value. If the provided value cannot be converted to an integer, the program will report an error and exit.
+     * @return The parsed integer value or the default value.
      */
     static inline long long getInt(std::string_view optName, const std::string &description, long long defaultValue = 0);
 
@@ -64,7 +74,7 @@ public:
      * @param names Option names (e.g., "r", "rate" or "r,rate").
      * @param description Option description.
      * @param defaultValue The default value.
-     * @return The parsed floating-point value or the default value. If the provided value cannot be converted to a floating-point number, the program will report an error and exit.
+     * @return The parsed floating-point value or the default value.
      */
     static inline double getDouble(std::string_view optName, const std::string &description, double defaultValue = 0.0);
 
@@ -149,7 +159,7 @@ private:
     // index == 0: Default value, usually indicating --opt=val form.
     struct OptionInfo {
         int         argvIndex;
-        std::string valueFromEquals; // Only used for --opt=val form
+        std::string valueStr; // Only used for -n123 and --opt=val forms
     };
 
     struct OptionHelpInfo {
@@ -168,6 +178,7 @@ private:
     struct InternalData {
         std::string programName;
         std::string programDescription;
+        std::string shortNonFlagOptsStr;
         // Containers
         std::unordered_map<std::string, OptionInfo> options;
         std::vector<OptionHelpInfo>                 optionHelpEntries;
@@ -225,8 +236,12 @@ private:
 // ========================================================================
 // Method Definitions
 // ========================================================================
-inline void Parser::setDescription(const std::string &description) {
+inline void Parser::setDescription(std::string_view description) {
     data_.programDescription = description;
+}
+
+inline void Parser::setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr) {
+    data_.shortNonFlagOptsStr = shortNonFlagOptsStr;
 }
 
 inline void Parser::preprocess(int argc, char **argv) {
@@ -294,19 +309,25 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
             continue;
         }
 
+        if (arg.length() <= 1) { // Not an option, an option has 2 chars at least (e.g., -h)
+            data.positionalArgsIndices.push_back(i);
+            continue;
+        }
+
         if (arg == "--") {
             allPositional = true;
             continue;
         }
 
-        if (arg.rfind("--", 0) == 0) { // Long option
+        // Long option
+        if (arg.rfind("--", 0) == 0) {
             std::string key = arg;
             std::string value;
             size_t      equalsPos = arg.find('=');
             if (equalsPos != std::string::npos) { // --opt=val form
                 key               = arg.substr(0, equalsPos);
                 value             = arg.substr(equalsPos + 1);
-                data.options[key] = {0, value};
+                data.options[key] = {0, std::move(value)};
             } else {
                 if (i + 1 < argc && argv[i + 1][0] != '-') {
                     data.options[key] = {i + 1, ""};
@@ -315,9 +336,17 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
                     data.options[key] = {-i, ""}; // Flag
                 }
             }
-        } else if (arg.rfind('-', 0) == 0) { // Short option(s)
+        }
+        // Short option(s)
+        else if (arg.rfind('-', 0) == 0) {
+            // Short option with a value, e.g., -n123
+            if (data.shortNonFlagOptsStr.find(arg[1]) != std::string::npos) {
+                std::string key   = arg.substr(0, 2);
+                std::string value = arg.substr(2);
+                data.options[key] = {0, std::move(value)};
+            }
             // Bundled flags, e.g., -abc
-            if (arg.length() > 2) {
+            else if (arg.length() > 2) {
                 for (size_t j = 1; j < arg.length(); ++j) {
                     std::string key = "-";
                     key += arg[j];
@@ -333,14 +362,17 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
                     }
                 }
             } else { // Single short option, e.g., -a
-                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                // `length() <= 1` has been checked before, but still check `i + 1 < argc` for safety
+                if (i + 1 < argc && argv[i + 1][0] != '-') { // -n 123 form
                     data.options[arg] = {i + 1, ""};
                     i++;
                 } else {
                     data.options[arg] = {-i, ""}; // Flag
                 }
             }
-        } else { // Positional
+        }
+        // Positional
+        else {
             data.positionalArgsIndices.push_back(i);
         }
     }
@@ -606,8 +638,8 @@ inline std::pair<bool, std::string> Parser::getValueStr(
             data.errorMessages.push_back(std::move(msg));
             return {false, ""};
         }
-        if (optInfo.argvIndex == 0) { // From --opt=val
-            return {true, optInfo.valueFromEquals};
+        if (optInfo.argvIndex == 0) { // From -n123 or --opt=val form
+            return {true, optInfo.valueStr};
         }
         return {true, argv_[optInfo.argvIndex]};
     }
