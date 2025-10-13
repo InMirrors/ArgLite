@@ -384,7 +384,7 @@ inline long long Parser::getInt_(
     } catch (const std::exception &) {
         appendOptValErrorMsg(data, optName, "integer", valueStr);
     }
-    return 0; // Should not reach here
+    return 0;
 }
 
 inline double Parser::getDouble_(
@@ -400,7 +400,7 @@ inline double Parser::getDouble_(
     } catch (const std::exception &) {
         appendOptValErrorMsg(data, optName, "double", valueStr);
     }
-    return 0.0; // Should not reach here
+    return 0.0;
 }
 
 inline bool Parser::getBool_(
@@ -421,7 +421,7 @@ inline bool Parser::getBool_(
     }
 
     appendOptValErrorMsg(data, parseOptName(optName), "boolean", valueStr);
-    return false; // Should not reach here
+    return false;
 }
 
 inline std::string Parser::getPositional_(
