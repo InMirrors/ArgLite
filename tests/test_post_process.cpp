@@ -1,5 +1,6 @@
-#include "ArgLite/Base.hpp"
-#include <ios>
+#define ARGLITE_ENABLE_FORMATTER
+
+#include "ArgLite/Core.hpp"
 #include <iostream>
 #include <string>
 
@@ -17,10 +18,14 @@ int main(int argc, char **argv) {
 
     Parser::tryToPrintHelp();
 
+    auto result_tryToPrintInvalidOpts = Parser::tryToPrintInvalidOpts(!exitIfInvalidOpt);
+    auto result_finalize              = Parser::finalize(!exitIfError);
+    auto result_runAllPostprocess     = Parser::runAllPostprocess(!exitIfAny);
+
     cout << boolalpha;
-    cout << "Result of tryToPrintInvalidOpts(): " << Parser::tryToPrintInvalidOpts(!exitIfInvalidOpt) << '\n';
-    cout << "Result of finalize()             : " << Parser::finalize(!exitIfError) << '\n';
-    cout << "Result of runAllPostprocess()    : " << Parser::runAllPostprocess(!exitIfAny) << '\n';
+    cout << "Result of tryToPrintInvalidOpts(): " << result_tryToPrintInvalidOpts << '\n';
+    cout << "Result of finalize()             : " << result_finalize << '\n';
+    cout << "Result of runAllPostprocess()    : " << result_runAllPostprocess << '\n';
     cout << "Number                           : " << num << '\n';
 
     return 0;
