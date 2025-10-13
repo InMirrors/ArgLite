@@ -166,9 +166,8 @@ private:
     };
 
     struct InternalData {
-        int    argc;
-        char **argv;
-        size_t positionalIdx;
+        std::string programName;
+        std::string programDescription;
         // Containers
         std::unordered_map<std::string, OptionInfo> options;
         std::vector<OptionHelpInfo>                 optionHelpEntries;
@@ -178,8 +177,9 @@ private:
     };
 
     // Internal data storage
-    static inline std::string  programDescription_;
-    static inline std::string  programName_;
+    static inline int          argc_;
+    static inline char       **argv_;
+    static inline size_t       positionalIdx_;
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
     static inline InternalData data_;
 
@@ -226,7 +226,7 @@ private:
 // Method Definitions
 // ========================================================================
 inline void Parser::setDescription(const std::string &description) {
-    programDescription_ = description;
+    data_.programDescription = description;
 }
 
 inline void Parser::preprocess(int argc, char **argv) {
@@ -274,14 +274,14 @@ inline bool Parser::runAllPostprocess(bool notExit) { return runAllPostprocess_(
 // === Private Helper Implementations ===
 
 inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // NOLINT(readability-function-cognitive-complexity)
-    data.argc = argc;
-    data.argv = argv;
-    if (argc > 0) {
-        programName_ = argv[0];
+    argc_ = argc;
+    argv_ = argv;
+    if (argc_ > 0) {
+        data_.programName = argv[0];
         // Extract the basename
-        size_t last_slash_pos = programName_.find_last_of("/\\");
+        size_t last_slash_pos = data_.programName.find_last_of("/\\");
         if (std::string::npos != last_slash_pos) {
-            programName_.erase(0, last_slash_pos + 1);
+            data_.programName.erase(0, last_slash_pos + 1);
         }
     }
 
@@ -434,10 +434,10 @@ inline std::string Parser::getPositional_(
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
     data.positionalHelpEntries.push_back({posName, description, isRequired});
-    if (data.positionalIdx < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
-        data.positionalIdx++;
-        return data.argv[argvIdx];
+    if (positionalIdx_ < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[positionalIdx_];
+        positionalIdx_++;
+        return argv_[argvIdx];
     }
     if (isRequired) {
         appendPosValErrorMsg(data, posName, "Missing required positional argument '");
@@ -453,10 +453,10 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
 
     data.positionalHelpEntries.push_back({posName, description, required});
     std::vector<std::string> remaining;
-    while (data.positionalIdx < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
-        remaining.emplace_back(data.argv[argvIdx]);
-        data.positionalIdx++;
+    while (positionalIdx_ < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[positionalIdx_];
+        remaining.emplace_back(argv_[argvIdx]);
+        positionalIdx_++;
     }
     if (required && remaining.empty()) {
         appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
@@ -609,7 +609,7 @@ inline std::pair<bool, std::string> Parser::getValueStr(
         if (optInfo.argvIndex == 0) { // From --opt=val
             return {true, optInfo.valueFromEquals};
         }
-        return {true, data.argv[optInfo.argvIndex]};
+        return {true, argv_[optInfo.argvIndex]};
     }
 
     return {false, defaultValueStr};
@@ -659,8 +659,8 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
 }
 
 inline void Parser::printHelp(const InternalData &data) {
-    printHelpDescription(programDescription_);
-    printHelpUsage(data, programName_);
+    printHelpDescription(data_.programDescription);
+    printHelpUsage(data, data_.programName);
     printHelpPositional(data);
     printHelpOptions(data);
 }
