@@ -723,7 +723,14 @@ inline void Parser::printHelpOptions(const InternalData &data) {
             }
             optStr += o.longOpt;
 
-            std::cout << std::left << std::setw(static_cast<int>(descriptionIndent_)) << optStr;
+            std::cout << std::left;
+#ifdef ARGLITE_ENABLE_FORMATTER
+            constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
+            std::cout << std::setw(static_cast<int>(descriptionIndent_) + ANSI_CODE_LENGTH)
+                      << Formatter::bold(optStr);
+#else
+            std::cout << std::setw(static_cast<int>(descriptionIndent_)) << optStr;
+#endif
 
             std::string descStr = o.description;
             if (!o.defaultValue.empty()) {

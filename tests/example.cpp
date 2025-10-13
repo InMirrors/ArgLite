@@ -17,13 +17,13 @@ int main(int argc, char **argv) {
     auto switch2    = Parser::hasFlag("2,switch2", "Switch 2.");
     auto debug      = Parser::getBool("d,whether-enable-debug-mode", "Whether enable debug mode.");
     auto count      = Parser::getInt("n,count", "Number of iterations.");
-    auto interval   = Parser::getInt("interval", "Interval between iterations."); // long option only
+    auto indent     = Parser::getInt("indent", "Option Description indent.", 20); // long option only
     auto rate       = Parser::getDouble("r", "Speed rate.", 123.0);               // short option only, with default value
     auto outputPath = Parser::getString("o,out-path", "Output file Path.", "output.txt");
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
-    Parser::changeDescriptionIndent(20);
+    Parser::changeDescriptionIndent(indent);
     Parser::tryToPrintHelp();
     Parser::tryToPrintInvalidOpts();
     Parser::finalize();
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     cout << "Switch 2   : " << switch2 << '\n';
     cout << "Debug      : " << debug << '\n';
     cout << "Count      : " << count << '\n';
-    cout << "Interval   : " << interval << '\n';
+    cout << "Indent     : " << indent << '\n';
     cout << "Rate       : " << rate << '\n';
     cout << "Output Path: " << outputPath << '\n';
     cout << "Output file: " << outputFile << '\n';

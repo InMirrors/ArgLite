@@ -28,7 +28,7 @@ def main():
             "Switch 2   : false",
             "Debug      : false",
             "Count      : 0",
-            "Interval   : 0",
+            "Indent     : 20",
             "Rate       : 123", # Default value
             "Output file: my_output.txt",
             "Output Path: output.txt", # Default value
@@ -40,14 +40,14 @@ def main():
     # With all flags and some options, including debug mode
     all_tests_passed &= test_case(
         "All flags and some options, including debug mode",
-        ["-v", "-1", "--switch2", "-d", "true", "--count", "10", "--interval", "20", "-r", "50.5", "-o", "custom_path.log", "output.log", "file1.txt", "file2.txt"],
+        ["-v", "-1", "--switch2", "-d", "true", "--count", "10", "--indent", "22", "-r", "50.5", "-o", "custom_path.log", "output.log", "file1.txt", "file2.txt"],
         expected_output_substrings=[
             "Verbose    : true",
             "Switch 1   : true",
             "Switch 2   : true",
             "Debug      : true",
             "Count      : 10",
-            "Interval   : 20",
+            "Indent     : 22",
             "Rate       : 50.5",
             "Output file: output.log",
             "Output Path: custom_path.log",
