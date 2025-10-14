@@ -59,22 +59,21 @@ def main():
 
     # Mixed short and long options, with debug mode set to false
     all_tests_passed &= test_case(
-        "Mixed short and long options, debug false",
-        ["--verbose", "-d", "false", "-n", "5", "--out-path", "mixed.txt", "final.out", "input.data"],
+        "Mixed short and long options, the latter one wins. debug false",
+        ["--verbose", "-d", "false", "-n", "5", "--count", "123", "--out-path", "out/path", "mixed.txt", "input.data"],
         expected_output_substrings=[
             "Verbose    : true",
             "Debug      : false",
-            "Count      : 5",
-            "Output Path: mixed.txt",
-            "Output file: final.out",
+            "Count      : 123",
+            "Output Path: out/path",
+            "Output file: mixed.txt",
             "Input files:",
             "input.data"
         ]
     )
 
-    # Short option combinations: -12v
     all_tests_passed &= test_case(
-        "Short option combination -12v",
+        "'-12v' Grouped short options",
         ["-12v", "output.txt", "input.txt"],
         expected_output_substrings=[
             "Verbose    : true",
@@ -86,9 +85,30 @@ def main():
         ]
     )
 
-    # Short option combination with argument: -12n 10
     all_tests_passed &= test_case(
-        "Short option combination with argument -12n 10",
+        "'--out-path=-path/to/file.log' Long option with equals sign to pass a value starting with a hyphen",
+        ["--out-path=-path/to/file.log", "output.txt", "input.txt"],
+        expected_output_substrings=[
+            "Output Path: -path/to/file.log",
+            "Output file: output.txt",
+            "Input files:",
+            "input.txt"
+        ]
+    )
+
+    all_tests_passed &= test_case(
+        "'-n15' Short option with value immediately following",
+        ["-n15", "output.txt", "input.txt"],
+        expected_output_substrings=[
+            "Count      : 15",
+            "Output file: output.txt",
+            "Input files:",
+            "input.txt"
+        ]
+    )
+
+    all_tests_passed &= test_case(
+        "'-12n 10' Short option combination with argument -12n 10",
         ["-12n", "10", "output.txt", "input.txt"],
         expected_output_substrings=[
             "Switch 1   : true",
@@ -100,41 +120,54 @@ def main():
         ]
     )
 
-    # Positional argument mixed between options: -1 file
     all_tests_passed &= test_case(
-        "Positional argument mixed between options: -1 file",
-        ["-1", "my_output.txt", "input.txt"],
+        "'-v1n10' Grouped short options with last option taking a value",
+        ["-v1n10", "output.txt", "input.txt"],
+        expected_output_substrings=[
+            "Verbose    : true",
+            "Switch 1   : true",
+            "Count      : 10",
+            "Output file: output.txt",
+            "Input files:",
+            "input.txt"
+        ]
+    )
+
+    all_tests_passed &= test_case(
+        "Flexible positional argument order",
+        ["-1", "my_output.txt", "-r12.3", "input1.txt", "-v", "input2.txt"],
         expected_output_substrings=[
             "Switch 1   : true",
+            "Rate       : 12.3",
             "Output file: my_output.txt",
             "Input files:",
-            "input.txt"
+            "input1.txt",
+            "input2.txt"
         ]
     )
 
-    # Long option with equals sign: --count=15
+    # End of options marker: -- -file1 --file2
     all_tests_passed &= test_case(
-        "Long option with equals sign: --count=15",
-        ["--count=15", "output.txt", "input.txt"],
+        "'--' End of options marker",
+        ["output.txt", "--", "-file1.txt", "--file2.txt"],
         expected_output_substrings=[
-            "Count      : 15",
             "Output file: output.txt",
             "Input files:",
-            "input.txt"
+            "-file1.txt",
+            "--file2.txt"
         ]
     )
 
-    # Long option with equals sign: --out-path=path/to/file.log
+    # Help option: -h
     all_tests_passed &= test_case(
-        "Long option with equals sign: --out-path=path/to/file.log",
-        ["--out-path=path/to/file.log", "output.txt", "input.txt"],
+        "Help option: -h. Errors are ignored when -h is present",
+        ["-h", "output.txt", "--count"], # Errors are ignored when -h is present
         expected_output_substrings=[
-            "Output Path: path/to/file.log",
-            "Output file: output.txt",
-            "Input files:",
-            "input.txt"
+            "Usage:",
+            "Options:"
         ]
     )
+
 
     # --- Error usage test cases ---
 
