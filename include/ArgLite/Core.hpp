@@ -338,36 +338,40 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
             }
         }
         // Short option(s)
+        // Process short options, e.g., -n 123, -ab, -abn 123, -n123, -abn123
         else if (arg.rfind('-', 0) == 0) {
-            // Short option with a value, e.g., -n123
-            if (data.shortNonFlagOptsStr.find(arg[1]) != std::string::npos) {
-                std::string key   = arg.substr(0, 2);
-                std::string value = arg.substr(2);
-                data.options[key] = {0, std::move(value)};
-            }
-            // Bundled flags, e.g., -abc
-            else if (arg.length() > 2) {
-                for (size_t j = 1; j < arg.length(); ++j) {
-                    std::string key = "-";
-                    key += arg[j];
-                    if (j == arg.length() - 1) { // Last char might have a value
-                        if (i + 1 < argc && argv[i + 1][0] != '-') {
-                            data.options[key] = {i + 1, ""};
-                            i++;
-                        } else {
-                            data.options[key] = {-i, ""}; // Flag
-                        }
-                    } else {
-                        data.options[key] = {-i, ""}; // All but the last are flags
-                    }
+            std::string lastFlagKey;
+            bool        isValueConsumedInCurrentArg = false; // True if a short option like -n123 was found
+
+            for (size_t j = 1; j < arg.length(); ++j) {
+                std::string currentOptKey = "-";
+                currentOptKey += arg[j];
+
+                // Check if the current character is a short option that requires a value
+                if (data.shortNonFlagOptsStr.find(arg[j]) != std::string::npos && j + 1 < arg.length()) {
+                    // `-n123` or `-abn123` form. It requires a value, the rest of the string is its value
+                    std::string value           = arg.substr(j + 1);
+                    data.options[currentOptKey] = {0, std::move(value)};
+                    isValueConsumedInCurrentArg = true;
+                    break; // Stop processing this argument, as the rest is a value for this option
                 }
-            } else { // Single short option, e.g., -a
-                // `length() <= 1` has been checked before, but still check `i + 1 < argc` for safety
-                if (i + 1 < argc && argv[i + 1][0] != '-') { // -n 123 form
-                    data.options[arg] = {i + 1, ""};
-                    i++;
-                } else {
-                    data.options[arg] = {-i, ""}; // Flag
+
+                // It's a flag
+                data.options[currentOptKey] = {-i, ""};
+                // Keep track of the last flag, in case it needs to consume the next argument
+                lastFlagKey = currentOptKey;
+            }
+
+            // `-n 123` or `-abn 123` form
+            // If no value was consumed within the current argument (not `-n123` form)
+            // and there was a last flag, check if it takes a value from the next argument.
+            if (!isValueConsumedInCurrentArg && !lastFlagKey.empty()) {
+                // This condition applies to the *last* flag in a bundle (e.g., 'c' in -abc)
+                // or a single short option (e.g., 'a' in -a).
+                // If the next argument exists and is not another option, it's the value.
+                if (i + 1 < argc && argv[i + 1][0] != '-') {
+                    data.options[lastFlagKey] = {i + 1, ""};
+                    i++; // Consume the next argument
                 }
             }
         }
