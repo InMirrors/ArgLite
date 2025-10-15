@@ -452,7 +452,15 @@ inline void Parser::printHelpPositional(const InternalData &data) {
             maxNameWidth = std::max(maxNameWidth, p.name.length());
         }
         for (const auto &p : data.positionalHelpEntries) {
-            std::cout << "  " << std::left << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name << p.description << '\n';
+            std::cout << "  " << std::left;
+#ifdef ARGLITE_ENABLE_FORMATTER
+            constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
+            std::cout << std::setw(static_cast<int>(maxNameWidth) + 2 + ANSI_CODE_LENGTH)
+                      << Formatter::bold(p.name);
+#else
+            std::cout << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name;
+#endif
+            std::cout << p.description << '\n';
         }
     }
 }
