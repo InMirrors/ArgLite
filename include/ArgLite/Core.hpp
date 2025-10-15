@@ -155,7 +155,7 @@ private:
     // key: Option name (e.g., "-o", "--output").
     // value: index > 0: Index of the argument in argv;
     // index < 0: Index of the flag option in argv;
-    // index == 0: Default value, usually indicating --opt=val form.
+    // index == 0: Default value, no special meaning yet.
     struct OptionInfo {
         int         argvIndex;
         std::string valueStr; // Only used for -n123 and --opt=val forms
@@ -326,7 +326,7 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
             if (equalsPos != std::string::npos) { // --opt=val form
                 key               = arg.substr(0, equalsPos);
                 value             = arg.substr(equalsPos + 1);
-                data.options[key] = {0, std::move(value)};
+                data.options[key] = {i, std::move(value)};
             } else {
                 if (i + 1 < argc && argv[i + 1][0] != '-') {
                     data.options[key] = {i + 1, ""};
@@ -350,7 +350,7 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
                 if (data.shortNonFlagOptsStr.find(arg[j]) != std::string::npos && j + 1 < arg.length()) {
                     // `-n123` or `-abn123` form. It requires a value, the rest of the string is its value
                     std::string value           = arg.substr(j + 1);
-                    data.options[currentOptKey] = {0, std::move(value)};
+                    data.options[currentOptKey] = {i, std::move(value)};
                     isValueConsumedInCurrentArg = true;
                     break; // Stop processing this argument, as the rest is a value for this option
                 }

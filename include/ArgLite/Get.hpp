@@ -265,7 +265,7 @@ inline std::pair<bool, std::string> Parser::getValueStr(
             data.errorMessages.push_back(std::move(msg));
             return {false, ""};
         }
-        if (optInfo.argvIndex == 0) { // From -n123 or --opt=val form
+        if (!optInfo.valueStr.empty()) { // From -n123 or --opt=val form
             return {true, optInfo.valueStr};
         }
         return {true, argv_[optInfo.argvIndex]};
