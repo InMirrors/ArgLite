@@ -26,7 +26,13 @@ public:
     static inline void setDescription(std::string_view description);
 
     /**
-     * @brief Sets which short options require a value.
+     * @brief Sets the program version and add options `-V` and `--version` to print the version.
+     * @param versionStr The program's version string.
+     */
+    static inline void setVersion(std::string_view versionStr);
+
+    /**
+    * @brief Sets which short options require a value.
      * @details To pass short options like `-n 123` as a single argument `-n123`,
                 provide the short option names as a string to this function.
                 You don't have to call it, but if you do, call it before `preprocess()`.
@@ -191,6 +197,7 @@ private:
     static inline char       **argv_;
     static inline size_t       positionalIdx_;
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
+    static inline std::string  programVersion_;
     static inline InternalData data_;
 
     // Internal helper functions
@@ -215,6 +222,7 @@ private:
     static inline std::pair<bool, std::string>        getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
     // Other helper functions
     static inline void preprocess_(int argc, char **argv, InternalData &data = data_);
+    static inline void tryToPrintVersion_(InternalData &data = data_);
     static inline void tryToPrintHelp_(InternalData &data = data_);
     static inline bool tryToPrintInvalidOpts_(InternalData &data = data_, bool notExit = false);
     static inline void printHelp(const InternalData &data = data_);
@@ -238,6 +246,8 @@ private:
 inline void Parser::setDescription(std::string_view description) {
     data_.programDescription = description;
 }
+
+inline void Parser::setVersion(std::string_view versionStr) { programVersion_ = versionStr; }
 
 inline void Parser::setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr) {
     data_.shortNonFlagOptsStr = shortNonFlagOptsStr;
@@ -381,7 +391,18 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
     }
 }
 
+inline void Parser::tryToPrintVersion_(InternalData &data) {
+    if (programVersion_.empty()) { return; }
+    data.optionHelpEntries.push_back({"-V", "--version", "Show version information and exit", ""});
+    if ((data.options.count("-V") != 0) || (data.options.count("--version")) != 0) {
+        std::cout << programVersion_ << '\n';
+        std::exit(EXIT_SUCCESS);
+    }
+}
+
 inline void Parser::tryToPrintHelp_(InternalData &data) {
+    tryToPrintVersion_(data);
+
     if ((data.options.count("-h") != 0) || (data.options.count("--help")) != 0) {
         data.optionHelpEntries.push_back({"-h", "--help", "Show this help message and exit", ""});
         printHelp();

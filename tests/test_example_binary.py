@@ -168,6 +168,13 @@ def main():
         ]
     )
 
+    all_tests_passed &= test_case(
+        "Version option: -V. Errors are ignored when -V is present",
+        ["-V", "output.txt", "--count"], # Errors are ignored when -h is present
+        expected_output_substrings=[
+            "."
+        ]
+    )
 
     # --- Error usage test cases ---
 

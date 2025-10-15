@@ -10,6 +10,7 @@ using ArgLite::Parser;
 
 int main(int argc, char **argv) {
     Parser::setDescription("A simple program to demonstrate ArgLite.");
+    Parser::setVersion("1.2.3");
     Parser::setShortNonFlagOptsStr("nr");
     Parser::preprocess(argc, argv);
 
