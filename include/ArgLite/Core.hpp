@@ -23,13 +23,13 @@ public:
      * @brief Sets the program description, used for the first line of the help message.
      * @param description The program's description text.
      */
-    static inline void setDescription(std::string_view description);
+    static void setDescription(std::string_view description) { setDescription_(description); }
 
     /**
      * @brief Sets the program version and add options `-V` and `--version` to print the version.
      * @param versionStr The program's version string.
      */
-    static inline void setVersion(std::string_view versionStr);
+    static void setVersion(std::string_view versionStr) { programVersion_ = versionStr; }
 
     /**
     * @brief Sets which short options require a value.
@@ -39,14 +39,14 @@ public:
      * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
                                   For example, if `-n` and `-r` require values, pass `nr`.
      */
-    static inline void setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr);
+    static void setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr) { setShortNonFlagOptsStr_(shortNonFlagOptsStr); }
 
     /**
      * @brief Preprocesses the command-line arguments. This is the first step in using this library.
      * @param argc The argc from the main function.
      * @param argv The argv from the main function.
      */
-    static inline void preprocess(int argc, char **argv);
+    static void preprocess(int argc, char **argv) { preprocess_(argc, argv); }
 
     /**
      * @brief Checks if a flag option exists.
@@ -54,7 +54,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
-    static inline bool hasFlag(std::string_view optName, const std::string &description);
+    static bool hasFlag(std::string_view optName, const std::string &description) { return hasFlag_(optName, description, data_); }
 
     //  Structure for arguments of mutually exclusive flag options.
     struct GetMutualExArgs {
@@ -71,7 +71,7 @@ public:
      * @return True if the first option is present and the second is not, or vice versa;
                defaultValue if neither option is present.
      */
-    static inline bool hasMutualExFlag(const GetMutualExArgs &args);
+    static bool hasMutualExFlag(const GetMutualExArgs &args) { return hasMutualExFlag_(args, data_); }
 
     /**
      * @brief Gets the value of a string option.
@@ -80,7 +80,9 @@ public:
      * @param defaultValue The default value to return if the option is not provided on the command line.
      * @return The parsed string value or the default value.
      */
-    static inline std::string getString(std::string_view optName, const std::string &description, const std::string &defaultValue = "");
+    static std::string getString(std::string_view optName, const std::string &description, const std::string &defaultValue = "") {
+        return getString_(optName, description, defaultValue, data_);
+    }
 
     /**
      * @brief Gets the value of an integer option.
@@ -89,7 +91,9 @@ public:
      * @param defaultValue The default value.
      * @return The parsed integer value or the default value.
      */
-    static inline long long getInt(std::string_view optName, const std::string &description, long long defaultValue = 0);
+    static long long getInt(std::string_view optName, const std::string &description, long long defaultValue = 0) {
+        return getInt_(optName, description, defaultValue, data_);
+    }
 
     /**
      * @brief Gets the value of a floating-point option.
@@ -98,7 +102,9 @@ public:
      * @param defaultValue The default value.
      * @return The parsed floating-point value or the default value.
      */
-    static inline double getDouble(std::string_view optName, const std::string &description, double defaultValue = 0.0);
+    static double getDouble(std::string_view optName, const std::string &description, double defaultValue = 0.0) {
+        return getDouble_(optName, description, defaultValue, data_);
+    }
 
     /**
      * @brief Gets the value of a boolean option.
@@ -110,7 +116,9 @@ public:
      * @param defaultValue The default value.
      * @return The parsed boolean value or the default value.
      */
-    static inline bool getBool(std::string_view optName, const std::string &description, bool defaultValue = false);
+    static bool getBool(std::string_view optName, const std::string &description, bool defaultValue = false) {
+        return getBool_(optName, description, defaultValue, data_);
+    }
 
     /**
      * @brief Gets a positional argument.
@@ -120,7 +128,9 @@ public:
      * @param required If true and the user does not provide the argument, the program will report an error and exit.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
-    static inline std::string getPositional(const std::string &posName, const std::string &description, bool required = true);
+    static std::string getPositional(const std::string &posName, const std::string &description, bool required = true) {
+        return getPositional_(posName, description, required, data_);
+    }
 
     /**
      * @brief Gets all remaining positional arguments.
@@ -130,20 +140,23 @@ public:
      * @param required If true and there are no remaining arguments, the program will report an error and exit.
      * @return A string vector containing all remaining arguments.
      */
-    static inline std::vector<std::string> getRemainingPositionals(const std::string &posName, const std::string &description, bool required = true);
+    static std::vector<std::string> getRemainingPositionals(
+        const std::string &posName, const std::string &description, bool required = true) {
+        return getRemainingPositionals_(posName, description, required, data_);
+    }
 
     /**
      * @brief Changes the description indent of option descriptions in the help message. Default is 25.
      * @details This function should be called before tryToPrintHelp.
      * @param indent The new description indent.
      */
-    static inline void changeDescriptionIndent(size_t indent);
+    static void changeDescriptionIndent(size_t indent) { descriptionIndent_ = indent; }
 
     /**
      * @brief If the user provides -h or --help, prints the help message and exits the program normally.
      * @details Recommended to be called after all get/hasFlag calls, and before tryToPrintInvalidOpts.
      */
-    static inline void tryToPrintHelp();
+    static void tryToPrintHelp() { tryToPrintHelp(); }
 
     /**
      * @brief Checks and reports all unknown options that were not processed by get/hasFlag.
@@ -152,7 +165,7 @@ public:
      * @param notExit If true, the program will not exit after printing any invalid options. Default is false.
      * @return Returns true if there are any unknown options and notExit is false, false otherwise.
      */
-    static inline bool tryToPrintInvalidOpts(bool notExit = false);
+    static bool tryToPrintInvalidOpts(bool notExit = false) { return tryToPrintInvalidOpts_(data_, notExit); }
 
     /**
      * @brief Finalizes the parser. This function should be called at the end of parsing.
@@ -160,7 +173,7 @@ public:
      * @param notExit If true, the program will not exit after printing any error messages. Default is false.
      * @return Returns true if there are any error messages and notExit is false, false otherwise.
      */
-    static inline bool finalize(bool notExit = false);
+    static bool finalize(bool notExit = false) { return finalize_(data_.errorMessages, notExit); }
 
     /**
      * @brief Runs tryToPrintHelp, tryToPrintInvalidOpts, and finalize in sequence.
@@ -169,7 +182,7 @@ public:
      * @return Returns true if there are any invalid options or any error messages and notExit is false,
                false otherwise.
      */
-    static inline bool runAllPostprocess(bool notExit = false);
+    static bool runAllPostprocess(bool notExit = false) { return runAllPostprocess_(data_, notExit); }
 
     Parser() = delete;
 
@@ -221,14 +234,14 @@ private:
 
     // Internal helper functions
     // Get functions, internal data can be changed
-    static inline bool                     hasFlag_(std::string_view optName, const std::string &description, InternalData &data = data_);
-    static inline bool                     hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data = data_);
-    static inline std::string              getString_(std::string_view optName, const std::string &description, const std::string &defaultValue = "", InternalData &data = data_);
-    static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue = 0, InternalData &data = data_);
-    static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue = 0.0, InternalData &data = data_);
-    static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue = false, InternalData &data = data_);
-    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required = true, InternalData &data = data_);
-    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired = true, InternalData &data = data_);
+    static inline bool                     hasFlag_(std::string_view optName, const std::string &description, InternalData &data);
+    static inline bool                     hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data);
+    static inline std::string              getString_(std::string_view optName, const std::string &description, const std::string &defaultValue, InternalData &data);
+    static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue, InternalData &data);
+    static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue, InternalData &data);
+    static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue, InternalData &data);
+    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, InternalData &data);
+    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, InternalData &data);
     // Helper functions for get functions
     static inline void appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
     static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
@@ -241,6 +254,8 @@ private:
     static inline std::unordered_map<std::string, OptionInfo>::node_type findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
     static inline std::pair<bool, std::string>                           getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
     // Other helper functions
+    static inline void setDescription_(std::string_view description, InternalData &data = data_);
+    static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data = data_);
     static inline void preprocess_(int argc, char **argv, InternalData &data = data_);
     static inline void tryToPrintVersion_(InternalData &data = data_);
     static inline void tryToPrintHelp_(InternalData &data = data_);
@@ -260,66 +275,15 @@ private:
 #endif
 };
 
-// ========================================================================
-// Method Definitions
-// ========================================================================
-inline void Parser::setDescription(std::string_view description) {
-    data_.programDescription = description;
-}
-
-inline void Parser::setVersion(std::string_view versionStr) { programVersion_ = versionStr; }
-
-inline void Parser::setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr) {
-    data_.shortNonFlagOptsStr = shortNonFlagOptsStr;
-}
-
-inline void Parser::preprocess(int argc, char **argv) {
-    preprocess_(argc, argv);
-}
-
-inline bool Parser::hasFlag(std::string_view optName, const std::string &description) {
-    return hasFlag_(optName, description);
-}
-
-inline bool Parser::hasMutualExFlag(const GetMutualExArgs &args) {
-    return hasMutualExFlag_(args);
-}
-
-inline std::string Parser::getString(std::string_view optName, const std::string &description, const std::string &defaultValue) {
-    return getString_(optName, description, defaultValue);
-}
-
-inline long long Parser::getInt(std::string_view optName, const std::string &description, long long defaultValue) {
-    return Parser::getInt_(optName, description, defaultValue);
-}
-
-inline double Parser::getDouble(std::string_view optName, const std::string &description, double defaultValue) {
-    return getDouble_(optName, description, defaultValue);
-}
-
-inline bool Parser::getBool(std::string_view optName, const std::string &description, bool defaultValue) {
-    return getBool_(optName, description, defaultValue);
-}
-
-inline std::string Parser::getPositional(const std::string &posName, const std::string &description, bool isRequired) {
-    return getPositional_(posName, description, isRequired);
-}
-
-inline std::vector<std::string> Parser::getRemainingPositionals(const std::string &posName, const std::string &description, bool required) {
-    return getRemainingPositionals_(posName, description, required);
-}
-
-inline void Parser::changeDescriptionIndent(size_t indent) { descriptionIndent_ = indent; }
-
-inline void Parser::tryToPrintHelp() { tryToPrintHelp_(); }
-
-inline bool Parser::tryToPrintInvalidOpts(bool notExit) { return tryToPrintInvalidOpts_(data_, notExit); }
-
-inline bool Parser::finalize(bool notExit) { return finalize_(data_.errorMessages, notExit); }
-
-inline bool Parser::runAllPostprocess(bool notExit) { return runAllPostprocess_(data_, notExit); }
-
 // === Private Helper Implementations ===
+
+inline void Parser::setDescription_(std::string_view description, InternalData &data) {
+    data.programDescription = description;
+}
+
+inline void Parser::setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data) {
+    data.shortNonFlagOptsStr = shortNonFlagOptsStr;
+}
 
 inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // NOLINT(readability-function-cognitive-complexity)
     argc_ = argc;
