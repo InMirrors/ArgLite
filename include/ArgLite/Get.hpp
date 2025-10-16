@@ -11,18 +11,17 @@ inline bool Parser::hasFlag_(
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
     data.optionHelpEntries.push_back({shortOpt, longOpt, description, ""});
 
-    auto [found, info] = findOption(shortOpt, longOpt, data);
+    auto optNode = findOption(shortOpt, longOpt, data);
 
-    if (found) {
+    if (!optNode.empty()) {
+        const auto &optInfo = optNode.mapped();
         // A flag was passed with a value, e.g., -f 123. The value is likely a positional arg.
-        if (info.argvIndex > 0) {
-            data.positionalArgsIndices.push_back(info.argvIndex);
+        if (optInfo.argvIndex > 0) {
+            data.positionalArgsIndices.push_back(optInfo.argvIndex);
         }
-        if (!shortOpt.empty()) data.options.erase(shortOpt);
-        if (!longOpt.empty()) data.options.erase(longOpt);
     }
 
-    return found;
+    return !optNode.empty();
 }
 
 bool Parser::hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data) {
@@ -32,25 +31,25 @@ bool Parser::hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data) {
     data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, args.trueDescription, ""});
     data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, args.falseDescription, ""});
 
-    auto [foundTrue, infoTrue]   = findOption(shortTrueOpt, longTrueOpt, data);
-    auto [foundFalse, infoFalse] = findOption(shortFalseOpt, longFalseOpt, data);
+    auto trueNode  = findOption(shortTrueOpt, longTrueOpt, data);
+    auto falseNode = findOption(shortFalseOpt, longFalseOpt, data);
 
-    if (foundTrue) {
-        if (infoTrue.argvIndex > 0) { data.positionalArgsIndices.push_back(infoTrue.argvIndex); }
-        if (!shortTrueOpt.empty()) data.options.erase(shortTrueOpt);
-        if (!longTrueOpt.empty()) data.options.erase(longTrueOpt);
+    if (!trueNode.empty()) {
+        if (trueNode.mapped().argvIndex > 0) {
+            data.positionalArgsIndices.push_back(trueNode.mapped().argvIndex);
+        }
     }
 
-    if (foundFalse) {
-        if (infoFalse.argvIndex > 0) { data.positionalArgsIndices.push_back(infoFalse.argvIndex); }
+    if (!falseNode.empty()) {
+        if (falseNode.mapped().argvIndex > 0) { data.positionalArgsIndices.push_back(falseNode.mapped().argvIndex); }
         if (!shortFalseOpt.empty()) data.options.erase(shortFalseOpt);
         if (!longFalseOpt.empty()) data.options.erase(longFalseOpt);
     }
 
-    if (!foundTrue && !foundFalse) { return args.defaultValue; }
+    if (trueNode.empty() && falseNode.empty()) { return args.defaultValue; }
 
     // They are negative, so Smaller is latter
-    return infoTrue.argvIndex < infoFalse.argvIndex;
+    return trueNode.mapped().argvIndex < falseNode.mapped().argvIndex;
 }
 
 inline std::string Parser::getString_(
@@ -243,29 +242,22 @@ inline std::pair<std::string, std::string> Parser::parseOptNameAsPair(std::strin
 }
 
 // Finds the option in the options_ map
-inline std::pair<bool, Parser::OptionInfo> Parser::findOption(
+inline Parser::OptMap::node_type Parser::findOption(
     const std::string &shortOpt, const std::string &longOpt, InternalData &data) {
 
-    auto longIt  = longOpt.empty() ? data.options.end() : data.options.find(longOpt);
-    auto shortIt = shortOpt.empty() ? data.options.end() : data.options.find(shortOpt);
+    auto longNode  = data.options.extract(longOpt);
+    auto shortNode = data.options.extract(shortOpt);
 
-    bool longFound  = longIt != data.options.end();
-    bool shortFound = shortIt != data.options.end();
-
-    if (!longFound && !shortFound) {
-        return {false, {0, ""}};
-    }
-
-    // If both are found, prefer the one that appears later in argv
-    if (longFound && shortFound) {
-        if (std::abs(longIt->second.argvIndex) > std::abs(shortIt->second.argvIndex)) {
-            return {true, longIt->second};
+    if (!longNode.empty() && !shortNode.empty()) {
+        if (std::abs(longNode.mapped().argvIndex) > std::abs(shortNode.mapped().argvIndex)) {
+            return longNode;
         }
-        return {true, shortIt->second};
+        return shortNode;
     }
 
-    if (longFound) return {true, longIt->second};
-    return {true, shortIt->second};
+    if (!longNode.empty()) { return longNode; }
+
+    return shortNode;
 }
 
 // Uses the option name to get a value string from the options_ map.
@@ -276,11 +268,10 @@ inline std::pair<bool, std::string> Parser::getValueStr(
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
     data.optionHelpEntries.push_back({shortOpt, longOpt, description, defaultValueStr});
 
-    auto [found, optInfo] = findOption(shortOpt, longOpt, data);
+    auto optNode = findOption(shortOpt, longOpt, data);
 
-    if (found) {
-        if (!shortOpt.empty()) data.options.erase(shortOpt);
-        if (!longOpt.empty()) data.options.erase(longOpt);
+    if (!optNode.empty()) {
+        const auto &optInfo = optNode.mapped();
 
         if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
             std::string msg("Option '");

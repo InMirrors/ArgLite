@@ -197,16 +197,18 @@ private:
         bool        required;
     };
 
+    using OptMap = std::unordered_map<std::string, OptionInfo>;
+
     struct InternalData {
         std::string programName;
         std::string programDescription;
         std::string shortNonFlagOptsStr;
         // Containers
-        std::unordered_map<std::string, OptionInfo> options;
-        std::vector<OptionHelpInfo>                 optionHelpEntries;
-        std::vector<int>                            positionalArgsIndices;
-        std::vector<PositionalHelpInfo>             positionalHelpEntries;
-        std::vector<std::string>                    errorMessages;
+        OptMap                          options;
+        std::vector<OptionHelpInfo>     optionHelpEntries;
+        std::vector<int>                positionalArgsIndices;
+        std::vector<PositionalHelpInfo> positionalHelpEntries;
+        std::vector<std::string>        errorMessages;
     };
 
     // Internal data storage
@@ -234,10 +236,10 @@ private:
     template <typename T>
     static inline std::string toString(const T &val);
     // Helper functions for get functions with long return types
-    static inline std::string                         parseOptName(std::string_view optName);
-    static inline std::pair<std::string, std::string> parseOptNameAsPair(std::string_view optName);
-    static inline std::pair<bool, OptionInfo>         findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
-    static inline std::pair<bool, std::string>        getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
+    static inline std::string                                            parseOptName(std::string_view optName);
+    static inline std::pair<std::string, std::string>                    parseOptNameAsPair(std::string_view optName);
+    static inline std::unordered_map<std::string, OptionInfo>::node_type findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
+    static inline std::pair<bool, std::string>                           getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
     // Other helper functions
     static inline void preprocess_(int argc, char **argv, InternalData &data = data_);
     static inline void tryToPrintVersion_(InternalData &data = data_);
