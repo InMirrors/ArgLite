@@ -2,6 +2,8 @@
 
 #include "Core.hpp"
 #include <sstream>
+#include <string_view>
+#include <type_traits>
 
 namespace ArgLite {
 
@@ -54,49 +56,57 @@ bool Parser::hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data) {
 
 inline std::string Parser::getString_(
     std::string_view optName, const std::string &description, const std::string &defaultValue,
-    InternalData &data) {
+    const std::string &typeName, InternalData &data) {
 
-    auto [found, value] = getValueStr(optName, description, defaultValue, data);
+    auto realTypeName = typeName.empty() ? getTypeName<std::string>() : typeName;
+
+    auto [found, value] = getValueStr(optName, description, defaultValue, realTypeName, data);
     return value;
 }
 
 inline long long Parser::getInt_(
     std::string_view optName, const std::string &description, long long defaultValue,
-    InternalData &data) {
+    const std::string &typeName, InternalData &data) {
 
-    auto [found, valueStr] = getValueStr(optName, description, toString(defaultValue), data);
+    auto realTypeName = typeName.empty() ? getTypeName<int>() : typeName;
+
+    auto [found, valueStr] = getValueStr(optName, description, toString(defaultValue), realTypeName, data);
     if (!found) {
         return defaultValue;
     }
     try {
         return std::stoll(valueStr);
     } catch (const std::exception &) {
-        appendOptValErrorMsg(data, optName, "integer", valueStr);
+        appendOptValErrorMsg(data, optName, getTypeName<int>(), valueStr);
     }
     return 0;
 }
 
 inline double Parser::getDouble_(
     std::string_view optName, const std::string &description, double defaultValue,
-    InternalData &data) {
+    const std::string &typeName, InternalData &data) {
 
-    auto [found, valueStr] = getValueStr(optName, description, toString(defaultValue), data);
+    auto realTypeName = typeName.empty() ? getTypeName<float>() : typeName;
+
+    auto [found, valueStr] = getValueStr(optName, description, toString(defaultValue), realTypeName, data);
     if (!found) {
         return defaultValue;
     }
     try {
         return std::stod(valueStr);
     } catch (const std::exception &) {
-        appendOptValErrorMsg(data, optName, "double", valueStr);
+        appendOptValErrorMsg(data, optName, getTypeName<float>(), valueStr);
     }
     return 0.0;
 }
 
 inline bool Parser::getBool_(
     std::string_view optName, const std::string &description, bool defaultValue,
-    InternalData &data) {
+    const std::string &typeName, InternalData &data) {
 
-    auto [found, valueStr] = getValueStr(optName, description, defaultValue ? "true" : "false", data);
+    auto realTypeName = typeName.empty() ? getTypeName<bool>() : typeName;
+
+    auto [found, valueStr] = getValueStr(optName, description, defaultValue ? "true" : "false", realTypeName, data);
     if (!found) {
         return defaultValue;
     }
@@ -109,7 +119,7 @@ inline bool Parser::getBool_(
         return false;
     }
 
-    appendOptValErrorMsg(data, parseOptName(optName), "boolean", valueStr);
+    appendOptValErrorMsg(data, parseOptName(optName), getTypeName<bool>(), valueStr);
     return false;
 }
 
@@ -263,10 +273,11 @@ inline Parser::OptMap::node_type Parser::findOption(
 // Uses the option name to get a value string from the options_ map.
 inline std::pair<bool, std::string> Parser::getValueStr(
     std::string_view optName, const std::string &description,
-    const std::string &defaultValueStr, InternalData &data) {
+    const std::string &defaultValueStr, const std::string &typeName,
+    InternalData &data) {
 
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
-    data.optionHelpEntries.push_back({shortOpt, longOpt, description, defaultValueStr});
+    data.optionHelpEntries.push_back({shortOpt, longOpt, description, defaultValueStr, typeName});
 
     auto optNode = findOption(shortOpt, longOpt, data);
 
@@ -304,6 +315,64 @@ inline void Parser::fixPositionalArgsArray(
 
     // Keep positional args sorted by their original index to maintain order
     std::sort(positionalArgsIndices.begin(), positionalArgsIndices.end());
+}
+
+template <typename T>
+// C++11/14/17 compatible `remove_cvref_t` (`std::remove_cvref_t` is C++20)
+// This alias removes const, volatile qualifiers and references from a type T
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
+template <typename T>
+std::string Parser::getTypeName() {
+    // Remove const, volatile qualifiers and references for consistent type comparison
+    using DecayedT = remove_cvref_t<T>;
+
+    // Group all signed integer types as "int"
+    if constexpr (std::disjunction_v<
+                      std::is_same<DecayedT, int>,
+                      std::is_same<DecayedT, short>,
+                      std::is_same<DecayedT, long>,
+                      std::is_same<DecayedT, long long>>) {
+        return "integer";
+    }
+    // Group all unsigned integer types as "unsigned int"
+    else if constexpr (std::disjunction_v<
+                           std::is_same<DecayedT, unsigned int>,
+                           std::is_same<DecayedT, unsigned short>,
+                           std::is_same<DecayedT, unsigned long>,
+                           std::is_same<DecayedT, unsigned long long>>) {
+        return "unsigned int";
+    }
+    // Group all floating-point types as "float"
+    else if constexpr (std::disjunction_v<
+                           std::is_same<DecayedT, float>,
+                           std::is_same<DecayedT, double>,
+                           std::is_same<DecayedT, long double>>) {
+        return "float";
+    }
+    // Group all character types as "char"
+    else if constexpr (std::disjunction_v<
+                           std::is_same<DecayedT, char>,
+                           std::is_same<DecayedT, signed char>,
+                           std::is_same<DecayedT, unsigned char>,
+                           std::is_same<DecayedT, wchar_t>,
+                           std::is_same<DecayedT, char16_t>, // C++11 character types
+                           std::is_same<DecayedT, char32_t>  // C++11 character types
+                           >) {
+        return "char";
+    }
+    // Specific type for boolean
+    else if constexpr (std::is_same_v<DecayedT, bool>) {
+        return "bool";
+    }
+    // Specific type for std::string
+    else if constexpr (std::is_same_v<DecayedT, std::string>) {
+        return "string";
+    }
+    // For any other types (e.g., void, nullptr_t, pointers, custom structs), return an empty string
+    else {
+        return "";
+    }
 }
 
 } // namespace ArgLite

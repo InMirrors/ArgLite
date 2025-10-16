@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
+    Parser::changeDescriptionIndent(indent);
     Parser::runAllPostprocess();
 
     cout << "Verbose    : " << boolalpha << verbose << '\n';

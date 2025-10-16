@@ -218,11 +218,11 @@ def main():
         expected_return_code=1
     )
 
-    # Option argument type mismatch for -r (e.g., passing non-double)
+    # Option argument type mismatch for -r (e.g., passing non-float)
     all_tests_passed &= test_case(
         "Option argument type mismatch (rate)",
         ["-r", "xyz", "output.txt", "input.txt"],
-        expected_error_keywords=["Option", "-r", "expect", "double", "got", "xyz"],
+        expected_error_keywords=["Option", "-r", "expect", "float", "got", "xyz"],
         expected_return_code=1
     )
 
@@ -238,7 +238,7 @@ def main():
     all_tests_passed &= test_case(
         "Missing argument for getBool option -d",
         ["-d", "output.txt", "input.txt"], # "output.txt" will be parsed as the value for -d, but it's not a valid boolean string
-        expected_error_keywords=["Option", "-d", "expect", "boolean", "got", "output.txt"],
+        expected_error_keywords=["Option", "-d", "expect", "bool", "got", "output.txt"],
         expected_return_code=1
     )
 

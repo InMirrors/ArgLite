@@ -81,7 +81,7 @@ public:
      * @return The parsed string value or the default value.
      */
     static std::string getString(std::string_view optName, const std::string &description, const std::string &defaultValue = "") {
-        return getString_(optName, description, defaultValue, data_);
+        return getString_(optName, description, defaultValue, "", data_);
     }
 
     /**
@@ -92,7 +92,7 @@ public:
      * @return The parsed integer value or the default value.
      */
     static long long getInt(std::string_view optName, const std::string &description, long long defaultValue = 0) {
-        return getInt_(optName, description, defaultValue, data_);
+        return getInt_(optName, description, defaultValue, "", data_);
     }
 
     /**
@@ -103,7 +103,7 @@ public:
      * @return The parsed floating-point value or the default value.
      */
     static double getDouble(std::string_view optName, const std::string &description, double defaultValue = 0.0) {
-        return getDouble_(optName, description, defaultValue, data_);
+        return getDouble_(optName, description, defaultValue, "", data_);
     }
 
     /**
@@ -117,7 +117,7 @@ public:
      * @return The parsed boolean value or the default value.
      */
     static bool getBool(std::string_view optName, const std::string &description, bool defaultValue = false) {
-        return getBool_(optName, description, defaultValue, data_);
+        return getBool_(optName, description, defaultValue, "", data_);
     }
 
     /**
@@ -202,6 +202,7 @@ private:
         std::string longOpt;  // Prepended with "--"
         std::string description;
         std::string defaultValue;
+        std::string typeName;
     };
 
     struct PositionalHelpInfo {
@@ -236,23 +237,25 @@ private:
     // Get functions, internal data can be changed
     static inline bool                     hasFlag_(std::string_view optName, const std::string &description, InternalData &data);
     static inline bool                     hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data);
-    static inline std::string              getString_(std::string_view optName, const std::string &description, const std::string &defaultValue, InternalData &data);
-    static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue, InternalData &data);
-    static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue, InternalData &data);
-    static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue, InternalData &data);
+    static inline std::string              getString_(std::string_view optName, const std::string &description, const std::string &defaultValue, const std::string &typeName, InternalData &data);
+    static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue, const std::string &typeName, InternalData &data);
+    static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue, const std::string &typeName, InternalData &data);
+    static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue, const std::string &typeName, InternalData &data);
     static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, InternalData &data);
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, InternalData &data);
     // Helper functions for get functions
     static inline void appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
     static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
-    static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options);
+    static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, OptMap &options);
     template <typename T>
     static inline std::string toString(const T &val);
+    template <typename T>
+    static inline std::string getTypeName();
     // Helper functions for get functions with long return types
-    static inline std::string                                            parseOptName(std::string_view optName);
-    static inline std::pair<std::string, std::string>                    parseOptNameAsPair(std::string_view optName);
-    static inline std::unordered_map<std::string, OptionInfo>::node_type findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
-    static inline std::pair<bool, std::string>                           getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, InternalData &data);
+    static inline std::string                         parseOptName(std::string_view optName);
+    static inline std::pair<std::string, std::string> parseOptNameAsPair(std::string_view optName);
+    static inline OptMap::node_type                   findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
+    static inline std::pair<bool, std::string>        getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, const std::string &typeName, InternalData &data);
     // Other helper functions
     static inline void setDescription_(std::string_view description, InternalData &data = data_);
     static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data = data_);
@@ -496,17 +499,28 @@ inline void Parser::printHelpOptions(const InternalData &data) {
             std::cout << std::left;
 #ifdef ARGLITE_ENABLE_FORMATTER
             constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
-            std::cout << std::setw(static_cast<int>(descriptionIndent_) + ANSI_CODE_LENGTH)
-                      << Formatter::bold(optStr);
+            std::cout << std::setw(static_cast<int>(descriptionIndent_) + ANSI_CODE_LENGTH);
+            optStr = Formatter::bold(optStr);
 #else
-            std::cout << std::setw(static_cast<int>(descriptionIndent_)) << optStr;
+            std::cout << std::setw(static_cast<int>(descriptionIndent_));
 #endif
+
+            if (!o.typeName.empty()) {
+                optStr.append(" <").append(o.typeName).append(">");
+            }
+            std::cout << optStr;
 
             std::string descStr = o.description;
             if (!o.defaultValue.empty()) {
                 descStr += std::string(" [default: ").append(o.defaultValue).append("]");
             }
-            if (optStr.length() > descriptionIndent_ - 2) { // the option string is too long, start a new line
+            // the option string is too long, start a new line
+            // -2: two separeting spaces after the type name
+            auto optPartLength = optStr.length();
+#ifdef ARGLITE_ENABLE_FORMATTER
+            optPartLength -= ANSI_CODE_LENGTH;
+#endif
+            if (optPartLength > descriptionIndent_ - 2) {
                 std::cout << '\n'
                           << std::left << std::setw(static_cast<int>(descriptionIndent_)) << "";
             }
