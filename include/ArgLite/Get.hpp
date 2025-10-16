@@ -25,6 +25,34 @@ inline bool Parser::hasFlag_(
     return found;
 }
 
+bool Parser::hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data) {
+    auto [shortTrueOpt, longTrueOpt]   = parseOptNameAsPair(args.trueOptName);
+    auto [shortFalseOpt, longFalseOpt] = parseOptNameAsPair(args.falseOptName);
+
+    data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, args.trueDescription, ""});
+    data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, args.falseDescription, ""});
+
+    auto [foundTrue, infoTrue]   = findOption(shortTrueOpt, longTrueOpt, data);
+    auto [foundFalse, infoFalse] = findOption(shortFalseOpt, longFalseOpt, data);
+
+    if (foundTrue) {
+        if (infoTrue.argvIndex > 0) { data.positionalArgsIndices.push_back(infoTrue.argvIndex); }
+        if (!shortTrueOpt.empty()) data.options.erase(shortTrueOpt);
+        if (!longTrueOpt.empty()) data.options.erase(longTrueOpt);
+    }
+
+    if (foundFalse) {
+        if (infoFalse.argvIndex > 0) { data.positionalArgsIndices.push_back(infoFalse.argvIndex); }
+        if (!shortFalseOpt.empty()) data.options.erase(shortFalseOpt);
+        if (!longFalseOpt.empty()) data.options.erase(longFalseOpt);
+    }
+
+    if (!foundTrue && !foundFalse) { return args.defaultValue; }
+
+    // They are negative, so Smaller is latter
+    return infoTrue.argvIndex < infoFalse.argvIndex;
+}
+
 inline std::string Parser::getString_(
     std::string_view optName, const std::string &description, const std::string &defaultValue,
     InternalData &data) {

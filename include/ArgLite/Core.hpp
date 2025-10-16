@@ -56,6 +56,23 @@ public:
      */
     static inline bool hasFlag(std::string_view optName, const std::string &description);
 
+    //  Structure for arguments of mutually exclusive flag options.
+    struct GetMutualExArgs {
+        std::string trueOptName;      // Name of the option that represents the true condition.
+        std::string trueDescription;  // Description of the option that represents the true condition.
+        std::string falseOptName;     // Name of the option that represents the false condition.
+        std::string falseDescription; // Description of the option that represents the false condition.
+        bool        defaultValue;     // Default value if neither option is specified.
+    };
+
+    /**
+     * @brief Checks if two mutually exclusive options exist.
+     * @param args Structure containing the names and descriptions of the mutually exclusive options.
+     * @return True if the first option is present and the second is not, or vice versa;
+               defaultValue if neither option is present.
+     */
+    static inline bool hasMutualExFlag(const GetMutualExArgs &args);
+
     /**
      * @brief Gets the value of a string option.
      * @param names Option names (e.g., "o", "output" or "o,output").
@@ -203,6 +220,7 @@ private:
     // Internal helper functions
     // Get functions, internal data can be changed
     static inline bool                     hasFlag_(std::string_view optName, const std::string &description, InternalData &data = data_);
+    static inline bool                     hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data = data_);
     static inline std::string              getString_(std::string_view optName, const std::string &description, const std::string &defaultValue = "", InternalData &data = data_);
     static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue = 0, InternalData &data = data_);
     static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue = 0.0, InternalData &data = data_);
@@ -259,6 +277,10 @@ inline void Parser::preprocess(int argc, char **argv) {
 
 inline bool Parser::hasFlag(std::string_view optName, const std::string &description) {
     return hasFlag_(optName, description);
+}
+
+inline bool Parser::hasMutualExFlag(const GetMutualExArgs &args) {
+    return hasMutualExFlag_(args);
 }
 
 inline std::string Parser::getString(std::string_view optName, const std::string &description, const std::string &defaultValue) {

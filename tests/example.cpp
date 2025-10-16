@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
     auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
     auto switch1    = Parser::hasFlag("1,switch1", "Switch 1.");
     auto switch2    = Parser::hasFlag("2,switch2", "Switch 2.");
+    auto enableX    = Parser::hasMutualExFlag({"x,enable-x", "Enable feature x.", "X,disable-x", "Disable feature x.", false});
     auto debug      = Parser::getBool("d,whether-enable-debug-mode", "Whether enable debug mode.");
     auto count      = Parser::getInt("n,count", "Number of iterations.");
     auto indent     = Parser::getInt("indent", "Option Description indent.", 20); // long option only
@@ -25,14 +26,12 @@ int main(int argc, char **argv) {
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
-    Parser::changeDescriptionIndent(indent);
-    Parser::tryToPrintHelp();
-    Parser::tryToPrintInvalidOpts();
-    Parser::finalize();
+    Parser::runAllPostprocess();
 
     cout << "Verbose    : " << boolalpha << verbose << '\n';
     cout << "Switch 1   : " << switch1 << '\n';
     cout << "Switch 2   : " << switch2 << '\n';
+    cout << "Feature X  : " << enableX << '\n';
     cout << "Debug      : " << debug << '\n';
     cout << "Count      : " << count << '\n';
     cout << "Indent     : " << indent << '\n';
