@@ -23,7 +23,7 @@ public:
      * @brief Sets the program description, used for the first line of the help message.
      * @param description The program's description text.
      */
-    static void setDescription(std::string_view description) { setDescription_(description); }
+    static void setDescription(std::string_view description) { setDescription_(description, data_); }
 
     /**
      * @brief Sets the program version and add options `-V` and `--version` to print the version.
@@ -39,7 +39,7 @@ public:
      * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
                                   For example, if `-n` and `-r` require values, pass `nr`.
      */
-    static void setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr) { setShortNonFlagOptsStr_(shortNonFlagOptsStr); }
+    static void setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr) { setShortNonFlagOptsStr_(shortNonFlagOptsStr, data_); }
 
     /**
      * @brief Preprocesses the command-line arguments. This is the first step in using this library.
@@ -257,13 +257,13 @@ private:
     static inline OptMap::node_type                   findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
     static inline std::pair<bool, std::string>        getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, const std::string &typeName, InternalData &data);
     // Other helper functions
-    static inline void setDescription_(std::string_view description, InternalData &data = data_);
-    static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data = data_);
-    static inline void preprocess_(int argc, char **argv, InternalData &data = data_);
-    static inline void tryToPrintVersion_(InternalData &data = data_);
-    static inline void tryToPrintHelp_(InternalData &data = data_);
-    static inline bool tryToPrintInvalidOpts_(InternalData &data = data_, bool notExit = false);
-    static inline void printHelp(const InternalData &data = data_);
+    static inline void setDescription_(std::string_view description, InternalData &data);
+    static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data);
+    static inline void preprocess_(int argc, char **argv);
+    static inline void tryToPrintVersion_(InternalData &data);
+    static inline void tryToPrintHelp_(InternalData &data);
+    static inline bool tryToPrintInvalidOpts_(InternalData &data, bool notExit = false);
+    static inline void printHelp(const InternalData &data);
     static inline void printHelpDescription(std::string_view description);
     static inline void printHelpUsage(const InternalData &data, std::string_view cmdName);
     static inline void printHelpPositional(const InternalData &data);
@@ -288,15 +288,19 @@ inline void Parser::setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr
     data.shortNonFlagOptsStr = shortNonFlagOptsStr;
 }
 
-inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // NOLINT(readability-function-cognitive-complexity)
+inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
     argc_ = argc;
     argv_ = argv;
+
+    auto &data = data_;
+
     if (argc_ > 0) {
-        data_.programName = argv[0];
+        data.programName = argv[0];
+
         // Extract the basename
-        if (auto last_slash_pos = data_.programName.find_last_of("/\\");
+        if (auto last_slash_pos = data.programName.find_last_of("/\\");
             std::string::npos != last_slash_pos) {
-            data_.programName.erase(0, last_slash_pos + 1);
+            data.programName.erase(0, last_slash_pos + 1);
         }
     }
 
@@ -396,7 +400,7 @@ inline void Parser::tryToPrintHelp_(InternalData &data) {
 
     if ((data.options.count("-h") != 0) || (data.options.count("--help")) != 0) {
         data.optionHelpEntries.push_back({"-h", "--help", "Show this help message and exit", ""});
-        printHelp();
+        printHelp(data);
         std::exit(EXIT_SUCCESS);
     }
 }
