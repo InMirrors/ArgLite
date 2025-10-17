@@ -36,22 +36,22 @@ bool Parser::hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data) {
     auto trueNode  = findOption(shortTrueOpt, longTrueOpt, data);
     auto falseNode = findOption(shortFalseOpt, longFalseOpt, data);
 
-    if (!trueNode.empty()) {
-        if (trueNode.mapped().argvIndex > 0) {
-            data.positionalArgsIndices.push_back(trueNode.mapped().argvIndex);
-        }
+    if (!trueNode.empty() && trueNode.mapped().argvIndex > 0) {
+        data.positionalArgsIndices.push_back(trueNode.mapped().argvIndex);
     }
-
-    if (!falseNode.empty()) {
-        if (falseNode.mapped().argvIndex > 0) { data.positionalArgsIndices.push_back(falseNode.mapped().argvIndex); }
-        if (!shortFalseOpt.empty()) data.options.erase(shortFalseOpt);
-        if (!longFalseOpt.empty()) data.options.erase(longFalseOpt);
+    if (!falseNode.empty() && falseNode.mapped().argvIndex > 0) {
+        data.positionalArgsIndices.push_back(falseNode.mapped().argvIndex);
     }
 
     if (trueNode.empty() && falseNode.empty()) { return args.defaultValue; }
 
     // They are negative, so Smaller is latter
-    return trueNode.mapped().argvIndex < falseNode.mapped().argvIndex;
+    if (!trueNode.empty() && !falseNode.empty()) {
+        return trueNode.mapped().argvIndex < falseNode.mapped().argvIndex;
+    }
+
+    if (!trueNode.empty()) { return true; }
+    return false;
 }
 
 inline std::string Parser::getString_(
