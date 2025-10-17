@@ -294,8 +294,8 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
     if (argc_ > 0) {
         data_.programName = argv[0];
         // Extract the basename
-        size_t last_slash_pos = data_.programName.find_last_of("/\\");
-        if (std::string::npos != last_slash_pos) {
+        if (auto last_slash_pos = data_.programName.find_last_of("/\\");
+            std::string::npos != last_slash_pos) {
             data_.programName.erase(0, last_slash_pos + 1);
         }
     }
@@ -323,8 +323,8 @@ inline void Parser::preprocess_(int argc, char **argv, InternalData &data) { // 
         if (arg.rfind("--", 0) == 0) {
             std::string key = arg;
             std::string value;
-            size_t      equalsPos = arg.find('=');
-            if (equalsPos != std::string::npos) { // --opt=val form
+            // --opt=val form
+            if (auto equalsPos = arg.find('='); equalsPos != std::string::npos) {
                 key               = arg.substr(0, equalsPos);
                 value             = arg.substr(equalsPos + 1);
                 data.options[key] = {i, std::move(value)};
