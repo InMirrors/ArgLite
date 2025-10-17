@@ -173,7 +173,7 @@ public:
      * @param notExit If true, the program will not exit after printing any error messages. Default is false.
      * @return Returns true if there are any error messages and notExit is false, false otherwise.
      */
-    static bool finalize(bool notExit = false) { return finalize_(data_.errorMessages, notExit); }
+    static bool finalize(bool notExit = false) { return finalize_(data_, notExit); }
 
     /**
      * @brief Runs tryToPrintHelp, tryToPrintInvalidOpts, and finalize in sequence.
@@ -268,7 +268,8 @@ private:
     static inline void printHelpUsage(const InternalData &data, std::string_view cmdName);
     static inline void printHelpPositional(const InternalData &data);
     static inline void printHelpOptions(const InternalData &data);
-    static inline bool finalize_(const std::vector<std::string> &errorMessages, bool notExit = false);
+    static inline void clearData(InternalData &data);
+    static inline bool finalize_(InternalData &data, bool notExit = false);
     static inline bool runAllPostprocess_(InternalData &data, bool notExit = false);
 
 #ifdef ARGLITE_ENABLE_FORMATTER
@@ -533,23 +534,39 @@ inline void Parser::printHelpOptions(const InternalData &data) {
     }
 }
 
-inline bool Parser::finalize_(const std::vector<std::string> &errorMessages, bool notExit) {
-    if (errorMessages.empty()) { return false; }
+// Clear internal data
+inline void Parser::clearData(InternalData &data) {
+    InternalData temp;
+    temp.options.swap(data.options);
+    temp.optionHelpEntries.swap(data.optionHelpEntries);
+    temp.positionalArgsIndices.swap(data.positionalArgsIndices);
+    temp.positionalHelpEntries.swap(data.positionalHelpEntries);
+    temp.errorMessages.swap(data.errorMessages);
+}
+
+inline bool Parser::finalize_(InternalData &data, bool notExit) {
+    if (data.errorMessages.empty()) {
+        clearData(data);
+        return false;
+    }
 
     std::cerr << "Errors occurred while parsing command-line arguments.\n";
     std::cerr << "The following is a list of error messages:\n";
-    for (const auto &msg : errorMessages) {
+    for (const auto &msg : data.errorMessages) {
         std::cerr << ERROR_STR << msg << '\n';
     }
 
-    if (notExit) { return true; }
+    if (notExit) {
+        clearData(data);
+        return true;
+    }
     std::exit(EXIT_FAILURE);
 }
 
 inline bool Parser::runAllPostprocess_(InternalData &data, bool notExit) {
     tryToPrintHelp_(data);
     auto hasInvalidOpts = tryToPrintInvalidOpts_(data, true);
-    auto hasError       = finalize_(data.errorMessages, true);
+    auto hasError       = finalize_(data, true);
 
     if (!notExit && (hasInvalidOpts || hasError)) {
         std::exit(EXIT_FAILURE);
