@@ -3,15 +3,6 @@ import os
 import test_utils
 from test_utils import colored_print, test_case, reset_test_counter
 
-# Define the path to the binary executable
-# Assuming the binary is located in the 'bin/' directory at the project root
-_local_binary_path = os.path.join(os.path.dirname(__file__), '..', 'bin', 'example')
-# Ensure _local_binary_path is an absolute path and unify slashes for cross-platform compatibility
-_local_binary_path = os.path.abspath(_local_binary_path).replace('\\', '/')
-
-# Set the global BINARY_PATH in test_utils
-test_utils.BINARY_PATH = _local_binary_path
-
 def main():
     reset_test_counter() # Reset counter for main execution
     all_tests_passed = True
@@ -250,4 +241,16 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
+    _local_binary_name = "example"
+    if sys.argv[1].lower() == "m":
+        _local_binary_name = "minimal_example"
+        colored_print(f"Running {_local_binary_name} tests...", color="blue")
+    # Define the path to the binary executable
+    _local_binary_path = os.path.join(os.path.dirname(__file__), '..', 'bin', _local_binary_name)
+    # Ensure _local_binary_path is an absolute path and unify slashes for cross-platform compatibility
+    _local_binary_path = os.path.abspath(_local_binary_path).replace('\\', '/')
+
+    # Set the global BINARY_PATH in test_utils
+    test_utils.BINARY_PATH = _local_binary_path
+
     main()
