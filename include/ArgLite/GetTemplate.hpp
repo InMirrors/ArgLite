@@ -49,11 +49,6 @@ inline std::string Parser::toString(const T &val) {
 }
 
 template <typename T>
-// C++11/14/17 compatible `remove_cvref_t` (`std::remove_cvref_t` is C++20)
-// This alias removes const, volatile qualifiers and references from a type T
-using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
-
-template <typename T>
 std::string Parser::getTypeName() {
     // Remove const, volatile qualifiers and references for consistent type comparison
     using DecayedT = remove_cvref_t<T>;

@@ -259,6 +259,10 @@ private:
     template <typename T> static inline T           convertType(const std::string &valueStr);
     template <typename T> static inline std::string toString(const T &val);
     template <typename T> static inline std::string getTypeName();
+    // C++11/14/17 compatible `remove_cvref_t` (`std::remove_cvref_t` is C++20)
+    // This alias removes const, volatile qualifiers and references from a type T
+    template <typename T>
+    using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
     // Other helper functions
     static inline void setDescription_(std::string_view description, InternalData &data);
     static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data);

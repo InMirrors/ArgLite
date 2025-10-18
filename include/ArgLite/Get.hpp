@@ -122,43 +122,6 @@ inline bool Parser::getBool_(
     return false;
 }
 
-inline std::string Parser::getPositional_(
-    const std::string &posName, const std::string &description, bool isRequired,
-    InternalData &data) {
-
-    fixPositionalArgsArray(data.positionalArgsIndices, data.options);
-
-    data.positionalHelpEntries.push_back({posName, description, isRequired});
-    if (positionalIdx_ < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[positionalIdx_];
-        positionalIdx_++;
-        return argv_[argvIdx];
-    }
-    if (isRequired) {
-        appendPosValErrorMsg(data, posName, "Missing required positional argument '");
-    }
-    return "";
-}
-
-inline std::vector<std::string> Parser::getRemainingPositionals_(
-    const std::string &posName, const std::string &description, bool required,
-    InternalData &data) {
-
-    fixPositionalArgsArray(data.positionalArgsIndices, data.options);
-
-    data.positionalHelpEntries.push_back({posName, description, required});
-    std::vector<std::string> remaining;
-    while (positionalIdx_ < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[positionalIdx_];
-        remaining.emplace_back(argv_[argvIdx]);
-        positionalIdx_++;
-    }
-    if (required && remaining.empty()) {
-        appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
-    }
-    return remaining;
-}
-
 inline void Parser::appendOptValErrorMsg(
     InternalData    &data,
     std::string_view optName, const std::string &typeName, const std::string &valueStr) {
@@ -184,19 +147,6 @@ inline void Parser::appendOptValErrorMsg(
 #endif
     errorStr += "'.";
     data.errorMessages.push_back(std::move(errorStr));
-}
-
-inline void Parser::appendPosValErrorMsg(
-    InternalData &data, std::string_view posName, std::string_view errorMsg) {
-
-    std::string msg(errorMsg);
-#ifdef ARGLITE_ENABLE_FORMATTER
-    msg.append(Formatter::bold(posName));
-#else
-    msg.append(posName);
-#endif
-    msg.append("'.");
-    data.errorMessages.push_back(std::move(msg));
 }
 
 // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
@@ -290,6 +240,56 @@ inline std::pair<bool, std::string> Parser::getValueStr(
     }
 
     return {false, defaultValueStr};
+}
+
+inline std::string Parser::getPositional_(
+    const std::string &posName, const std::string &description, bool isRequired,
+    InternalData &data) {
+
+    fixPositionalArgsArray(data.positionalArgsIndices, data.options);
+
+    data.positionalHelpEntries.push_back({posName, description, isRequired});
+    if (positionalIdx_ < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[positionalIdx_];
+        positionalIdx_++;
+        return argv_[argvIdx];
+    }
+    if (isRequired) {
+        appendPosValErrorMsg(data, posName, "Missing required positional argument '");
+    }
+    return "";
+}
+
+inline std::vector<std::string> Parser::getRemainingPositionals_(
+    const std::string &posName, const std::string &description, bool required,
+    InternalData &data) {
+
+    fixPositionalArgsArray(data.positionalArgsIndices, data.options);
+
+    data.positionalHelpEntries.push_back({posName, description, required});
+    std::vector<std::string> remaining;
+    while (positionalIdx_ < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[positionalIdx_];
+        remaining.emplace_back(argv_[argvIdx]);
+        positionalIdx_++;
+    }
+    if (required && remaining.empty()) {
+        appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
+    }
+    return remaining;
+}
+
+inline void Parser::appendPosValErrorMsg(
+    InternalData &data, std::string_view posName, std::string_view errorMsg) {
+
+    std::string msg(errorMsg);
+#ifdef ARGLITE_ENABLE_FORMATTER
+    msg.append(Formatter::bold(posName));
+#else
+    msg.append(posName);
+#endif
+    msg.append("'.");
+    data.errorMessages.push_back(std::move(msg));
 }
 
 inline void Parser::fixPositionalArgsArray(
