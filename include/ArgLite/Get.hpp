@@ -1,9 +1,8 @@
 #pragma once
 
 #include "Core.hpp"
-#include <sstream>
+#include "GetTemplate.hpp" // IWYU pragma: keep
 #include <string_view>
-#include <type_traits>
 
 namespace ArgLite {
 
@@ -200,19 +199,6 @@ inline void Parser::appendPosValErrorMsg(
     data.errorMessages.push_back(std::move(msg));
 }
 
-template <typename T>
-inline std::string Parser::toString(const T &val) {
-    std::stringstream ss;
-    ss << val;
-    std::string result(ss.str());
-    if constexpr (std::is_floating_point_v<T>) {
-        if (result.find('.') == std::string::npos) {
-            result.append(".0");
-        }
-    }
-    return result;
-}
-
 // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
 inline std::string Parser::parseOptName(std::string_view optName) {
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
@@ -318,68 +304,6 @@ inline void Parser::fixPositionalArgsArray(
 
     // Keep positional args sorted by their original index to maintain order
     std::sort(positionalArgsIndices.begin(), positionalArgsIndices.end());
-}
-
-template <typename T>
-// C++11/14/17 compatible `remove_cvref_t` (`std::remove_cvref_t` is C++20)
-// This alias removes const, volatile qualifiers and references from a type T
-using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
-
-template <typename T>
-std::string Parser::getTypeName() {
-    // Remove const, volatile qualifiers and references for consistent type comparison
-    using DecayedT = remove_cvref_t<T>;
-
-    // Group all signed integer types as "int"
-    if constexpr (
-        std::disjunction_v<
-            std::is_same<DecayedT, int>,
-            std::is_same<DecayedT, short>,
-            std::is_same<DecayedT, long>,
-            std::is_same<DecayedT, long long>>) {
-        return "integer";
-    }
-    // Group all unsigned integer types as "unsigned int"
-    else if constexpr (
-        std::disjunction_v<
-            std::is_same<DecayedT, unsigned int>,
-            std::is_same<DecayedT, unsigned short>,
-            std::is_same<DecayedT, unsigned long>,
-            std::is_same<DecayedT, unsigned long long>>) {
-        return "unsigned int";
-    }
-    // Group all floating-point types as "float"
-    else if constexpr (
-        std::disjunction_v<
-            std::is_same<DecayedT, float>,
-            std::is_same<DecayedT, double>,
-            std::is_same<DecayedT, long double>>) {
-        return "float";
-    }
-    // Group all character types as "char"
-    else if constexpr (
-        std::disjunction_v<
-            std::is_same<DecayedT, char>,
-            std::is_same<DecayedT, signed char>,
-            std::is_same<DecayedT, unsigned char>,
-            std::is_same<DecayedT, wchar_t>,
-            std::is_same<DecayedT, char16_t>, // C++11 character types
-            std::is_same<DecayedT, char32_t>  // C++11 character types
-            >) {
-        return "char";
-    }
-    // Specific type for boolean
-    else if constexpr (std::is_same_v<DecayedT, bool>) {
-        return "bool";
-    }
-    // Specific type for std::string
-    else if constexpr (std::is_same_v<DecayedT, std::string>) {
-        return "string";
-    }
-    // For any other types (e.g., void, nullptr_t, pointers, custom structs), return an empty string
-    else {
-        return "";
-    }
 }
 
 } // namespace ArgLite

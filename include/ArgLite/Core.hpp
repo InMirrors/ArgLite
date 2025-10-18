@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -247,15 +248,17 @@ private:
     static inline void appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
     static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
     static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, OptMap &options);
-    template <typename T>
-    static inline std::string toString(const T &val);
-    template <typename T>
-    static inline std::string getTypeName();
     // Helper functions for get functions with long return types
     static inline std::string                         parseOptName(std::string_view optName);
     static inline std::pair<std::string, std::string> parseOptNameAsPair(std::string_view optName);
     static inline OptMap::node_type                   findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
     static inline std::pair<bool, std::string>        getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, const std::string &typeName, InternalData &data);
+    // Template helper functions for get functions
+    template <typename T> struct isOptionalType : public std::false_type {};
+    template <typename T> struct isOptionalType<std::optional<T>> : public std::true_type {};
+    template <typename T> static inline T           convertType(const std::string &valueStr);
+    template <typename T> static inline std::string toString(const T &val);
+    template <typename T> static inline std::string getTypeName();
     // Other helper functions
     static inline void setDescription_(std::string_view description, InternalData &data);
     static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data);
