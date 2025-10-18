@@ -187,7 +187,9 @@ inline void Parser::appendOptValErrorMsg(
     data.errorMessages.push_back(std::move(errorStr));
 }
 
-inline void Parser::appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg) {
+inline void Parser::appendPosValErrorMsg(
+    InternalData &data, std::string_view posName, std::string_view errorMsg) {
+
     std::string msg(errorMsg);
 #ifdef ARGLITE_ENABLE_FORMATTER
     msg.append(Formatter::bold(posName));
@@ -305,7 +307,8 @@ inline std::pair<bool, std::string> Parser::getValueStr(
 }
 
 inline void Parser::fixPositionalArgsArray(
-    std::vector<int> &positionalArgsIndices, std::unordered_map<std::string, OptionInfo> &options) {
+    std::vector<int> &positionalArgsIndices, OptMap &options) {
+
     for (auto &it : options) {
         if (it.second.argvIndex > 0) { // Unrecognized option that consumed a positional arg
             positionalArgsIndices.push_back(it.second.argvIndex);
@@ -328,37 +331,41 @@ std::string Parser::getTypeName() {
     using DecayedT = remove_cvref_t<T>;
 
     // Group all signed integer types as "int"
-    if constexpr (std::disjunction_v<
-                      std::is_same<DecayedT, int>,
-                      std::is_same<DecayedT, short>,
-                      std::is_same<DecayedT, long>,
-                      std::is_same<DecayedT, long long>>) {
+    if constexpr (
+        std::disjunction_v<
+            std::is_same<DecayedT, int>,
+            std::is_same<DecayedT, short>,
+            std::is_same<DecayedT, long>,
+            std::is_same<DecayedT, long long>>) {
         return "integer";
     }
     // Group all unsigned integer types as "unsigned int"
-    else if constexpr (std::disjunction_v<
-                           std::is_same<DecayedT, unsigned int>,
-                           std::is_same<DecayedT, unsigned short>,
-                           std::is_same<DecayedT, unsigned long>,
-                           std::is_same<DecayedT, unsigned long long>>) {
+    else if constexpr (
+        std::disjunction_v<
+            std::is_same<DecayedT, unsigned int>,
+            std::is_same<DecayedT, unsigned short>,
+            std::is_same<DecayedT, unsigned long>,
+            std::is_same<DecayedT, unsigned long long>>) {
         return "unsigned int";
     }
     // Group all floating-point types as "float"
-    else if constexpr (std::disjunction_v<
-                           std::is_same<DecayedT, float>,
-                           std::is_same<DecayedT, double>,
-                           std::is_same<DecayedT, long double>>) {
+    else if constexpr (
+        std::disjunction_v<
+            std::is_same<DecayedT, float>,
+            std::is_same<DecayedT, double>,
+            std::is_same<DecayedT, long double>>) {
         return "float";
     }
     // Group all character types as "char"
-    else if constexpr (std::disjunction_v<
-                           std::is_same<DecayedT, char>,
-                           std::is_same<DecayedT, signed char>,
-                           std::is_same<DecayedT, unsigned char>,
-                           std::is_same<DecayedT, wchar_t>,
-                           std::is_same<DecayedT, char16_t>, // C++11 character types
-                           std::is_same<DecayedT, char32_t>  // C++11 character types
-                           >) {
+    else if constexpr (
+        std::disjunction_v<
+            std::is_same<DecayedT, char>,
+            std::is_same<DecayedT, signed char>,
+            std::is_same<DecayedT, unsigned char>,
+            std::is_same<DecayedT, wchar_t>,
+            std::is_same<DecayedT, char16_t>, // C++11 character types
+            std::is_same<DecayedT, char32_t>  // C++11 character types
+            >) {
         return "char";
     }
     // Specific type for boolean
