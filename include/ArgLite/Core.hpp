@@ -160,22 +160,24 @@ public:
      */
     static bool runAllPostprocess(bool notExit = false) { return runAllPostprocess_(data_, notExit); }
 
-    // === Instance Methods ===
+    // === Instance-related Methods ===
+
+    static bool isMainCmdActive() { return activeSubCmd_ == nullptr; }
 
     Parser(std::string_view subCommandName, std::string_view subCmdDescription)
         : subCommandName_(subCommandName), subCmdDescription_(subCmdDescription) {
-        if (std::find(subCommandNames_.begin(), subCommandNames_.end(), subCommandName_) != subCommandNames_.end()) {
+        if (std::find_if(subCmdPtrs_.begin(), subCmdPtrs_.end(), [subCommandName](const Parser *p) {
+                return p->subCommandName_ == subCommandName;
+            }) != subCmdPtrs_.end()) {
             std::cerr << "[ArgLite] You cannot create multiple Parser objects with the same subcommand name.\n";
             std::cerr << "[ArgLite] This subcommand name is already used: " << subCommandName_ << "\n";
             std::exit(EXIT_FAILURE);
         }
-        subCommandNames_.push_back(subCommandName_);
-        subCmdDescriptions_.push_back(subCmdDescription_);
+        subCmdPtrs_.push_back(this);
     };
 
     ~Parser() {
-        subCommandNames_.erase(std::remove_if(subCommandNames_.begin(), subCommandNames_.end(), subCommandName_), subCommandNames_.end());
-        subCmdDescriptions_.erase(std::remove_if(subCmdDescriptions_.begin(), subCmdDescriptions_.end(), subCmdDescription_), subCmdDescriptions_.end());
+        subCmdPtrs_.erase(std::remove_if(subCmdPtrs_.begin(), subCmdPtrs_.end(), this), subCmdPtrs_.end());
     }
 
     bool isActive() { return activeSubCmd_ == this; }
@@ -189,11 +191,8 @@ private:
 
     // --- Instance-related ---
 
-    static std::vector<std::string> subCommandNames_;
-    static std::vector<std::string> subCmdDescriptions_;
-    static Parser                  *activeSubCmd_;
-
-    static bool isSubCmdActive() { return activeSubCmd_ != nullptr; }
+    static std::vector<Parser *> subCmdPtrs_;
+    static Parser               *activeSubCmd_;
 
     // --- Static-related ---
 
