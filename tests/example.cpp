@@ -11,18 +11,18 @@ using ArgLite::Parser;
 int main(int argc, char **argv) {
     Parser::setDescription("A simple program to demonstrate ArgLite.");
     Parser::setVersion("1.2.3");
-    Parser::setShortNonFlagOptsStr("nr");
+    Parser::setShortNonFlagOptsStr("ir");
     Parser::preprocess(argc, argv);
 
     auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
     auto switch1    = Parser::hasFlag("1,switch1", "Switch 1.");
     auto switch2    = Parser::hasFlag("2,switch2", "Switch 2.");
     auto enableX    = Parser::hasMutualExFlag({"x,enable-x", "Enable feature x.", "X,disable-x", "Disable feature x.", false});
-    auto debug      = Parser::getBool("d,whether-enable-debug-mode", "Whether enable debug mode.");
-    auto count      = Parser::getInt("n,count", "Number of iterations.");
-    auto indent     = Parser::getInt("indent", "Option Description indent.", 20); // long option only
-    auto rate       = Parser::getDouble("r", "Speed rate.", 123.0);               // short option only, with default value
-    auto outputPath = Parser::getString("o,out-path", "Output file Path.", "output.txt");
+    auto debug      = Parser::get<bool>("d,whether-enable-debug-mode", "Whether enable debug mode.").get();
+    auto indent     = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).get();
+    auto number     = Parser::get<int>("number", "Number of iterations.").get();       // long option only
+    auto rate       = Parser::get<double>("r", "Speed rate.").setDefault(123.0).get(); // short option only
+    auto outputPath = Parser::get<string>("o,out-path", "Output file Path.").setDefault("output.txt").get();
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
@@ -34,8 +34,8 @@ int main(int argc, char **argv) {
     cout << "Switch 2   : " << switch2 << '\n';
     cout << "Feature X  : " << enableX << '\n';
     cout << "Debug      : " << debug << '\n';
-    cout << "Count      : " << count << '\n';
     cout << "Indent     : " << indent << '\n';
+    cout << "Number     : " << number << '\n';
     cout << "Rate       : " << rate << '\n';
     cout << "Output Path: " << outputPath << '\n';
     cout << "Output file: " << outputFile << '\n';

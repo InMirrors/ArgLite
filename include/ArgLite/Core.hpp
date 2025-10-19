@@ -58,7 +58,7 @@ public:
     static bool hasFlag(std::string_view optName, const std::string &description) { return hasFlag_(optName, description, data_); }
 
     //  Structure for arguments of mutually exclusive flag options.
-    struct GetMutualExArgs {
+    struct HasMutualExArgs {
         std::string trueOptName;      // Name of the option that represents the true condition.
         std::string trueDescription;  // Description of the option that represents the true condition.
         std::string falseOptName;     // Name of the option that represents the false condition.
@@ -72,7 +72,7 @@ public:
      * @return True if the first option is present and the second is not, or vice versa;
                defaultValue if neither option is present.
      */
-    static bool hasMutualExFlag(const GetMutualExArgs &args) { return hasMutualExFlag_(args, data_); }
+    static bool hasMutualExFlag(const HasMutualExArgs &args) { return hasMutualExFlag_(args, data_); }
 
     /**
      * @brief Gets the value of a string option.
@@ -81,44 +81,19 @@ public:
      * @param defaultValue The default value to return if the option is not provided on the command line.
      * @return The parsed string value or the default value.
      */
-    static std::string getString(std::string_view optName, const std::string &description, const std::string &defaultValue = "") {
-        return getString_(optName, description, defaultValue, "", data_);
-    }
+
+    template <typename T>
+    class OptValBuilder;
 
     /**
      * @brief Gets the value of an integer option.
      * @param names Option names (e.g., "n", "count" or "n,count").
      * @param description Option description.
-     * @param defaultValue The default value.
-     * @return The parsed integer value or the default value.
+     * @return A OptValBuilder object that can be used to parse the option value.
      */
-    static long long getInt(std::string_view optName, const std::string &description, long long defaultValue = 0) {
-        return getInt_(optName, description, defaultValue, "", data_);
-    }
-
-    /**
-     * @brief Gets the value of a floating-point option.
-     * @param names Option names (e.g., "r", "rate" or "r,rate").
-     * @param description Option description.
-     * @param defaultValue The default value.
-     * @return The parsed floating-point value or the default value.
-     */
-    static double getDouble(std::string_view optName, const std::string &description, double defaultValue = 0.0) {
-        return getDouble_(optName, description, defaultValue, "", data_);
-    }
-
-    /**
-     * @brief Gets the value of a boolean option.
-     * @details "1", "true", "yes", "on" (case-insensitive) will be parsed as true.
-     *          "0", "false", "no", "off" (case-insensitive) will be parsed as false.
-     *          Other values will cause the program to report an error and exit.
-     * @param names Option names (e.g., "e", "enable" or "e,enable").
-     * @param description Option description.
-     * @param defaultValue The default value.
-     * @return The parsed boolean value or the default value.
-     */
-    static bool getBool(std::string_view optName, const std::string &description, bool defaultValue = false) {
-        return getBool_(optName, description, defaultValue, "", data_);
+    template <typename T>
+    static OptValBuilder<T> get(std::string_view optName, const std::string &description) {
+        return OptValBuilder<T>(optName, description, data_);
     }
 
     /**
@@ -237,22 +212,16 @@ private:
     // Internal helper functions
     // Get functions, internal data can be changed
     static inline bool                     hasFlag_(std::string_view optName, const std::string &description, InternalData &data);
-    static inline bool                     hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data);
-    static inline std::string              getString_(std::string_view optName, const std::string &description, const std::string &defaultValue, const std::string &typeName, InternalData &data);
-    static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue, const std::string &typeName, InternalData &data);
-    static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue, const std::string &typeName, InternalData &data);
-    static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue, const std::string &typeName, InternalData &data);
+    static inline bool                     hasMutualExFlag_(const HasMutualExArgs &args, InternalData &data);
     static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, InternalData &data);
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, InternalData &data);
     // Helper functions for get functions
-    static inline void appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
     static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
     static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, OptMap &options);
     // Helper functions for get functions with long return types
     static inline std::string                         parseOptName(std::string_view optName);
     static inline std::pair<std::string, std::string> parseOptNameAsPair(std::string_view optName);
     static inline OptMap::node_type                   findOption(const std::string &shortOpt, const std::string &longOpt, InternalData &data);
-    static inline std::pair<bool, std::string>        getValueStr(std::string_view optName, const std::string &description, const std::string &defaultValueStr, const std::string &typeName, InternalData &data);
     // Template helper functions for get functions
     template <typename T> struct isOptionalType : public std::false_type {};
     template <typename T> struct isOptionalType<std::optional<T>> : public std::true_type {};

@@ -25,7 +25,7 @@ inline bool Parser::hasFlag_(
     return !optNode.empty();
 }
 
-bool Parser::hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data) {
+bool Parser::hasMutualExFlag_(const HasMutualExArgs &args, InternalData &data) {
     auto [shortTrueOpt, longTrueOpt]   = parseOptNameAsPair(args.trueOptName);
     auto [shortFalseOpt, longFalseOpt] = parseOptNameAsPair(args.falseOptName);
 
@@ -53,104 +53,10 @@ bool Parser::hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data) {
     return false;
 }
 
-inline std::string Parser::getString_(
-    std::string_view optName, const std::string &description, const std::string &defaultValue,
-    const std::string &typeName, InternalData &data) {
-
-    auto realTypeName = typeName.empty() ? getTypeName<std::string>() : typeName;
-
-    auto [found, value] = getValueStr(optName, description, defaultValue, realTypeName, data);
-    return value;
-}
-
-inline long long Parser::getInt_(
-    std::string_view optName, const std::string &description, long long defaultValue,
-    const std::string &typeName, InternalData &data) {
-
-    auto realTypeName = typeName.empty() ? getTypeName<int>() : typeName;
-
-    auto [found, valueStr] = getValueStr(optName, description, toString(defaultValue), realTypeName, data);
-    if (!found) {
-        return defaultValue;
-    }
-    try {
-        return std::stoll(valueStr);
-    } catch (const std::exception &) {
-        appendOptValErrorMsg(data, optName, getTypeName<int>(), valueStr);
-    }
-    return 0;
-}
-
-inline double Parser::getDouble_(
-    std::string_view optName, const std::string &description, double defaultValue,
-    const std::string &typeName, InternalData &data) {
-
-    auto realTypeName = typeName.empty() ? getTypeName<float>() : typeName;
-
-    auto [found, valueStr] = getValueStr(optName, description, toString(defaultValue), realTypeName, data);
-    if (!found) {
-        return defaultValue;
-    }
-    try {
-        return std::stod(valueStr);
-    } catch (const std::exception &) {
-        appendOptValErrorMsg(data, optName, getTypeName<float>(), valueStr);
-    }
-    return 0.0;
-}
-
-inline bool Parser::getBool_(
-    std::string_view optName, const std::string &description, bool defaultValue,
-    const std::string &typeName, InternalData &data) {
-
-    auto realTypeName = typeName.empty() ? getTypeName<bool>() : typeName;
-
-    auto [found, valueStr] = getValueStr(optName, description, defaultValue ? "true" : "false", realTypeName, data);
-    if (!found) {
-        return defaultValue;
-    }
-
-    std::transform(valueStr.begin(), valueStr.end(), valueStr.begin(), ::tolower);
-    if (valueStr == "true" || valueStr == "1" || valueStr == "yes" || valueStr == "on") {
-        return true;
-    }
-    if (valueStr == "false" || valueStr == "0" || valueStr == "no" || valueStr == "off") {
-        return false;
-    }
-
-    appendOptValErrorMsg(data, parseOptName(optName), getTypeName<bool>(), valueStr);
-    return false;
-}
-
-inline void Parser::appendOptValErrorMsg(
-    InternalData    &data,
-    std::string_view optName, const std::string &typeName, const std::string &valueStr) {
-
-    std::string errorStr;
-    errorStr += "Invalid value for option '";
-#ifdef ARGLITE_ENABLE_FORMATTER
-    errorStr += Formatter::bold(parseOptName(optName));
-#else
-    errorStr += parseOptName(optName);
-#endif
-    errorStr += "'. Expected a ";
-#ifdef ARGLITE_ENABLE_FORMATTER
-    errorStr += Formatter::bold(typeName);
-#else
-    errorStr += typeName;
-#endif
-    errorStr += ", but got '";
-#ifdef ARGLITE_ENABLE_FORMATTER
-    errorStr += Formatter::bold(valueStr);
-#else
-    errorStr += valueStr;
-#endif
-    errorStr += "'.";
-    data.errorMessages.push_back(std::move(errorStr));
-}
+// === Helper functions for parsing option ===
 
 // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
-inline std::string Parser::parseOptName(std::string_view optName) {
+std::string Parser::parseOptName(std::string_view optName) {
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
 
     // Short option only
@@ -164,7 +70,7 @@ inline std::string Parser::parseOptName(std::string_view optName) {
 }
 
 // Parses option name (o,out) and saves the results in shortOpt (-o) and longOpt (--out)
-inline std::pair<std::string, std::string> Parser::parseOptNameAsPair(std::string_view optName) {
+std::pair<std::string, std::string> Parser::parseOptNameAsPair(std::string_view optName) {
     if (optName.empty()) {
         std::cerr << "[ArgLite] Error: Option name in hasFlag/get* functions cannot be empty." << '\n';
         std::exit(EXIT_FAILURE);
@@ -190,7 +96,7 @@ inline std::pair<std::string, std::string> Parser::parseOptNameAsPair(std::strin
 }
 
 // Finds the option in the options_ map
-inline Parser::OptMap::node_type Parser::findOption(
+Parser::OptMap::node_type Parser::findOption(
     const std::string &shortOpt, const std::string &longOpt, InternalData &data) {
 
     auto longNode  = data.options.extract(longOpt);
@@ -208,39 +114,129 @@ inline Parser::OptMap::node_type Parser::findOption(
     return shortNode;
 }
 
-// Uses the option name to get a value string from the options_ map.
-inline std::pair<bool, std::string> Parser::getValueStr(
-    std::string_view optName, const std::string &description,
-    const std::string &defaultValueStr, const std::string &typeName,
-    InternalData &data) {
-
-    auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
-    data.optionHelpEntries.push_back({shortOpt, longOpt, description, defaultValueStr, typeName});
-
-    auto optNode = findOption(shortOpt, longOpt, data);
-
-    if (!optNode.empty()) {
-        const auto &optInfo = optNode.mapped();
-
-        if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
-            std::string msg("Option '");
-#ifdef ARGLITE_ENABLE_FORMATTER
-            msg.append(Formatter::bold(parseOptName(optName)));
-#else
-            msg.append(parseOptName(optName));
-#endif
-            msg.append("' requires a value.");
-            data.errorMessages.push_back(std::move(msg));
-            return {false, ""};
-        }
-        if (!optInfo.valueStr.empty()) { // From -n123 or --opt=val form
-            return {true, optInfo.valueStr};
-        }
-        return {true, argv_[optInfo.argvIndex]};
+template <typename T>
+class Parser::OptValBuilder {
+public:
+    OptValBuilder(std::string_view optName,
+                  std::string_view description, InternalData &data)
+        : optName_(optName),
+          description_(description),
+          data_(data) {
+        typeName_ = getTypeName<T>();
     }
 
-    return {false, defaultValueStr};
-}
+    /**
+     * @brief Retrieves the option's value.
+     * @return The parsed value of the option,
+               or the default value if the option is not found or its value is invalid.
+     */
+    T get() {
+        auto [found, valueStr] = getValueStr(optName_, description_, toString(defaultValue_), getTypeName<T>(), data_);
+
+        if (!found) { return defaultValue_; }
+
+        try {
+            return convertType<T>(valueStr);
+        } catch (...) {
+            appendOptValErrorMsg(data_, optName_, typeName_, valueStr);
+        }
+        return defaultValue_;
+    }
+
+    /**
+     * @brief Sets the default value for the option.
+     * @param defaultValue The value to be used as the default.
+     * @return A reference to the current OptValBuilder instance for chaining.
+     */
+    OptValBuilder<T> &setDefault(T defaultValue) {
+        defaultValue_ = defaultValue;
+        return *this;
+    }
+
+private:
+    std::string_view optName_;
+    std::string      description_;
+    InternalData    &data_;
+    std::string      typeName_;
+    T                defaultValue_{};
+
+    void appendOptValErrorMsg(
+        InternalData    &data,
+        std::string_view optName, const std::string &typeName, const std::string &valueStr) {
+
+        std::string errorStr;
+        errorStr += "Invalid value for option '";
+#ifdef ARGLITE_ENABLE_FORMATTER
+        errorStr += Formatter::bold(parseOptName(optName));
+#else
+        errorStr += parseOptName(optName);
+#endif
+        errorStr += "'. Expected a ";
+#ifdef ARGLITE_ENABLE_FORMATTER
+        errorStr += Formatter::bold(typeName);
+#else
+        errorStr += typeName;
+#endif
+        errorStr += ", but got '";
+#ifdef ARGLITE_ENABLE_FORMATTER
+        errorStr += Formatter::bold(valueStr);
+#else
+        errorStr += valueStr;
+#endif
+        errorStr += "'.";
+        data.errorMessages.push_back(std::move(errorStr));
+    }
+
+    void appendPosValErrorMsg(
+        InternalData &data, std::string_view posName, std::string_view errorMsg) {
+
+        std::string msg(errorMsg);
+#ifdef ARGLITE_ENABLE_FORMATTER
+        msg.append(Formatter::bold(posName));
+#else
+        msg.append(posName);
+#endif
+        msg.append("'.");
+        data.errorMessages.push_back(std::move(msg));
+    }
+
+    // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
+    // Uses the option name to get a value string from the options_ map.
+    std::pair<bool, std::string> getValueStr(
+        std::string_view optName, const std::string &description,
+        const std::string &defaultValueStr, const std::string &typeName,
+        InternalData &data) {
+
+        auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
+        data.optionHelpEntries.push_back({shortOpt, longOpt, description, defaultValueStr, typeName});
+
+        auto optNode = findOption(shortOpt, longOpt, data);
+
+        if (!optNode.empty()) {
+            const auto &optInfo = optNode.mapped();
+
+            if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
+                std::string msg("Option '");
+#ifdef ARGLITE_ENABLE_FORMATTER
+                msg.append(Formatter::bold(parseOptName(optName)));
+#else
+                msg.append(parseOptName(optName));
+#endif
+                msg.append("' requires a value.");
+                data.errorMessages.push_back(std::move(msg));
+                return {false, ""};
+            }
+            if (!optInfo.valueStr.empty()) { // From -n123 or --opt=val form
+                return {true, optInfo.valueStr};
+            }
+            return {true, argv_[optInfo.argvIndex]};
+        }
+
+        return {false, defaultValueStr};
+    }
+};
+
+// === Positional Args ===
 
 inline std::string Parser::getPositional_(
     const std::string &posName, const std::string &description, bool isRequired,
