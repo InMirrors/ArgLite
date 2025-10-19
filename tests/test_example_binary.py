@@ -18,8 +18,8 @@ def main():
             "Switch 1   : false",
             "Switch 2   : false",
             "Debug      : false",
-            "Count      : 0",
-            "Indent     : 20",
+            "Indent     : 26",
+            "Number     : 0",
             "Rate       : 123", # Default value
             "Output file: my_output.txt",
             "Output Path: output.txt", # Default value
@@ -31,14 +31,14 @@ def main():
     # With all flags and some options, including debug mode
     all_tests_passed &= test_case(
         "All flags and some options, including debug mode",
-        ["-v", "-1", "--switch2", "-d", "true", "--count", "10", "--indent", "22", "-r", "50.5", "-o", "custom_path.log", "output.log", "file1.txt", "file2.txt"],
+        ["-v", "-1", "--switch2", "-d", "true", "--number", "10", "--indent", "22", "-r", "50.5", "-o", "custom_path.log", "output.log", "file1.txt", "file2.txt"],
         expected_output_substrings=[
             "Verbose    : true",
             "Switch 1   : true",
             "Switch 2   : true",
             "Debug      : true",
-            "Count      : 10",
             "Indent     : 22",
+            "Number     : 10",
             "Rate       : 50.5",
             "Output file: output.log",
             "Output Path: custom_path.log",
@@ -51,11 +51,12 @@ def main():
     # Mixed short and long options, with debug mode set to false
     all_tests_passed &= test_case(
         "Mixed short and long options, the latter one wins. debug false",
-        ["--verbose", "-d", "false", "-n", "5", "--count", "123", "--out-path", "out/path", "mixed.txt", "input.data"],
+        ["--verbose", "-d", "false", "-i", "25", "--number", "123", "--out-path", "out/path", "mixed.txt", "input.data"],
         expected_output_substrings=[
             "Verbose    : true",
             "Debug      : false",
-            "Count      : 123",
+            "Indent     : 25",
+            "Number     : 123",
             "Output Path: out/path",
             "Output file: mixed.txt",
             "Input files:",
@@ -88,37 +89,37 @@ def main():
     )
 
     all_tests_passed &= test_case(
-        "'-n15' Short option with value immediately following",
-        ["-n15", "output.txt", "input.txt"],
+        "'-i15' Short option with value immediately following",
+        ["-i15", "output.txt", "input.txt"],
         expected_output_substrings=[
-            "Count      : 15",
             "Output file: output.txt",
+            "Indent     : 15",
             "Input files:",
             "input.txt"
         ]
     )
 
     all_tests_passed &= test_case(
-        "'-12n 10' Short option combination with argument -12n 10",
-        ["-12n", "10", "output.txt", "input.txt"],
+        "'-12i 10' Short option combination with argument -12i 10",
+        ["-12i", "10", "output.txt", "input.txt"],
         expected_output_substrings=[
             "Switch 1   : true",
             "Switch 2   : true",
-            "Count      : 10",
             "Output file: output.txt",
+            "Indent     : 10",
             "Input files:",
             "input.txt"
         ]
     )
 
     all_tests_passed &= test_case(
-        "'-v1n10' Grouped short options with last option taking a value",
-        ["-v1n10", "output.txt", "input.txt"],
+        "'-v1i10' Grouped short options with last option taking a value",
+        ["-v1i10", "output.txt", "input.txt"],
         expected_output_substrings=[
             "Verbose    : true",
             "Switch 1   : true",
-            "Count      : 10",
             "Output file: output.txt",
+            "Indent     : 10",
             "Input files:",
             "input.txt"
         ]
@@ -152,7 +153,7 @@ def main():
     # Help option: -h
     all_tests_passed &= test_case(
         "Help option: -h. Errors are ignored when -h is present",
-        ["-h", "output.txt", "--count"], # Errors are ignored when -h is present
+        ["-h", "output.txt", "--number"], # Errors are ignored when -h is present
         expected_output_substrings=[
             "Usage:",
             "Options:"
@@ -161,7 +162,7 @@ def main():
 
     all_tests_passed &= test_case(
         "Version option: -V. Errors are ignored when -V is present",
-        ["-V", "output.txt", "--count"], # Errors are ignored when -h is present
+        ["-V", "output.txt", "--number"], # Errors are ignored when -h is present
         expected_output_substrings=[
             "."
         ]
@@ -201,11 +202,11 @@ def main():
         expected_return_code=1
     )
 
-    # Option argument type mismatch for --count (e.g., passing non-integer)
+    # Option argument type mismatch for --number (e.g., passing non-integer)
     all_tests_passed &= test_case(
-        "Option argument type mismatch (count)",
-        ["--count", "abc", "output.txt", "input.txt"],
-        expected_error_keywords=["Option", "--count", "expect", "integer", "got", "abc"],
+        "Option argument type mismatch (number)",
+        ["--number", "abc", "output.txt", "input.txt"],
+        expected_error_keywords=["Option", "--number", "expect", "integer", "got", "abc"],
         expected_return_code=1
     )
 
@@ -217,11 +218,11 @@ def main():
         expected_return_code=1
     )
 
-    # Missing argument for option --count (e.g., not providing a value)
+    # Missing argument for option --number (e.g., not providing a value)
     all_tests_passed &= test_case(
-        "Missing argument for option (count)",
-        ["--count", "output.txt", "input.txt"], # "output.txt" will be parsed as the value for --count, leading to a type error
-        expected_error_keywords=["Option", "--count", "expect", "integer", "got", "output.txt"],
+        "Missing argument for option (number)",
+        ["--number", "output.txt", "input.txt"], # "output.txt" will be parsed as the value for --number, leading to a type error
+        expected_error_keywords=["Option", "--number", "expect", "integer", "got", "output.txt"],
         expected_return_code=1
     )
 
@@ -242,7 +243,7 @@ def main():
 
 if __name__ == "__main__":
     _local_binary_name = "example"
-    if sys.argv[1].lower() == "m":
+    if len(sys.argv) > 1 and sys.argv[1].lower() == "m":
         _local_binary_name = "minimal_example"
         colored_print(f"Running {_local_binary_name} tests...", color="blue")
     # Define the path to the binary executable
