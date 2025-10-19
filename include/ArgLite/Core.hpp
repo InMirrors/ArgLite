@@ -160,9 +160,43 @@ public:
      */
     static bool runAllPostprocess(bool notExit = false) { return runAllPostprocess_(data_, notExit); }
 
-    Parser() = delete;
+    // === Instance Methods ===
+
+    Parser(std::string_view subCommandName, std::string_view subCmdDescription)
+        : subCommandName_(subCommandName), subCmdDescription_(subCmdDescription) {
+        if (std::find(subCommandNames_.begin(), subCommandNames_.end(), subCommandName_) != subCommandNames_.end()) {
+            std::cerr << "[ArgLite] You cannot create multiple Parser objects with the same subcommand name.\n";
+            std::cerr << "[ArgLite] This subcommand name is already used: " << subCommandName_ << "\n";
+            std::exit(EXIT_FAILURE);
+        }
+        subCommandNames_.push_back(subCommandName_);
+        subCmdDescriptions_.push_back(subCmdDescription_);
+    };
+
+    ~Parser() {
+        subCommandNames_.erase(std::remove_if(subCommandNames_.begin(), subCommandNames_.end(), subCommandName_), subCommandNames_.end());
+        subCmdDescriptions_.erase(std::remove_if(subCmdDescriptions_.begin(), subCmdDescriptions_.end(), subCmdDescription_), subCmdDescriptions_.end());
+    }
+
+    bool isActive() { return activeSubCmd_ == this; }
 
 private:
+    // === Instance-level ===
+    std::string subCommandName_;
+    std::string subCmdDescription_;
+
+    // === Static-level ===
+
+    // --- Instance-related ---
+
+    static std::vector<std::string> subCommandNames_;
+    static std::vector<std::string> subCmdDescriptions_;
+    static Parser                  *activeSubCmd_;
+
+    static bool isSubCmdActive() { return activeSubCmd_ != nullptr; }
+
+    // --- Static-related ---
+
     // Stores option information for subsequent get/hasFlag calls.
     // key: Option name (e.g., "-o", "--output").
     // value: index > 0: Index of the argument in argv;
