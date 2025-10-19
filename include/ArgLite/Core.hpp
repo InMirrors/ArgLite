@@ -24,13 +24,13 @@ public:
      * @brief Sets the program description, used for the first line of the help message.
      * @param description The program's description text.
      */
-    static void setDescription(std::string_view description) { setDescription_(description, data_); }
+    static void setDescription(std::string description) { programDescription_ = std::move(description); }
 
     /**
      * @brief Sets the program version and add options `-V` and `--version` to print the version.
      * @param versionStr The program's version string.
      */
-    static void setVersion(std::string_view versionStr) { programVersion_ = versionStr; }
+    static void setVersion(std::string versionStr) { programVersion_ = std::move(versionStr); }
 
     /**
     * @brief Sets which short options require a value.
@@ -40,7 +40,7 @@ public:
      * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
                                   For example, if `-n` and `-r` require values, pass `nr`.
      */
-    static void setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr) { setShortNonFlagOptsStr_(shortNonFlagOptsStr, data_); }
+    static void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr) { setShortNonFlagOptsStr_(std::move(shortNonFlagOptsStr), data_); }
 
     /**
      * @brief Preprocesses the command-line arguments. This is the first step in using this library.
@@ -55,7 +55,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
-    static bool hasFlag(std::string_view optName, const std::string &description) { return hasFlag_(optName, description, data_); }
+    static bool hasFlag(std::string_view optName, std::string description) { return hasFlag_(optName, std::move(description), data_); }
 
     //  Structure for arguments of mutually exclusive flag options.
     struct HasMutualExArgs {
@@ -72,7 +72,7 @@ public:
      * @return True if the first option is present and the second is not, or vice versa;
                defaultValue if neither option is present.
      */
-    static bool hasMutualExFlag(const HasMutualExArgs &args) { return hasMutualExFlag_(args, data_); }
+    static bool hasMutualExFlag(HasMutualExArgs args) { return hasMutualExFlag_(std::move(args), data_); }
 
     /**
      * @brief Gets the value of a string option.
@@ -92,8 +92,8 @@ public:
      * @return A OptValBuilder object that can be used to parse the option value.
      */
     template <typename T>
-    static OptValBuilder<T> get(std::string_view optName, const std::string &description) {
-        return OptValBuilder<T>(optName, description, data_);
+    static OptValBuilder<T> get(std::string_view optName, std::string description) {
+        return OptValBuilder<T>(optName, std::move(description), data_);
     }
 
     /**
@@ -104,8 +104,8 @@ public:
      * @param required If true and the user does not provide the argument, the program will report an error and exit.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
-    static std::string getPositional(const std::string &posName, const std::string &description, bool required = true) {
-        return getPositional_(posName, description, required, data_);
+    static std::string getPositional(const std::string &posName, std::string description, bool required = true) {
+        return getPositional_(posName, std::move(description), required, data_);
     }
 
     /**
@@ -117,8 +117,8 @@ public:
      * @return A string vector containing all remaining arguments.
      */
     static std::vector<std::string> getRemainingPositionals(
-        const std::string &posName, const std::string &description, bool required = true) {
-        return getRemainingPositionals_(posName, description, required, data_);
+        const std::string &posName, std::string description, bool required = true) {
+        return getRemainingPositionals_(posName, std::move(description), required, data_);
     }
 
     /**
@@ -164,8 +164,10 @@ public:
 
     static bool isMainCmdActive() { return activeSubCmd_ == nullptr; }
 
-    Parser(std::string_view subCommandName, std::string_view subCmdDescription)
-        : subCommandName_(subCommandName), subCmdDescription_(subCmdDescription) {
+    Parser(std::string subCommandName, std::string subCmdDescription)
+        : subCommandName_(std::move(subCommandName)),
+          subCmdDescription_(std::move(subCmdDescription)) {
+
         if (std::find_if(subCmdPtrs_.begin(), subCmdPtrs_.end(), [subCommandName](const Parser *p) {
                 return p->subCommandName_ == subCommandName;
             }) != subCmdPtrs_.end()) {
@@ -173,6 +175,7 @@ public:
             std::cerr << "[ArgLite] This subcommand name is already used: " << subCommandName_ << "\n";
             std::exit(EXIT_FAILURE);
         }
+
         subCmdPtrs_.push_back(this);
     };
 
@@ -191,8 +194,8 @@ private:
 
     // --- Instance-related ---
 
-    static std::vector<Parser *> subCmdPtrs_;
-    static Parser               *activeSubCmd_;
+    static inline std::vector<Parser *> subCmdPtrs_;
+    static inline Parser               *activeSubCmd_;
 
     // --- Static-related ---
 
@@ -223,8 +226,7 @@ private:
     using OptMap = std::unordered_map<std::string, OptionInfo>;
 
     struct InternalData {
-        std::string programName;
-        std::string programDescription;
+        std::string cmdName;
         std::string shortNonFlagOptsStr;
         // Containers
         OptMap                          options;
@@ -239,17 +241,18 @@ private:
     static inline char       **argv_;
     static inline size_t       positionalIdx_;
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
+    static inline std::string  programDescription_;
     static inline std::string  programVersion_;
     static inline InternalData data_;
 
     // Internal helper functions
     // Get functions, internal data can be changed
-    static inline bool                     hasFlag_(std::string_view optName, const std::string &description, InternalData &data);
-    static inline bool                     hasMutualExFlag_(const HasMutualExArgs &args, InternalData &data);
-    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, InternalData &data);
-    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, InternalData &data);
+    static inline bool                     hasFlag_(std::string_view optName, std::string description, InternalData &data);
+    static inline bool                     hasMutualExFlag_(HasMutualExArgs args, InternalData &data);
+    static inline std::string              getPositional_(const std::string &posName, std::string description, bool required, InternalData &data);
+    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, std::string description, bool isRequired, InternalData &data);
     // Helper functions for get functions
-    static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
+    static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string errorMsg);
     static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, OptMap &options);
     // Helper functions for get functions with long return types
     static inline std::string                         parseOptName(std::string_view optName);
@@ -266,8 +269,7 @@ private:
     template <typename T>
     using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
     // Other helper functions
-    static inline void setDescription_(std::string_view description, InternalData &data);
-    static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data);
+    static inline void setShortNonFlagOptsStr_(std::string shortNonFlagOptsStr, InternalData &data);
     static inline void preprocess_(int argc, char **argv);
     static inline void tryToPrintVersion_(InternalData &data);
     static inline void tryToPrintHelp_(InternalData &data);
@@ -290,12 +292,8 @@ private:
 
 // === Private Helper Implementations ===
 
-inline void Parser::setDescription_(std::string_view description, InternalData &data) {
-    data.programDescription = description;
-}
-
-inline void Parser::setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data) {
-    data.shortNonFlagOptsStr = shortNonFlagOptsStr;
+inline void Parser::setShortNonFlagOptsStr_(std::string shortNonFlagOptsStr, InternalData &data) {
+    data.shortNonFlagOptsStr = std::move(shortNonFlagOptsStr);
 }
 
 inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
@@ -305,12 +303,12 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
     auto &data = data_;
 
     if (argc_ > 0) {
-        data.programName = argv[0];
+        data.cmdName = argv[0];
 
         // Extract the basename
-        if (auto last_slash_pos = data.programName.find_last_of("/\\");
+        if (auto last_slash_pos = data.cmdName.find_last_of("/\\");
             std::string::npos != last_slash_pos) {
-            data.programName.erase(0, last_slash_pos + 1);
+            data.cmdName.erase(0, last_slash_pos + 1);
         }
     }
 
@@ -438,8 +436,8 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
 }
 
 inline void Parser::printHelp(const InternalData &data) {
-    printHelpDescription(data_.programDescription);
-    printHelpUsage(data, data_.programName);
+    printHelpDescription(programDescription_);
+    printHelpUsage(data, data_.cmdName);
     printHelpPositional(data);
     printHelpOptions(data);
 }

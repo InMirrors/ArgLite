@@ -7,10 +7,10 @@
 namespace ArgLite {
 
 inline bool Parser::hasFlag_(
-    std::string_view optName, const std::string &description, InternalData &data) {
+    std::string_view optName, std::string description, InternalData &data) {
 
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
-    data.optionHelpEntries.push_back({shortOpt, longOpt, description, ""});
+    data.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description), ""});
 
     auto optNode = findOption(shortOpt, longOpt, data);
 
@@ -25,12 +25,12 @@ inline bool Parser::hasFlag_(
     return !optNode.empty();
 }
 
-bool Parser::hasMutualExFlag_(const HasMutualExArgs &args, InternalData &data) {
+bool Parser::hasMutualExFlag_(HasMutualExArgs args, InternalData &data) {
     auto [shortTrueOpt, longTrueOpt]   = parseOptNameAsPair(args.trueOptName);
     auto [shortFalseOpt, longFalseOpt] = parseOptNameAsPair(args.falseOptName);
 
-    data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, args.trueDescription, ""});
-    data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, args.falseDescription, ""});
+    data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, std::move(args.trueDescription), ""});
+    data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, std::move(args.falseDescription), ""});
 
     auto trueNode  = findOption(shortTrueOpt, longTrueOpt, data);
     auto falseNode = findOption(shortFalseOpt, longFalseOpt, data);
@@ -118,9 +118,9 @@ template <typename T>
 class Parser::OptValBuilder {
 public:
     OptValBuilder(std::string_view optName,
-                  std::string_view description, InternalData &data)
+                  std::string description, InternalData &data)
         : optName_(optName),
-          description_(description),
+          description_(std::move(description)),
           data_(data) {
         typeName_ = getTypeName<T>();
     }
@@ -131,7 +131,7 @@ public:
                or the default value if the option is not found or its value is invalid.
      */
     T get() {
-        auto [found, valueStr] = getValueStr(optName_, description_, toString(defaultValue_), getTypeName<T>(), data_);
+        auto [found, valueStr] = getValueStr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
 
         if (!found) { return defaultValue_; }
 
@@ -203,12 +203,12 @@ private:
     // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
     // Uses the option name to get a value string from the options_ map.
     std::pair<bool, std::string> getValueStr(
-        std::string_view optName, const std::string &description,
-        const std::string &defaultValueStr, const std::string &typeName,
+        std::string_view optName, std::string description,
+        std::string defaultValueStr, std::string typeName,
         InternalData &data) {
 
         auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
-        data.optionHelpEntries.push_back({shortOpt, longOpt, description, defaultValueStr, typeName});
+        data.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description), std::move(defaultValueStr), std::move(typeName)});
 
         auto optNode = findOption(shortOpt, longOpt, data);
 
@@ -239,12 +239,12 @@ private:
 // === Positional Args ===
 
 inline std::string Parser::getPositional_(
-    const std::string &posName, const std::string &description, bool isRequired,
+    const std::string &posName, std::string description, bool isRequired,
     InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
-    data.positionalHelpEntries.push_back({posName, description, isRequired});
+    data.positionalHelpEntries.push_back({posName, std::move(description), isRequired});
     if (positionalIdx_ < data.positionalArgsIndices.size()) {
         int argvIdx = data.positionalArgsIndices[positionalIdx_];
         positionalIdx_++;
@@ -257,12 +257,12 @@ inline std::string Parser::getPositional_(
 }
 
 inline std::vector<std::string> Parser::getRemainingPositionals_(
-    const std::string &posName, const std::string &description, bool required,
+    const std::string &posName, std::string description, bool required,
     InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
-    data.positionalHelpEntries.push_back({posName, description, required});
+    data.positionalHelpEntries.push_back({posName, std::move(description), required});
     std::vector<std::string> remaining;
     while (positionalIdx_ < data.positionalArgsIndices.size()) {
         int argvIdx = data.positionalArgsIndices[positionalIdx_];
@@ -276,9 +276,9 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
 }
 
 inline void Parser::appendPosValErrorMsg(
-    InternalData &data, std::string_view posName, std::string_view errorMsg) {
+    InternalData &data, std::string_view posName, std::string errorMsg) {
 
-    std::string msg(errorMsg);
+    std::string msg(std::move(errorMsg));
 #ifdef ARGLITE_ENABLE_FORMATTER
     msg.append(Formatter::bold(posName));
 #else
