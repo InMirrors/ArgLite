@@ -36,10 +36,12 @@ public:
     static void setVersion(std::string versionStr) { programVersion_ = std::move(versionStr); }
 
     /**
-    * @brief Sets which short options require a value.
-     * @details To pass short options like `-n 123` as a single argument `-n123`,
+     * @brief Sets which short options that require a value.
+     * @details To pass short options with their values as a single argument
+                (e.g., `-n123` for `-n 123`),
                 provide the short option names as a string to this function.
                 You don't have to call it, but if you do, call it before `preprocess()`.
+                Note: Only include short options that *require* a value, not all short options.
      * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
                                   For example, if `-n` and `-r` require values, pass `nr`.
      */
@@ -167,6 +169,10 @@ public:
 
     // === SubParser Instance-related Methods ===
 
+    /**
+     * @brief Checks if the main command is active.
+     * @return True if the main command is active, false otherwise.
+     */
     static bool isMainCmdActive() { return activeSubCmd_ == nullptr; }
 
 private:
@@ -286,13 +292,19 @@ public:
         Parser::subCmdPtrs_.push_back(this);
     };
 
+    /**
+     * @brief Checks if this subcommand is active.
+     * @return True if this subcommand is active, false otherwise.
+     */
     bool isActive() { return Parser::activeSubCmd_ == this; }
 
     /**
-    * @brief Sets which short options require a value.
-     * @details To pass short options like `-n 123` as a single argument `-n123`,
+     * @brief Sets which short options that require a value.
+     * @details To pass short options with their values as a single argument
+                (e.g., `-n123` for `-n 123`),
                 provide the short option names as a string to this function.
                 You don't have to call it, but if you do, call it before `preprocess()`.
+                Note: Only include short options that *require* a value, not all short options.
      * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
                                   For example, if `-n` and `-r` require values, pass `nr`.
      */
