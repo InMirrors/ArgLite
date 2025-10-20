@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core.hpp"
+#include <sstream>
 #include <type_traits>
 
 namespace ArgLite {

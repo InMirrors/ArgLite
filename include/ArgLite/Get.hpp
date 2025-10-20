@@ -117,11 +117,12 @@ Parser::OptMap::node_type Parser::findOption(
 template <typename T>
 class Parser::OptValBuilder {
 public:
-    OptValBuilder(std::string_view optName,
-                  std::string description, InternalData &data)
+    OptValBuilder(std::string_view optName, std::string description,
+                  InternalData &data, SubParser *passedSubCmd)
         : optName_(optName),
           description_(std::move(description)),
-          data_(data) {
+          data_(data),
+          passedSubCmd_(passedSubCmd) {
         typeName_ = getTypeName<T>();
     }
 
@@ -131,6 +132,8 @@ public:
                or the default value if the option is not found or its value is invalid.
      */
     T get() {
+        if (passedSubCmd_ != activeSubCmd_) { return defaultValue_; }
+
         auto [found, valueStr] = getValueStr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
 
         if (!found) { return defaultValue_; }
@@ -159,6 +162,7 @@ private:
     InternalData    &data_;
     std::string      typeName_;
     T                defaultValue_{};
+    SubParser       *passedSubCmd_{nullptr};
 
     void appendOptValErrorMsg(
         InternalData    &data,

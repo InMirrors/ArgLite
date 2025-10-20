@@ -18,7 +18,11 @@
 
 namespace ArgLite {
 
+class SubParser;
+
 class Parser {
+    friend class SubParser;
+
 public:
     /**
      * @brief Sets the program description, used for the first line of the help message.
@@ -80,14 +84,6 @@ public:
         return hasMutualExFlag_(std::move(args), data_);
     }
 
-    /**
-     * @brief Gets the value of a string option.
-     * @param names Option names (e.g., "o", "output" or "o,output").
-     * @param description Option description.
-     * @param defaultValue The default value to return if the option is not provided on the command line.
-     * @return The parsed string value or the default value.
-     */
-
     template <typename T>
     class OptValBuilder;
 
@@ -99,8 +95,7 @@ public:
      */
     template <typename T>
     static OptValBuilder<T> get(std::string_view optName, std::string description) {
-        if (!isMainCmdActive()) { return T{}; }
-        return OptValBuilder<T>(optName, std::move(description), data_);
+        return OptValBuilder<T>(optName, std::move(description), data_, nullptr);
     }
 
     /**
@@ -169,45 +164,19 @@ public:
      */
     static bool runAllPostprocess(bool notExit = false) { return runAllPostprocess_(data_, notExit); }
 
-    // === Instance-related Methods ===
+    Parser() = delete;
+
+    // === SubParser Instance-related Methods ===
 
     static bool isMainCmdActive() { return activeSubCmd_ == nullptr; }
 
-    Parser(std::string subCommandName, std::string subCmdDescription)
-        : subCommandName_(std::move(subCommandName)),
-          subCmdDescription_(std::move(subCmdDescription)) {
-
-        if (std::find_if(subCmdPtrs_.begin(), subCmdPtrs_.end(), [subCommandName](const Parser *p) {
-                return p->subCommandName_ == subCommandName;
-            }) != subCmdPtrs_.end()) {
-            std::cerr << "[ArgLite] You cannot create multiple Parser objects with the same subcommand name.\n";
-            std::cerr << "[ArgLite] This subcommand name is already used: " << subCommandName_ << "\n";
-            std::exit(EXIT_FAILURE);
-        }
-
-        subCmdPtrs_.push_back(this);
-    };
-
-    ~Parser() {
-        subCmdPtrs_.erase(std::remove_if(subCmdPtrs_.begin(), subCmdPtrs_.end(), this), subCmdPtrs_.end());
-    }
-
-    bool isActive() { return activeSubCmd_ == this; }
-
 private:
-    // === Instance-level ===
-    std::string subCommandName_;
-    std::string subCmdDescription_;
-    std::string subCmdShortNonFlagOptsStr_;
+    // === SubParser Instance-related ===
 
-    // === Static-level ===
+    static inline std::vector<SubParser *> subCmdPtrs_;
+    static inline SubParser               *activeSubCmd_;
 
-    // --- Instance-related ---
-
-    static inline std::vector<Parser *> subCmdPtrs_;
-    static inline Parser               *activeSubCmd_;
-
-    // --- Static-related ---
+    // === Static-related ===
 
     // Stores option information for subsequent get/hasFlag calls.
     // key: Option name (e.g., "-o", "--output").
@@ -299,7 +268,102 @@ private:
 #endif
 };
 
-// === Private Helper Implementations ===
+class SubParser {
+    friend Parser;
+
+public:
+    SubParser(std::string subCommandName, std::string subCmdDescription)
+        : subCommandName_(std::move(subCommandName)),
+          subCmdDescription_(std::move(subCmdDescription)) {
+
+        if (std::find_if(Parser::subCmdPtrs_.begin(), Parser::subCmdPtrs_.end(), [subCommandName](const SubParser *p) {
+                return p->subCommandName_ == subCommandName;
+            }) != Parser::subCmdPtrs_.end()) {
+            std::cerr << "[ArgLite] You cannot create multiple SubParser objects with the same subcommand name.\n";
+            std::cerr << "[ArgLite] This subcommand name is already used: " << subCommandName_ << "\n";
+            std::exit(EXIT_FAILURE);
+        }
+
+        Parser::subCmdPtrs_.push_back(this);
+    };
+
+    bool isActive() { return Parser::activeSubCmd_ == this; }
+
+    /**
+    * @brief Sets which short options require a value.
+     * @details To pass short options like `-n 123` as a single argument `-n123`,
+                provide the short option names as a string to this function.
+                You don't have to call it, but if you do, call it before `preprocess()`.
+     * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
+                                  For example, if `-n` and `-r` require values, pass `nr`.
+     */
+    void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr) { subCmdShortNonFlagOptsStr_ = std::move(shortNonFlagOptsStr); }
+
+    /**
+     * @brief Checks if a flag option exists.
+     * @param names Option names (e.g., "v", "verbose" or "v,verbose").
+     * @param description Option description, used for the help message.
+     * @return Returns true if the option appears in the command line, false otherwise.
+     */
+    bool hasFlag(std::string_view optName, std::string description) {
+        if (!isActive()) { return false; }
+        return Parser::hasFlag_(optName, std::move(description), Parser::data_);
+    }
+
+    /**
+     * @brief Checks if two mutually exclusive options exist.
+     * @param args Structure containing the names and descriptions of the mutually exclusive options.
+     * @return True if the first option is present and the second is not, or vice versa;
+               defaultValue if neither option is present.
+     */
+    bool hasMutualExFlag(Parser::HasMutualExArgs args) {
+        if (!isActive()) { return false; }
+        return Parser::hasMutualExFlag_(std::move(args), Parser::data_);
+    }
+
+    /**
+     * @brief Gets the value of an integer option.
+     * @param names Option names (e.g., "n", "count" or "n,count").
+     * @param description Option description.
+     * @return A OptValBuilder object that can be used to parse the option value.
+     */
+    template <typename T>
+    Parser::OptValBuilder<T> get(std::string_view optName, std::string description) {
+        return Parser::OptValBuilder<T>(optName, std::move(description), Parser::data_, this);
+    }
+
+    /**
+     * @brief Gets a positional argument.
+     * @details Must be called after all get/hasFlag calls. Should be called in order.
+     * @param name Argument name, used for the help message (e.g., "input-file").
+     * @param description Argument description.
+     * @param required If true and the user does not provide the argument, the program will report an error and exit.
+     * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
+     */
+    std::string getPositional(const std::string &posName, std::string description, bool required = true) {
+        if (!isActive()) { return ""; }
+        return Parser::getPositional_(posName, std::move(description), required, Parser::data_);
+    }
+
+    /**
+     * @brief Gets all remaining positional arguments.
+     * @details Must be called after all getPositional calls.
+     * @param name Argument name, used for the help message (e.g., "extra-files").
+     * @param description Argument description.
+     * @param required If true and there are no remaining arguments, the program will report an error and exit.
+     * @return A string vector containing all remaining arguments.
+     */
+    std::vector<std::string> getRemainingPositionals(
+        const std::string &posName, std::string description, bool required = true) {
+        if (!isActive()) { return {}; }
+        return Parser::getRemainingPositionals_(posName, std::move(description), required, Parser::data_);
+    }
+
+private:
+    std::string subCommandName_;
+    std::string subCmdDescription_;
+    std::string subCmdShortNonFlagOptsStr_;
+};
 
 inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
     argc_ = argc;
@@ -324,7 +388,7 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
     if (argc > 1) {
         std::string argv1 = argv[1];
         auto        it    = std::find_if(
-            subCmdPtrs_.begin(), subCmdPtrs_.end(), [argv1](const Parser *p) { return p->subCommandName_ == argv1; });
+            subCmdPtrs_.begin(), subCmdPtrs_.end(), [argv1](const SubParser *p) { return p->subCommandName_ == argv1; });
         if (it != subCmdPtrs_.end()) {
             activeSubCmd_ = *it;
             data.cmdName.append(" ").append(argv[1]); // cmdName is now "program subcommand"
@@ -606,4 +670,4 @@ inline bool Parser::runAllPostprocess_(InternalData &data, bool notExit) {
 
 } // namespace ArgLite
 
-#include "Get.hpp" // IWYU pragma: keep
+#include "Get.hpp"            // IWYU pragma: keep
