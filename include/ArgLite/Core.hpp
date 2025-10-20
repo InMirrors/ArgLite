@@ -40,7 +40,7 @@ public:
      * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
                                   For example, if `-n` and `-r` require values, pass `nr`.
      */
-    static void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr) { setShortNonFlagOptsStr_(std::move(shortNonFlagOptsStr), data_); }
+    static void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr) { mainCmdShortNonFlagOptsStr_ = std::move(shortNonFlagOptsStr); }
 
     /**
      * @brief Preprocesses the command-line arguments. This is the first step in using this library.
@@ -55,7 +55,10 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
-    static bool hasFlag(std::string_view optName, std::string description) { return hasFlag_(optName, std::move(description), data_); }
+    static bool hasFlag(std::string_view optName, std::string description) {
+        if (!isMainCmdActive()) { return false; }
+        return hasFlag_(optName, std::move(description), data_);
+    }
 
     //  Structure for arguments of mutually exclusive flag options.
     struct HasMutualExArgs {
@@ -72,7 +75,10 @@ public:
      * @return True if the first option is present and the second is not, or vice versa;
                defaultValue if neither option is present.
      */
-    static bool hasMutualExFlag(HasMutualExArgs args) { return hasMutualExFlag_(std::move(args), data_); }
+    static bool hasMutualExFlag(HasMutualExArgs args) {
+        if (!isMainCmdActive()) { return false; }
+        return hasMutualExFlag_(std::move(args), data_);
+    }
 
     /**
      * @brief Gets the value of a string option.
@@ -93,6 +99,7 @@ public:
      */
     template <typename T>
     static OptValBuilder<T> get(std::string_view optName, std::string description) {
+        if (!isMainCmdActive()) { return T{}; }
         return OptValBuilder<T>(optName, std::move(description), data_);
     }
 
@@ -105,6 +112,7 @@ public:
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
     static std::string getPositional(const std::string &posName, std::string description, bool required = true) {
+        if (!isMainCmdActive()) { return ""; }
         return getPositional_(posName, std::move(description), required, data_);
     }
 
@@ -118,6 +126,7 @@ public:
      */
     static std::vector<std::string> getRemainingPositionals(
         const std::string &posName, std::string description, bool required = true) {
+        if (!isMainCmdActive()) { return {}; }
         return getRemainingPositionals_(posName, std::move(description), required, data_);
     }
 
@@ -189,6 +198,7 @@ private:
     // === Instance-level ===
     std::string subCommandName_;
     std::string subCmdDescription_;
+    std::string subCmdShortNonFlagOptsStr_;
 
     // === Static-level ===
 
@@ -227,7 +237,6 @@ private:
 
     struct InternalData {
         std::string cmdName;
-        std::string shortNonFlagOptsStr;
         // Containers
         OptMap                          options;
         std::vector<OptionHelpInfo>     optionHelpEntries;
@@ -243,6 +252,7 @@ private:
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
     static inline std::string  programDescription_;
     static inline std::string  programVersion_;
+    static inline std::string  mainCmdShortNonFlagOptsStr_;
     static inline InternalData data_;
 
     // Internal helper functions
@@ -269,7 +279,6 @@ private:
     template <typename T>
     using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
     // Other helper functions
-    static inline void setShortNonFlagOptsStr_(std::string shortNonFlagOptsStr, InternalData &data);
     static inline void preprocess_(int argc, char **argv);
     static inline void tryToPrintVersion_(InternalData &data);
     static inline void tryToPrintHelp_(InternalData &data);
@@ -292,16 +301,13 @@ private:
 
 // === Private Helper Implementations ===
 
-inline void Parser::setShortNonFlagOptsStr_(std::string shortNonFlagOptsStr, InternalData &data) {
-    data.shortNonFlagOptsStr = std::move(shortNonFlagOptsStr);
-}
-
 inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
     argc_ = argc;
     argv_ = argv;
 
     auto &data = data_;
 
+    // Set up the program name
     if (argc_ > 0) {
         data.cmdName = argv[0];
 
@@ -312,8 +318,25 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
         }
     }
 
+    // Check if there is a subcommand
+    std::string_view shortNonFlagOptsStr;
+    int              subCmdOffset = 0;
+    if (argc > 1) {
+        std::string argv1 = argv[1];
+        auto        it    = std::find_if(
+            subCmdPtrs_.begin(), subCmdPtrs_.end(), [argv1](const Parser *p) { return p->subCommandName_ == argv1; });
+        if (it != subCmdPtrs_.end()) {
+            activeSubCmd_ = *it;
+            data.cmdName.append(" ").append(argv[1]); // cmdName is now "program subcommand"
+            subCmdOffset        = 1;
+            shortNonFlagOptsStr = (*it)->subCmdShortNonFlagOptsStr_;
+        }
+    } else {
+        shortNonFlagOptsStr = mainCmdShortNonFlagOptsStr_;
+    }
+
     bool allPositional = false;
-    for (int i = 1; i < argc; ++i) {
+    for (int i = 1 + subCmdOffset; i < argc; ++i) {
         std::string arg = argv[i];
 
         if (allPositional) {
@@ -360,7 +383,7 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
                 currentOptKey += arg[j];
 
                 // Check if the current character is a short option that requires a value
-                if (data.shortNonFlagOptsStr.find(arg[j]) != std::string::npos && j + 1 < arg.length()) {
+                if (shortNonFlagOptsStr.find(arg[j]) != std::string::npos && j + 1 < arg.length()) {
                     // `-n123` or `-abn123` form. It requires a value, the rest of the string is its value
                     std::string value           = arg.substr(j + 1);
                     data.options[currentOptKey] = {i, std::move(value)};
