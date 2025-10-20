@@ -24,6 +24,8 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
 
     auto &data = data_;
 
+    std::string_view shortNonFlagOptsStr = mainCmdShortNonFlagOptsStr_;
+
     // Set up the program name
     if (argc_ > 0) {
         data.cmdName = argv[0];
@@ -36,8 +38,7 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
     }
 
     // Check if there is a subcommand
-    std::string_view shortNonFlagOptsStr;
-    int              subCmdOffset = 0;
+    int subCmdOffset = 0;
     if (argc > 1) {
         std::string argv1 = argv[1];
         auto        it    = std::find_if(
@@ -48,8 +49,6 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
             subCmdOffset        = 1;
             shortNonFlagOptsStr = (*it)->subCmdShortNonFlagOptsStr_;
         }
-    } else {
-        shortNonFlagOptsStr = mainCmdShortNonFlagOptsStr_;
     }
 
     bool allPositional = false;
