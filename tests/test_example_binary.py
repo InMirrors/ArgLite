@@ -127,7 +127,7 @@ def main():
 
     all_tests_passed &= test_case(
         "Flexible positional argument order",
-        ["-1", "my_output.txt", "-r12.3", "input1.txt", "-v", "input2.txt"],
+        ["-1", "my_output.txt", "-r12.3", "input1.txt", "-1", "input2.txt"],
         expected_output_substrings=[
             "Switch 1   : true",
             "Rate       : 12.3",

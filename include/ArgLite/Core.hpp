@@ -207,7 +207,7 @@ private:
         bool        required;
     };
 
-    using OptMap = std::unordered_map<std::string, OptionInfo>;
+    using OptMap = std::unordered_map<std::string, std::vector<OptionInfo>>;
 
     struct InternalData {
         std::string cmdName;
@@ -236,6 +236,7 @@ private:
     static inline std::string              getPositional_(const std::string &posName, std::string description, bool required, InternalData &data);
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, std::string description, bool isRequired, InternalData &data);
     // Helper functions for get functions
+    static inline void restorePosArgsInFlags(const std::vector<OptionInfo> &optInfoArr, std::vector<int> &positionalArgsIndices);
     static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string errorMsg);
     static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, OptMap &options);
     // Helper functions for get functions with long return types
