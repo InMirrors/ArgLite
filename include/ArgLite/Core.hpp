@@ -260,6 +260,7 @@ private:
     static inline void printHelp(const InternalData &data);
     static inline void printHelpDescription(std::string_view description);
     static inline void printHelpUsage(const InternalData &data, std::string_view cmdName);
+    static inline void printHelpSubCmd(const std::vector<SubParser *> &subCmdPtrs);
     static inline void printHelpPositional(const InternalData &data);
     static inline void printHelpOptions(const InternalData &data);
     static inline void clearData(InternalData &data);

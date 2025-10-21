@@ -177,6 +177,7 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
 inline void Parser::printHelp(const InternalData &data) {
     printHelpDescription(programDescription_);
     printHelpUsage(data, data_.cmdName);
+    printHelpSubCmd(subCmdPtrs_);
     printHelpPositional(data);
     printHelpOptions(data);
 }
@@ -195,11 +196,34 @@ inline void Parser::printHelpUsage(const InternalData &data, std::string_view cm
 #else
     std::cout << cmdName;
 #endif
-    if (!data.optionHelpEntries.empty()) std::cout << " [OPTIONS]";
+    if (!subCmdPtrs_.empty()) { std::cout << " [SUBCOMMAND]"; }
+    if (!data.optionHelpEntries.empty()) { std::cout << " [OPTIONS]"; }
     for (const auto &p : data.positionalHelpEntries) {
         std::cout << " " << (p.required ? "" : "[") << p.name << (p.required ? "" : "]");
     }
     std::cout << '\n';
+}
+
+inline void Parser::printHelpSubCmd(const std::vector<SubParser *> &subCmdPtrs) {
+    if (subCmdPtrs.empty() || !isMainCmdActive()) { return; }
+
+#ifdef ARGLITE_ENABLE_FORMATTER
+    std::cout << '\n'
+              << Formatter::boldUnderline("Subcommands:") << '\n';
+#else
+    std::cout << "\nSubcommands:\n";
+#endif
+
+    size_t maxSubCmdNameWidth = 0;
+    for (const auto &p : subCmdPtrs) {
+        maxSubCmdNameWidth = std::max(maxSubCmdNameWidth, p->subCommandName_.length());
+    }
+
+    for (const auto &p : subCmdPtrs) {
+        std::cout << "  " << std::left
+                  << std::setw(static_cast<int>(maxSubCmdNameWidth) + 3)
+                  << p->subCommandName_ << p->subCmdDescription_ << '\n';
+    }
 }
 
 inline void Parser::printHelpPositional(const InternalData &data) {

@@ -29,14 +29,13 @@ def main():
         "Main command help with subcommand name",
         ["-h", "mv"],
         expected_output_substrings=[
-            "Usage: subcommand [OPTIONS]",
-            # "Usage: subcommand [SUBCOMMAND] [OPTIONS]",
+            "Usage: subcommand [SUBCOMMAND] [OPTIONS]",
             "A simple program to demonstrate ArgLite subcommand feature.",
             "Options:",
-            # "Subcommands:",
-            # "status",
-            # "commit",
-            # "mv"
+            "Subcommands:",
+            "status",
+            "commit",
+            "mv"
         ],
     )
 
