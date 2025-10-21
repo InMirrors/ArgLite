@@ -202,6 +202,13 @@ def main():
         expected_return_code=1
     )
 
+    all_tests_passed &= test_case(
+        "Missing option value",
+        ["--number", "-v", "output.txt", "input.txt"],
+        expected_error_keywords=["Option", "--number", "requires", "a", "value"],
+        expected_return_code=1
+    )
+
     # Option argument type mismatch for --number (e.g., passing non-integer)
     all_tests_passed &= test_case(
         "Option argument type mismatch (number)",

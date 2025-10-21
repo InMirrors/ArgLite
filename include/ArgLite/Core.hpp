@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
-#include <iomanip>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -18,29 +17,35 @@
 
 namespace ArgLite {
 
+class SubParser;
+
 class Parser {
+    friend class SubParser;
+
 public:
     /**
      * @brief Sets the program description, used for the first line of the help message.
      * @param description The program's description text.
      */
-    static void setDescription(std::string_view description) { setDescription_(description, data_); }
+    static void setDescription(std::string description) { programDescription_ = std::move(description); }
 
     /**
      * @brief Sets the program version and add options `-V` and `--version` to print the version.
      * @param versionStr The program's version string.
      */
-    static void setVersion(std::string_view versionStr) { programVersion_ = versionStr; }
+    static void setVersion(std::string versionStr) { programVersion_ = std::move(versionStr); }
 
     /**
-    * @brief Sets which short options require a value.
-     * @details To pass short options like `-n 123` as a single argument `-n123`,
+     * @brief Sets which short options that require a value.
+     * @details To pass short options with their values as a single argument
+                (e.g., `-n123` for `-n 123`),
                 provide the short option names as a string to this function.
                 You don't have to call it, but if you do, call it before `preprocess()`.
+                Note: Only include short options that *require* a value, not all short options.
      * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
                                   For example, if `-n` and `-r` require values, pass `nr`.
      */
-    static void setShortNonFlagOptsStr(std::string_view shortNonFlagOptsStr) { setShortNonFlagOptsStr_(shortNonFlagOptsStr, data_); }
+    static void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr) { mainCmdShortNonFlagOptsStr_ = std::move(shortNonFlagOptsStr); }
 
     /**
      * @brief Preprocesses the command-line arguments. This is the first step in using this library.
@@ -55,7 +60,10 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
-    static bool hasFlag(std::string_view optName, const std::string &description) { return hasFlag_(optName, description, data_); }
+    static bool hasFlag(std::string_view optName, std::string description) {
+        if (!isMainCmdActive()) { return false; }
+        return hasFlag_(optName, std::move(description), data_);
+    }
 
     //  Structure for arguments of mutually exclusive flag options.
     struct HasMutualExArgs {
@@ -72,15 +80,10 @@ public:
      * @return True if the first option is present and the second is not, or vice versa;
                defaultValue if neither option is present.
      */
-    static bool hasMutualExFlag(const HasMutualExArgs &args) { return hasMutualExFlag_(args, data_); }
-
-    /**
-     * @brief Gets the value of a string option.
-     * @param names Option names (e.g., "o", "output" or "o,output").
-     * @param description Option description.
-     * @param defaultValue The default value to return if the option is not provided on the command line.
-     * @return The parsed string value or the default value.
-     */
+    static bool hasMutualExFlag(HasMutualExArgs args) {
+        if (!isMainCmdActive()) { return false; }
+        return hasMutualExFlag_(std::move(args), data_);
+    }
 
     template <typename T>
     class OptValBuilder;
@@ -92,8 +95,8 @@ public:
      * @return A OptValBuilder object that can be used to parse the option value.
      */
     template <typename T>
-    static OptValBuilder<T> get(std::string_view optName, const std::string &description) {
-        return OptValBuilder<T>(optName, description, data_);
+    static OptValBuilder<T> get(std::string_view optName, std::string description) {
+        return OptValBuilder<T>(optName, std::move(description), data_, nullptr);
     }
 
     /**
@@ -104,8 +107,9 @@ public:
      * @param required If true and the user does not provide the argument, the program will report an error and exit.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
-    static std::string getPositional(const std::string &posName, const std::string &description, bool required = true) {
-        return getPositional_(posName, description, required, data_);
+    static std::string getPositional(const std::string &posName, std::string description, bool required = true) {
+        if (!isMainCmdActive()) { return ""; }
+        return getPositional_(posName, std::move(description), required, data_);
     }
 
     /**
@@ -117,8 +121,9 @@ public:
      * @return A string vector containing all remaining arguments.
      */
     static std::vector<std::string> getRemainingPositionals(
-        const std::string &posName, const std::string &description, bool required = true) {
-        return getRemainingPositionals_(posName, description, required, data_);
+        const std::string &posName, std::string description, bool required = true) {
+        if (!isMainCmdActive()) { return {}; }
+        return getRemainingPositionals_(posName, std::move(description), required, data_);
     }
 
     /**
@@ -162,7 +167,22 @@ public:
 
     Parser() = delete;
 
+    // === SubParser Instance-related Methods ===
+
+    /**
+     * @brief Checks if the main command is active.
+     * @return True if the main command is active, false otherwise.
+     */
+    static bool isMainCmdActive() { return activeSubCmd_ == nullptr; }
+
 private:
+    // === SubParser Instance-related ===
+
+    static inline std::vector<SubParser *> subCmdPtrs_;
+    static inline SubParser               *activeSubCmd_;
+
+    // === Static-related ===
+
     // Stores option information for subsequent get/hasFlag calls.
     // key: Option name (e.g., "-o", "--output").
     // value: index > 0: Index of the argument in argv;
@@ -190,9 +210,7 @@ private:
     using OptMap = std::unordered_map<std::string, OptionInfo>;
 
     struct InternalData {
-        std::string programName;
-        std::string programDescription;
-        std::string shortNonFlagOptsStr;
+        std::string cmdName;
         // Containers
         OptMap                          options;
         std::vector<OptionHelpInfo>     optionHelpEntries;
@@ -206,17 +224,19 @@ private:
     static inline char       **argv_;
     static inline size_t       positionalIdx_;
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
+    static inline std::string  programDescription_;
     static inline std::string  programVersion_;
+    static inline std::string  mainCmdShortNonFlagOptsStr_;
     static inline InternalData data_;
 
     // Internal helper functions
     // Get functions, internal data can be changed
-    static inline bool                     hasFlag_(std::string_view optName, const std::string &description, InternalData &data);
-    static inline bool                     hasMutualExFlag_(const HasMutualExArgs &args, InternalData &data);
-    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, InternalData &data);
-    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, InternalData &data);
+    static inline bool                     hasFlag_(std::string_view optName, std::string description, InternalData &data);
+    static inline bool                     hasMutualExFlag_(HasMutualExArgs args, InternalData &data);
+    static inline std::string              getPositional_(const std::string &posName, std::string description, bool required, InternalData &data);
+    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, std::string description, bool isRequired, InternalData &data);
     // Helper functions for get functions
-    static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
+    static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string errorMsg);
     static inline void fixPositionalArgsArray(std::vector<int> &positionalArgsIndices, OptMap &options);
     // Helper functions for get functions with long return types
     static inline std::string                         parseOptName(std::string_view optName);
@@ -233,8 +253,6 @@ private:
     template <typename T>
     using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
     // Other helper functions
-    static inline void setDescription_(std::string_view description, InternalData &data);
-    static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data);
     static inline void preprocess_(int argc, char **argv);
     static inline void tryToPrintVersion_(InternalData &data);
     static inline void tryToPrintHelp_(InternalData &data);
@@ -242,6 +260,7 @@ private:
     static inline void printHelp(const InternalData &data);
     static inline void printHelpDescription(std::string_view description);
     static inline void printHelpUsage(const InternalData &data, std::string_view cmdName);
+    static inline void printHelpSubCmd(const std::vector<SubParser *> &subCmdPtrs);
     static inline void printHelpPositional(const InternalData &data);
     static inline void printHelpOptions(const InternalData &data);
     static inline void clearData(InternalData &data);
@@ -255,301 +274,110 @@ private:
 #endif
 };
 
-// === Private Helper Implementations ===
+class SubParser {
+    friend Parser;
 
-inline void Parser::setDescription_(std::string_view description, InternalData &data) {
-    data.programDescription = description;
-}
+public:
+    SubParser(std::string subCommandName, std::string subCmdDescription)
+        : subCommandName_(std::move(subCommandName)),
+          subCmdDescription_(std::move(subCmdDescription)) {
 
-inline void Parser::setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data) {
-    data.shortNonFlagOptsStr = shortNonFlagOptsStr;
-}
-
-inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
-    argc_ = argc;
-    argv_ = argv;
-
-    auto &data = data_;
-
-    if (argc_ > 0) {
-        data.programName = argv[0];
-
-        // Extract the basename
-        if (auto last_slash_pos = data.programName.find_last_of("/\\");
-            std::string::npos != last_slash_pos) {
-            data.programName.erase(0, last_slash_pos + 1);
-        }
-    }
-
-    bool allPositional = false;
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-
-        if (allPositional) {
-            data.positionalArgsIndices.push_back(i);
-            continue;
+        if (std::find_if(Parser::subCmdPtrs_.begin(), Parser::subCmdPtrs_.end(), [subCommandName](const SubParser *p) {
+                return p->subCommandName_ == subCommandName;
+            }) != Parser::subCmdPtrs_.end()) {
+            std::cerr << "[ArgLite] You cannot create multiple SubParser objects with the same subcommand name.\n";
+            std::cerr << "[ArgLite] This subcommand name is already used: " << subCommandName_ << "\n";
+            std::exit(EXIT_FAILURE);
         }
 
-        if (arg.length() <= 1) { // Not an option, an option has 2 chars at least (e.g., -h)
-            data.positionalArgsIndices.push_back(i);
-            continue;
-        }
+        Parser::subCmdPtrs_.push_back(this);
+    };
 
-        if (arg == "--") {
-            allPositional = true;
-            continue;
-        }
+    /**
+     * @brief Checks if this subcommand is active.
+     * @return True if this subcommand is active, false otherwise.
+     */
+    bool isActive() { return Parser::activeSubCmd_ == this; }
 
-        // Long option
-        if (arg.rfind("--", 0) == 0) {
-            std::string key = arg;
-            std::string value;
-            // --opt=val form
-            if (auto equalsPos = arg.find('='); equalsPos != std::string::npos) {
-                key               = arg.substr(0, equalsPos);
-                value             = arg.substr(equalsPos + 1);
-                data.options[key] = {i, std::move(value)};
-            } else {
-                if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    data.options[key] = {i + 1, ""};
-                    i++; // Consume next arg as value
-                } else {
-                    data.options[key] = {-i, ""}; // Flag
-                }
-            }
-        }
-        // Short option(s)
-        // Process short options, e.g., -n 123, -ab, -abn 123, -n123, -abn123
-        else if (arg.rfind('-', 0) == 0) {
-            std::string lastFlagKey;
-            bool        isValueConsumedInCurrentArg = false; // True if a short option like -n123 was found
+    /**
+     * @brief Sets which short options that require a value.
+     * @details To pass short options with their values as a single argument
+                (e.g., `-n123` for `-n 123`),
+                provide the short option names as a string to this function.
+                You don't have to call it, but if you do, call it before `preprocess()`.
+                Note: Only include short options that *require* a value, not all short options.
+     * @param shortNonFlagOptsStr A string containing all short option characters that require a value.
+                                  For example, if `-n` and `-r` require values, pass `nr`.
+     */
+    void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr) { subCmdShortNonFlagOptsStr_ = std::move(shortNonFlagOptsStr); }
 
-            for (size_t j = 1; j < arg.length(); ++j) {
-                std::string currentOptKey = "-";
-                currentOptKey += arg[j];
-
-                // Check if the current character is a short option that requires a value
-                if (data.shortNonFlagOptsStr.find(arg[j]) != std::string::npos && j + 1 < arg.length()) {
-                    // `-n123` or `-abn123` form. It requires a value, the rest of the string is its value
-                    std::string value           = arg.substr(j + 1);
-                    data.options[currentOptKey] = {i, std::move(value)};
-                    isValueConsumedInCurrentArg = true;
-                    break; // Stop processing this argument, as the rest is a value for this option
-                }
-
-                // It's a flag
-                data.options[currentOptKey] = {-i, ""};
-                // Keep track of the last flag, in case it needs to consume the next argument
-                lastFlagKey = currentOptKey;
-            }
-
-            // `-n 123` or `-abn 123` form
-            // If no value was consumed within the current argument (not `-n123` form)
-            // and there was a last flag, check if it takes a value from the next argument.
-            if (!isValueConsumedInCurrentArg && !lastFlagKey.empty()) {
-                // This condition applies to the *last* flag in a bundle (e.g., 'c' in -abc)
-                // or a single short option (e.g., 'a' in -a).
-                // If the next argument exists and is not another option, it's the value.
-                if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    data.options[lastFlagKey] = {i + 1, ""};
-                    i++; // Consume the next argument
-                }
-            }
-        }
-        // Positional
-        else {
-            data.positionalArgsIndices.push_back(i);
-        }
-    }
-}
-
-inline void Parser::tryToPrintVersion_(InternalData &data) {
-    if (programVersion_.empty()) { return; }
-    data.optionHelpEntries.push_back({"-V", "--version", "Show version information and exit", ""});
-    if ((data.options.count("-V") != 0) || (data.options.count("--version")) != 0) {
-        std::cout << programVersion_ << '\n';
-        std::exit(EXIT_SUCCESS);
-    }
-}
-
-inline void Parser::tryToPrintHelp_(InternalData &data) {
-    tryToPrintVersion_(data);
-
-    if ((data.options.count("-h") != 0) || (data.options.count("--help")) != 0) {
-        data.optionHelpEntries.push_back({"-h", "--help", "Show this help message and exit", ""});
-        printHelp(data);
-        std::exit(EXIT_SUCCESS);
-    }
-}
-
-inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
-    // Remove help options as they are handled by tryToPrintHelp
-    data.options.erase("-h");
-    data.options.erase("--help");
-
-    if (!data.options.empty()) {
-        for (const auto &pair : data.options) {
-            std::cerr << ERROR_STR << "Unrecognized option '";
-#ifdef ARGLITE_ENABLE_FORMATTER
-            std::cerr << Formatter::bold(pair.first);
-#else
-            std::cerr << pair.first;
-#endif
-            std::cerr << "'\n";
-        }
-        if (!notExit) { std::exit(EXIT_FAILURE); }
-        return true;
+    /**
+     * @brief Checks if a flag option exists.
+     * @param names Option names (e.g., "v", "verbose" or "v,verbose").
+     * @param description Option description, used for the help message.
+     * @return Returns true if the option appears in the command line, false otherwise.
+     */
+    bool hasFlag(std::string_view optName, std::string description) {
+        if (!isActive()) { return false; }
+        return Parser::hasFlag_(optName, std::move(description), Parser::data_);
     }
 
-    return false;
-}
-
-inline void Parser::printHelp(const InternalData &data) {
-    printHelpDescription(data_.programDescription);
-    printHelpUsage(data, data_.programName);
-    printHelpPositional(data);
-    printHelpOptions(data);
-}
-
-inline void Parser::printHelpDescription(std::string_view description) {
-    if (!description.empty()) {
-        std::cout << description << '\n'
-                  << '\n';
-    }
-}
-
-inline void Parser::printHelpUsage(const InternalData &data, std::string_view cmdName) {
-    std::cout << "Usage: ";
-#ifdef ARGLITE_ENABLE_FORMATTER
-    std::cout << Formatter::bold(cmdName);
-#else
-    std::cout << cmdName;
-#endif
-    if (!data.optionHelpEntries.empty()) std::cout << " [OPTIONS]";
-    for (const auto &p : data.positionalHelpEntries) {
-        std::cout << " " << (p.required ? "" : "[") << p.name << (p.required ? "" : "]");
-    }
-    std::cout << '\n';
-}
-
-inline void Parser::printHelpPositional(const InternalData &data) {
-    if (!data.positionalHelpEntries.empty()) {
-#ifdef ARGLITE_ENABLE_FORMATTER
-        std::cout << '\n'
-                  << Formatter::boldUnderline("Positional Arguments:") << '\n';
-#else
-        std::cout << "\nPositional Arguments:\n";
-#endif
-        size_t maxNameWidth = 0;
-        for (const auto &p : data.positionalHelpEntries) {
-            maxNameWidth = std::max(maxNameWidth, p.name.length());
-        }
-        for (const auto &p : data.positionalHelpEntries) {
-            std::cout << "  " << std::left;
-#ifdef ARGLITE_ENABLE_FORMATTER
-            constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
-            std::cout << std::setw(static_cast<int>(maxNameWidth) + 2 + ANSI_CODE_LENGTH)
-                      << Formatter::bold(p.name);
-#else
-            std::cout << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name;
-#endif
-            std::cout << p.description << '\n';
-        }
-    }
-}
-
-inline void Parser::printHelpOptions(const InternalData &data) {
-    if (!data.optionHelpEntries.empty()) {
-#ifdef ARGLITE_ENABLE_FORMATTER
-        std::cout << '\n'
-                  << Formatter::boldUnderline("Options:") << '\n';
-#else
-        std::cout << "\nOptions:\n";
-#endif
-
-        for (const auto &o : data.optionHelpEntries) {
-            std::string optStr("  ");
-            if (!o.shortOpt.empty()) {
-                optStr += o.shortOpt;
-                if (!o.longOpt.empty()) { optStr += ", "; }
-            } else {
-                optStr += "    "; // Pad for alignment
-            }
-            optStr += o.longOpt;
-
-            std::cout << std::left;
-#ifdef ARGLITE_ENABLE_FORMATTER
-            constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
-            std::cout << std::setw(static_cast<int>(descriptionIndent_) + ANSI_CODE_LENGTH);
-            optStr = Formatter::bold(optStr);
-#else
-            std::cout << std::setw(static_cast<int>(descriptionIndent_));
-#endif
-
-            if (!o.typeName.empty()) {
-                optStr.append(" <").append(o.typeName).append(">");
-            }
-            std::cout << optStr;
-
-            std::string descStr = o.description;
-            if (!o.defaultValue.empty()) {
-                descStr += std::string(" [default: ").append(o.defaultValue).append("]");
-            }
-            // the option string is too long, start a new line
-            // -2: two separeting spaces after the type name
-            auto optPartLength = optStr.length();
-#ifdef ARGLITE_ENABLE_FORMATTER
-            optPartLength -= ANSI_CODE_LENGTH;
-#endif
-            if (optPartLength > descriptionIndent_ - 2) {
-                std::cout << '\n'
-                          << std::left << std::setw(static_cast<int>(descriptionIndent_)) << "";
-            }
-            std::cout << descStr << '\n';
-        }
-    }
-}
-
-// Clear internal data
-inline void Parser::clearData(InternalData &data) {
-    InternalData temp;
-    temp.options.swap(data.options);
-    temp.optionHelpEntries.swap(data.optionHelpEntries);
-    temp.positionalArgsIndices.swap(data.positionalArgsIndices);
-    temp.positionalHelpEntries.swap(data.positionalHelpEntries);
-    temp.errorMessages.swap(data.errorMessages);
-}
-
-inline bool Parser::finalize_(InternalData &data, bool notExit) {
-    if (data.errorMessages.empty()) {
-        clearData(data);
-        return false;
+    /**
+     * @brief Checks if two mutually exclusive options exist.
+     * @param args Structure containing the names and descriptions of the mutually exclusive options.
+     * @return True if the first option is present and the second is not, or vice versa;
+               defaultValue if neither option is present.
+     */
+    bool hasMutualExFlag(Parser::HasMutualExArgs args) {
+        if (!isActive()) { return false; }
+        return Parser::hasMutualExFlag_(std::move(args), Parser::data_);
     }
 
-    std::cerr << "Errors occurred while parsing command-line arguments.\n";
-    std::cerr << "The following is a list of error messages:\n";
-    for (const auto &msg : data.errorMessages) {
-        std::cerr << ERROR_STR << msg << '\n';
+    /**
+     * @brief Gets the value of an integer option.
+     * @param names Option names (e.g., "n", "count" or "n,count").
+     * @param description Option description.
+     * @return A OptValBuilder object that can be used to parse the option value.
+     */
+    template <typename T>
+    Parser::OptValBuilder<T> get(std::string_view optName, std::string description) {
+        return Parser::OptValBuilder<T>(optName, std::move(description), Parser::data_, this);
     }
 
-    if (notExit) {
-        clearData(data);
-        return true;
+    /**
+     * @brief Gets a positional argument.
+     * @details Must be called after all get/hasFlag calls. Should be called in order.
+     * @param name Argument name, used for the help message (e.g., "input-file").
+     * @param description Argument description.
+     * @param required If true and the user does not provide the argument, the program will report an error and exit.
+     * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
+     */
+    std::string getPositional(const std::string &posName, std::string description, bool required = true) {
+        if (!isActive()) { return ""; }
+        return Parser::getPositional_(posName, std::move(description), required, Parser::data_);
     }
-    std::exit(EXIT_FAILURE);
-}
 
-inline bool Parser::runAllPostprocess_(InternalData &data, bool notExit) {
-    tryToPrintHelp_(data);
-    auto hasInvalidOpts = tryToPrintInvalidOpts_(data, true);
-    auto hasError       = finalize_(data, true);
-
-    if (!notExit && (hasInvalidOpts || hasError)) {
-        std::exit(EXIT_FAILURE);
+    /**
+     * @brief Gets all remaining positional arguments.
+     * @details Must be called after all getPositional calls.
+     * @param name Argument name, used for the help message (e.g., "extra-files").
+     * @param description Argument description.
+     * @param required If true and there are no remaining arguments, the program will report an error and exit.
+     * @return A string vector containing all remaining arguments.
+     */
+    std::vector<std::string> getRemainingPositionals(
+        const std::string &posName, std::string description, bool required = true) {
+        if (!isActive()) { return {}; }
+        return Parser::getRemainingPositionals_(posName, std::move(description), required, Parser::data_);
     }
-    return hasInvalidOpts || hasError;
-}
+
+private:
+    std::string subCommandName_;
+    std::string subCmdDescription_;
+    std::string subCmdShortNonFlagOptsStr_;
+};
 
 } // namespace ArgLite
 
-#include "Get.hpp" // IWYU pragma: keep
+#include "Get.hpp"            // IWYU pragma: keep
+#include "PrePostProcess.hpp" // IWYU pragma: keep
