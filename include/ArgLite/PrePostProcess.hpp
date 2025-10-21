@@ -134,20 +134,10 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
 }
 
 inline void Parser::tryToPrintVersion_(InternalData &data) {
-    if (programVersion_.empty()) { return; }
+    if (programVersion_.empty() || !isMainCmdActive()) { return; }
     data.optionHelpEntries.push_back({"-V", "--version", "Show version information and exit", ""});
     if ((data.options.count("-V") != 0) || (data.options.count("--version")) != 0) {
         std::cout << programVersion_ << '\n';
-        std::exit(EXIT_SUCCESS);
-    }
-}
-
-inline void Parser::tryToPrintHelp_(InternalData &data) {
-    tryToPrintVersion_(data);
-
-    if ((data.options.count("-h") != 0) || (data.options.count("--help")) != 0) {
-        data.optionHelpEntries.push_back({"-h", "--help", "Show this help message and exit", ""});
-        printHelp(data);
         std::exit(EXIT_SUCCESS);
     }
 }
@@ -174,8 +164,20 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
     return false;
 }
 
+inline void Parser::tryToPrintHelp_(InternalData &data) {
+    tryToPrintVersion_(data);
+
+    if ((data.options.count("-h") != 0) || (data.options.count("--help")) != 0) {
+        data.optionHelpEntries.push_back({"-h", "--help", "Show this help message and exit", ""});
+        printHelp(data);
+        std::exit(EXIT_SUCCESS);
+    }
+}
+
 inline void Parser::printHelp(const InternalData &data) {
-    printHelpDescription(programDescription_);
+    std::string_view description = programDescription_;
+    if (activeSubCmd_ != nullptr) { description = activeSubCmd_->subCmdDescription_; }
+    printHelpDescription(description);
     printHelpUsage(data, data_.cmdName);
     printHelpSubCmd(subCmdPtrs_);
     printHelpPositional(data);
