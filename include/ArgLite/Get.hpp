@@ -116,99 +116,10 @@ std::pair<std::string, std::string> Parser::parseOptNameAsPair(std::string_view 
     return {shortOpt, longOpt};
 }
 
-template <typename T>
-class Parser::OptValBuilder {
-public:
-    OptValBuilder(std::string_view optName, std::string description,
-                  InternalData &data, SubParser *passedSubCmd)
-        : optName_(optName),
-          description_(std::move(description)),
-          data_(data),
-          passedSubCmd_(passedSubCmd) {
-        typeName_ = getTypeName<T>();
-    }
+class Parser::OptValHelper {
+    template <typename T> friend class OptValBuilder;
 
-    /**
-     * @brief Sets the default value for the option.
-     * @param defaultValue The value to be used as the default.
-     * @return A reference to the current OptValBuilder instance for chaining.
-     */
-    OptValBuilder<T> &setDefault(T defaultValue) {
-        defaultValue_ = defaultValue;
-        return *this;
-    }
-
-    /**
-     * @brief Retrieves the option's value.
-     * @return The parsed value of the option,
-               or the default value if the option is not found or its value is invalid.
-     */
-    T get() {
-        if (passedSubCmd_ != activeSubCmd_) { return defaultValue_; }
-
-        auto [found, longOptInfoArr, shortOptInfoArr] =
-            getLongShortOptArr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
-
-        if (!found) { return defaultValue_; }
-
-        auto valueStr = getValueStr(longOptInfoArr, shortOptInfoArr);
-
-        try {
-            return convertType<T>(valueStr);
-        } catch (...) {
-            appendOptValErrorMsg(data_, optName_, typeName_, std::move(valueStr));
-        }
-        return defaultValue_;
-    }
-
-    /**
-     * @brief Retrieves the option's value as a vector of type T.
-     *
-     * @details This function is used to retrieve the value of an option that,
-     *          expects multiple arguments, which are then converted to a vector<T>.
-     *          It handles the parsing and conversion of the option's value,
-     *          splitting it into individual elements based on the provided delimiter.
-     * @param delimiter The delimiter character used to split the option's value string into
-     *                  individual elements. If '\0' is provided (the default), the value is not split,
-     *                  and the entire value string is treated as a single element.
-     * @return A vector of type T containing the parsed values of the option's arguments.
-     *         Returns an empty vector if the option is not found or if an error occurs
-     *         during value conversion.
-     */
-    std::vector<T> getVec(char delimiter = '\0') {
-        if (passedSubCmd_ != activeSubCmd_) { return {}; }
-
-        auto [found, longOptInfoArr, shortOptInfoArr] =
-            getLongShortOptArr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
-
-        if (!found) { return {}; }
-
-        auto valueStrVec    = getValueStrVec(longOptInfoArr, shortOptInfoArr);
-        auto splittedStrVec = getSplittedStrVec(valueStrVec, delimiter);
-
-        // Convert each string to T
-        std::vector<T> resultVec;
-        resultVec.reserve(splittedStrVec.size());
-        for (auto &valueStr : splittedStrVec) {
-            try {
-                resultVec.push_back(convertType<T>(valueStr));
-            } catch (...) {
-                appendOptValErrorMsg(data_, optName_, typeName_, std::move(valueStr));
-            }
-        }
-
-        return resultVec;
-    }
-
-private:
-    std::string_view optName_;
-    std::string      description_;
-    InternalData    &data_;
-    std::string      typeName_;
-    T                defaultValue_{};
-    SubParser       *passedSubCmd_{nullptr};
-
-    void appendOptValErrorMsg(
+    static void appendOptValErrorMsg(
         InternalData    &data,
         std::string_view optName, const std::string &typeName, const std::string &valueStr) {
 
@@ -235,7 +146,7 @@ private:
         data.errorMessages.push_back(std::move(errorStr));
     }
 
-    void appendPosValErrorMsg(
+    static void appendPosValErrorMsg(
         InternalData &data, std::string_view posName, std::string_view errorMsg) {
 
         std::string msg(errorMsg);
@@ -248,8 +159,8 @@ private:
         data.errorMessages.push_back(std::move(msg));
     }
 
-    bool hasNoValOpt(const std::vector<OptionInfo> &optInfoArr,
-                     std::string_view optName, std::vector<std::string> &errorMessages) {
+    static bool hasNoValOpt(const std::vector<OptionInfo> &optInfoArr,
+                            std::string_view optName, std::vector<std::string> &errorMessages) {
         bool hasNoValOpt = false;
 
         for (const auto &it : optInfoArr) {
@@ -270,13 +181,9 @@ private:
     }
 
     // Uses the option name to get a value string from the options_ map.
-    std::tuple<bool, std::vector<OptionInfo>, std::vector<OptionInfo>> getLongShortOptArr(
-        std::string_view optName, std::string description,
-        std::string defaultValueStr, std::string typeName,
+    static std::tuple<bool, std::vector<OptionInfo>, std::vector<OptionInfo>> getLongShortOptArr(
+        std::string_view optName, const std::string &shortOpt, const std::string &longOpt,
         InternalData &data) {
-
-        auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
-        data.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description), std::move(defaultValueStr), std::move(typeName)});
 
         auto longNode  = data.options.extract(longOpt);
         auto shortNode = data.options.extract(shortOpt);
@@ -299,7 +206,7 @@ private:
         return {true, longOptInfoArr, shortOptInfoArr};
     }
 
-    std::string getValueStr(
+    static std::string getValueStr(
         std::vector<OptionInfo> longOptInfoArr, std::vector<OptionInfo> shortOptInfoArr) {
 
         auto longIndex  = longOptInfoArr.empty() ? 0 : longOptInfoArr.back().argvIndex;
@@ -310,7 +217,7 @@ private:
         return argv_[optInfo.argvIndex];
     }
 
-    std::vector<std::string> getValueStrVec(
+    static std::vector<std::string> getValueStrVec(
         std::vector<OptionInfo> longOptInfoArr, std::vector<OptionInfo> shortOptInfoArr) {
 
         std::vector<std::string> valueStrVec;
@@ -355,7 +262,7 @@ private:
         return valueStrVec;
     }
 
-    std::vector<std::string> getSplittedStrVec(
+    static std::vector<std::string> getSplittedStrVec(
         std::vector<std::string> &valueStrVec, char delimiter) {
 
         std::vector<std::string> splittedStrVec;
@@ -380,6 +287,108 @@ private:
 
         return splittedStrVec;
     }
+};
+
+template <typename T>
+class Parser::OptValBuilder {
+public:
+    using Helper = OptValHelper;
+
+    OptValBuilder(std::string_view optName, std::string description,
+                  InternalData &data, SubParser *passedSubCmd)
+        : optName_(optName),
+          description_(std::move(description)),
+          data_(data),
+          passedSubCmd_(passedSubCmd) {
+        typeName_ = getTypeName<T>();
+    }
+
+    /**
+     * @brief Sets the default value for the option.
+     * @param defaultValue The value to be used as the default.
+     * @return A reference to the current OptValBuilder instance for chaining.
+     */
+    OptValBuilder<T> &setDefault(T defaultValue) {
+        defaultValue_ = defaultValue;
+        return *this;
+    }
+
+    /**
+     * @brief Retrieves the option's value.
+     * @return The parsed value of the option,
+               or the default value if the option is not found or its value is invalid.
+     */
+    T get() {
+        if (passedSubCmd_ != activeSubCmd_) { return defaultValue_; }
+
+        auto [shortOpt, longOpt] = parseOptNameAsPair(optName_);
+        data_.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description_), toString(defaultValue_), getTypeName<T>()});
+
+        auto [found, longOptInfoArr, shortOptInfoArr] =
+            Helper::getLongShortOptArr(optName_, shortOpt, longOpt, data_);
+
+        if (!found) { return defaultValue_; }
+
+        auto valueStr = Helper::getValueStr(longOptInfoArr, shortOptInfoArr);
+
+        try {
+            return convertType<T>(valueStr);
+        } catch (...) {
+            Helper::appendOptValErrorMsg(data_, optName_, typeName_, valueStr);
+        }
+        return defaultValue_;
+    }
+
+    /**
+     * @brief Retrieves the option's value as a vector of type T.
+     *
+     * @details This function is used to retrieve the value of an option that,
+     *          expects multiple arguments, which are then converted to a vector<T>.
+     *          It handles the parsing and conversion of the option's value,
+     *          splitting it into individual elements based on the provided delimiter.
+     * @param delimiter The delimiter character used to split the option's value string into
+     *                  individual elements.
+     *                  If `\0` is provided (the default), the value is not split,
+     *                  and the entire value string is treated as a single element.
+     * @return A vector of type T containing the parsed values of the option's arguments.
+     *         Returns an empty vector if the option is not found or if an error occurs
+     *         during value conversion.
+     */
+    std::vector<T> getVec(char delimiter = '\0') {
+        if (passedSubCmd_ != activeSubCmd_) { return {}; }
+
+        auto [shortOpt, longOpt] = parseOptNameAsPair(optName_);
+        data_.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description_), toString(defaultValue_), getTypeName<T>()});
+
+        auto [found, longOptInfoArr, shortOptInfoArr] =
+            Helper::getLongShortOptArr(optName_, shortOpt, longOpt, data_);
+
+        if (!found) { return {}; }
+
+        auto valueStrVec    = Helper::getValueStrVec(longOptInfoArr, shortOptInfoArr);
+        auto splittedStrVec = Helper::getSplittedStrVec(valueStrVec, delimiter);
+
+        // Convert each string to T
+        std::vector<T> resultVec;
+        resultVec.reserve(splittedStrVec.size());
+        for (auto &valueStr : splittedStrVec) {
+            try {
+                resultVec.push_back(convertType<T>(valueStr));
+            } catch (...) {
+                Helper::appendOptValErrorMsg(data_, optName_, typeName_, valueStr);
+            }
+        }
+
+        return resultVec;
+    }
+
+private:
+    std::string_view optName_;
+    std::string      description_;
+    InternalData    &data_;
+    std::string      typeName_;
+    T                defaultValue_{};
+    SubParser       *passedSubCmd_{nullptr};
 };
 
 // === Positional Args ===

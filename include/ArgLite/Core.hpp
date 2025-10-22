@@ -229,6 +229,8 @@ private:
     static inline std::string  mainCmdShortNonFlagOptsStr_;
     static inline InternalData data_;
 
+    class OptValHelper;
+
     // Internal helper functions
     // Get functions, internal data can be changed
     static inline bool                     hasFlag_(std::string_view optName, std::string description, InternalData &data);
