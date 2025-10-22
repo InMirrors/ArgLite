@@ -3,6 +3,8 @@
 #include "Core.hpp"
 #include "GetTemplate.hpp" // IWYU pragma: keep
 #include <algorithm>
+#include <cstddef>
+#include <string>
 #include <string_view>
 #include <tuple>
 #include <vector>
@@ -127,6 +129,16 @@ public:
     }
 
     /**
+     * @brief Sets the default value for the option.
+     * @param defaultValue The value to be used as the default.
+     * @return A reference to the current OptValBuilder instance for chaining.
+     */
+    OptValBuilder<T> &setDefault(T defaultValue) {
+        defaultValue_ = defaultValue;
+        return *this;
+    }
+
+    /**
      * @brief Retrieves the option's value.
      * @return The parsed value of the option,
                or the default value if the option is not found or its value is invalid.
@@ -134,7 +146,8 @@ public:
     T get() {
         if (passedSubCmd_ != activeSubCmd_) { return defaultValue_; }
 
-        auto [found, longOptInfoArr, shortOptInfoArr] = getLongShortOptArr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
+        auto [found, longOptInfoArr, shortOptInfoArr] =
+            getLongShortOptArr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
 
         if (!found) { return defaultValue_; }
 
@@ -143,19 +156,48 @@ public:
         try {
             return convertType<T>(valueStr);
         } catch (...) {
-            appendOptValErrorMsg(data_, optName_, typeName_, valueStr);
+            appendOptValErrorMsg(data_, optName_, typeName_, std::move(valueStr));
         }
         return defaultValue_;
     }
 
     /**
-     * @brief Sets the default value for the option.
-     * @param defaultValue The value to be used as the default.
-     * @return A reference to the current OptValBuilder instance for chaining.
+     * @brief Retrieves the option's value as a vector of type T.
+     *
+     * @details This function is used to retrieve the value of an option that,
+     *          expects multiple arguments, which are then converted to a vector<T>.
+     *          It handles the parsing and conversion of the option's value,
+     *          splitting it into individual elements based on the provided delimiter.
+     * @param delimiter The delimiter character used to split the option's value string into
+     *                  individual elements. If '\0' is provided (the default), the value is not split,
+     *                  and the entire value string is treated as a single element.
+     * @return A vector of type T containing the parsed values of the option's arguments.
+     *         Returns an empty vector if the option is not found or if an error occurs
+     *         during value conversion.
      */
-    OptValBuilder<T> &setDefault(T defaultValue) {
-        defaultValue_ = defaultValue;
-        return *this;
+    std::vector<T> getVec(char delimiter = '\0') {
+        if (passedSubCmd_ != activeSubCmd_) { return {}; }
+
+        auto [found, longOptInfoArr, shortOptInfoArr] =
+            getLongShortOptArr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
+
+        if (!found) { return {}; }
+
+        auto valueStrVec    = getValueStrVec(longOptInfoArr, shortOptInfoArr);
+        auto splittedStrVec = getSplittedStrVec(valueStrVec, delimiter);
+
+        // Convert each string to T
+        std::vector<T> resultVec;
+        resultVec.reserve(splittedStrVec.size());
+        for (auto &valueStr : splittedStrVec) {
+            try {
+                resultVec.push_back(convertType<T>(valueStr));
+            } catch (...) {
+                appendOptValErrorMsg(data_, optName_, typeName_, std::move(valueStr));
+            }
+        }
+
+        return resultVec;
     }
 
 private:
@@ -264,8 +306,79 @@ private:
         auto shortIndex = shortOptInfoArr.empty() ? 0 : shortOptInfoArr.back().argvIndex;
 
         auto &optInfo = longIndex > shortIndex ? longOptInfoArr.back() : shortOptInfoArr.back();
-        if (!optInfo.valueStr.empty()) { return optInfo.valueStr; }
+        if (!optInfo.valueStr.empty()) { return std::move(optInfo.valueStr); }
         return argv_[optInfo.argvIndex];
+    }
+
+    std::vector<std::string> getValueStrVec(
+        std::vector<OptionInfo> longOptInfoArr, std::vector<OptionInfo> shortOptInfoArr) {
+
+        std::vector<std::string> valueStrVec;
+        valueStrVec.reserve(longOptInfoArr.size() + shortOptInfoArr.size());
+
+        size_t longIdx  = 0;
+        size_t shortIdx = 0;
+
+        while (longIdx < longOptInfoArr.size() && shortIdx < shortOptInfoArr.size()) {
+            OptionInfo *currentOptInfo = nullptr;
+            if (longOptInfoArr[longIdx].argvIndex < shortOptInfoArr[shortIdx].argvIndex) {
+                currentOptInfo = &longOptInfoArr[longIdx++];
+            } else {
+                currentOptInfo = &shortOptInfoArr[shortIdx++];
+            }
+
+            if (!currentOptInfo->valueStr.empty()) {
+                valueStrVec.push_back(std::move(currentOptInfo->valueStr));
+            } else {
+                valueStrVec.emplace_back(argv_[currentOptInfo->argvIndex]);
+            }
+        }
+
+        while (longIdx < longOptInfoArr.size()) {
+            if (!longOptInfoArr[longIdx].valueStr.empty()) {
+                valueStrVec.push_back(std::move(longOptInfoArr[longIdx].valueStr));
+            } else {
+                valueStrVec.emplace_back(argv_[longOptInfoArr[longIdx].argvIndex]);
+            }
+            longIdx++;
+        }
+
+        while (shortIdx < shortOptInfoArr.size()) {
+            if (!shortOptInfoArr[shortIdx].valueStr.empty()) {
+                valueStrVec.push_back(std::move(shortOptInfoArr[shortIdx].valueStr));
+            } else {
+                valueStrVec.emplace_back(argv_[shortOptInfoArr[shortIdx].argvIndex]);
+            }
+            shortIdx++;
+        }
+
+        return valueStrVec;
+    }
+
+    std::vector<std::string> getSplittedStrVec(
+        std::vector<std::string> &valueStrVec, char delimiter) {
+
+        std::vector<std::string> splittedStrVec;
+        splittedStrVec.reserve(valueStrVec.size());
+
+        for (auto &valueStr : valueStrVec) {
+            auto delimiterPos = valueStr.find(delimiter);
+            if (delimiterPos == std::string::npos) {
+                splittedStrVec.push_back(std::move(valueStr));
+            }
+            // The delemiter is found, split the string
+            else {
+                size_t currentPos = 0;
+                while ((delimiterPos = valueStr.find(delimiter, currentPos)) != std::string::npos) {
+                    splittedStrVec.push_back(valueStr.substr(currentPos, delimiterPos - currentPos));
+                    currentPos = delimiterPos + 1;
+                }
+                // Add the last part
+                splittedStrVec.push_back(valueStr.substr(currentPos));
+            }
+        }
+
+        return splittedStrVec;
     }
 };
 
