@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 namespace ArgLite {
@@ -20,9 +21,9 @@ inline bool Parser::hasFlag_(
     auto longNode  = data.options.extract(longOpt);
     auto shortNode = data.options.extract(shortOpt);
 
-    auto  emptyArr        = std::vector<OptionInfo>();
-    auto &longOptInfoArr  = longNode.empty() ? emptyArr : longNode.mapped();
-    auto &shortOptInfoArr = shortNode.empty() ? emptyArr : shortNode.mapped();
+    auto emptyArr        = std::vector<OptionInfo>();
+    auto longOptInfoArr  = longNode.empty() ? emptyArr : std::move(longNode.mapped());
+    auto shortOptInfoArr = shortNode.empty() ? emptyArr : std::move(shortNode.mapped());
 
     restorePosArgsInFlags(shortOptInfoArr, data.positionalArgsIndices);
     restorePosArgsInFlags(longOptInfoArr, data.positionalArgsIndices);
@@ -42,11 +43,11 @@ bool Parser::hasMutualExFlag_(HasMutualExArgs args, InternalData &data) {
     auto falseLongNode  = data.options.extract(longFalseOpt);
     auto falseShortNode = data.options.extract(shortFalseOpt);
 
-    auto  emptyArr             = std::vector<OptionInfo>();
-    auto &trueLongOptInfoArr   = trueLongNode.empty() ? emptyArr : trueLongNode.mapped();
-    auto &trueShortOptInfoArr  = trueShortNode.empty() ? emptyArr : trueShortNode.mapped();
-    auto &falseLongOptInfoArr  = falseLongNode.empty() ? emptyArr : falseLongNode.mapped();
-    auto &falseShortOptInfoArr = falseShortNode.empty() ? emptyArr : falseShortNode.mapped();
+    auto emptyArr             = std::vector<OptionInfo>();
+    auto trueLongOptInfoArr   = trueLongNode.empty() ? emptyArr : std::move(trueLongNode.mapped());
+    auto trueShortOptInfoArr  = trueShortNode.empty() ? emptyArr : std::move(trueShortNode.mapped());
+    auto falseLongOptInfoArr  = falseLongNode.empty() ? emptyArr : std::move(falseLongNode.mapped());
+    auto falseShortOptInfoArr = falseShortNode.empty() ? emptyArr : std::move(falseShortNode.mapped());
 
     restorePosArgsInFlags(trueLongOptInfoArr, data.positionalArgsIndices);
     restorePosArgsInFlags(trueShortOptInfoArr, data.positionalArgsIndices);
@@ -194,9 +195,9 @@ class Parser::OptValHelper {
         }
 
         // At least one option is found, so at least one array is not empty
-        auto  emptyArr        = std::vector<OptionInfo>();
-        auto &longOptInfoArr  = longNode.empty() ? emptyArr : longNode.mapped();
-        auto &shortOptInfoArr = shortNode.empty() ? emptyArr : shortNode.mapped();
+        auto emptyArr        = std::vector<OptionInfo>();
+        auto longOptInfoArr  = longNode.empty() ? emptyArr : std::move(longNode.mapped());
+        auto shortOptInfoArr = shortNode.empty() ? emptyArr : std::move(shortNode.mapped());
 
         if (hasNoValOpt(longOptInfoArr, optName, data.errorMessages) ||
             hasNoValOpt(shortOptInfoArr, optName, data.errorMessages)) {
