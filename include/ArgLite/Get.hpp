@@ -2,7 +2,12 @@
 
 #include "Core.hpp"
 #include "GetTemplate.hpp" // IWYU pragma: keep
+#include <algorithm>
+#include <cstddef>
+#include <string>
 #include <string_view>
+#include <tuple>
+#include <vector>
 
 namespace ArgLite {
 
@@ -12,17 +17,17 @@ inline bool Parser::hasFlag_(
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
     data.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description), ""});
 
-    auto optNode = findOption(shortOpt, longOpt, data);
+    auto longNode  = data.options.extract(longOpt);
+    auto shortNode = data.options.extract(shortOpt);
 
-    if (!optNode.empty()) {
-        const auto &optInfo = optNode.mapped();
-        // A flag was passed with a value, e.g., -f 123. The value is likely a positional arg.
-        if (optInfo.argvIndex > 0) {
-            data.positionalArgsIndices.push_back(optInfo.argvIndex);
-        }
-    }
+    auto  emptyArr        = std::vector<OptionInfo>();
+    auto &longOptInfoArr  = longNode.empty() ? emptyArr : longNode.mapped();
+    auto &shortOptInfoArr = shortNode.empty() ? emptyArr : shortNode.mapped();
 
-    return !optNode.empty();
+    restorePosArgsInFlags(shortOptInfoArr, data.positionalArgsIndices);
+    restorePosArgsInFlags(longOptInfoArr, data.positionalArgsIndices);
+
+    return !(longNode.empty() && shortNode.empty());
 }
 
 bool Parser::hasMutualExFlag_(HasMutualExArgs args, InternalData &data) {
@@ -32,25 +37,41 @@ bool Parser::hasMutualExFlag_(HasMutualExArgs args, InternalData &data) {
     data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, std::move(args.trueDescription), ""});
     data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, std::move(args.falseDescription), ""});
 
-    auto trueNode  = findOption(shortTrueOpt, longTrueOpt, data);
-    auto falseNode = findOption(shortFalseOpt, longFalseOpt, data);
+    auto trueLongNode   = data.options.extract(longTrueOpt);
+    auto trueShortNode  = data.options.extract(shortTrueOpt);
+    auto falseLongNode  = data.options.extract(longFalseOpt);
+    auto falseShortNode = data.options.extract(shortFalseOpt);
 
-    if (!trueNode.empty() && trueNode.mapped().argvIndex > 0) {
-        data.positionalArgsIndices.push_back(trueNode.mapped().argvIndex);
-    }
-    if (!falseNode.empty() && falseNode.mapped().argvIndex > 0) {
-        data.positionalArgsIndices.push_back(falseNode.mapped().argvIndex);
-    }
+    auto  emptyArr             = std::vector<OptionInfo>();
+    auto &trueLongOptInfoArr   = trueLongNode.empty() ? emptyArr : trueLongNode.mapped();
+    auto &trueShortOptInfoArr  = trueShortNode.empty() ? emptyArr : trueShortNode.mapped();
+    auto &falseLongOptInfoArr  = falseLongNode.empty() ? emptyArr : falseLongNode.mapped();
+    auto &falseShortOptInfoArr = falseShortNode.empty() ? emptyArr : falseShortNode.mapped();
 
-    if (trueNode.empty() && falseNode.empty()) { return args.defaultValue; }
+    restorePosArgsInFlags(trueLongOptInfoArr, data.positionalArgsIndices);
+    restorePosArgsInFlags(trueShortOptInfoArr, data.positionalArgsIndices);
+    restorePosArgsInFlags(falseLongOptInfoArr, data.positionalArgsIndices);
+    restorePosArgsInFlags(falseShortOptInfoArr, data.positionalArgsIndices);
+
+    auto trueLongIndex   = trueLongOptInfoArr.empty() ? 0 : trueLongOptInfoArr.back().argvIndex;
+    auto trueShortIndex  = trueShortOptInfoArr.empty() ? 0 : trueShortOptInfoArr.back().argvIndex;
+    auto falseLongIndex  = falseLongOptInfoArr.empty() ? 0 : falseLongOptInfoArr.back().argvIndex;
+    auto falseShortIndex = falseShortOptInfoArr.empty() ? 0 : falseShortOptInfoArr.back().argvIndex;
+
+    auto trueIndex  = std::min(trueShortIndex, trueLongIndex);
+    auto falseIndex = std::min(falseShortIndex, falseLongIndex);
 
     // They are negative, so Smaller is latter
-    if (!trueNode.empty() && !falseNode.empty()) {
-        return trueNode.mapped().argvIndex < falseNode.mapped().argvIndex;
-    }
+    return trueIndex < falseIndex;
+}
 
-    if (!trueNode.empty()) { return true; }
-    return false;
+void Parser::restorePosArgsInFlags(const std::vector<OptionInfo> &optInfoArr, std::vector<int> &positionalArgsIndices) {
+    for (const auto &it : optInfoArr) {
+        // A flag was passed with a value, e.g., -f 123. The value is likely a positional arg.
+        if (it.argvIndex > 0) {
+            positionalArgsIndices.push_back(it.argvIndex);
+        }
+    }
 }
 
 // === Helper functions for parsing option ===
@@ -95,25 +116,6 @@ std::pair<std::string, std::string> Parser::parseOptNameAsPair(std::string_view 
     return {shortOpt, longOpt};
 }
 
-// Finds the option in the options_ map
-Parser::OptMap::node_type Parser::findOption(
-    const std::string &shortOpt, const std::string &longOpt, InternalData &data) {
-
-    auto longNode  = data.options.extract(longOpt);
-    auto shortNode = data.options.extract(shortOpt);
-
-    if (!longNode.empty() && !shortNode.empty()) {
-        if (std::abs(longNode.mapped().argvIndex) > std::abs(shortNode.mapped().argvIndex)) {
-            return longNode;
-        }
-        return shortNode;
-    }
-
-    if (!longNode.empty()) { return longNode; }
-
-    return shortNode;
-}
-
 template <typename T>
 class Parser::OptValBuilder {
 public:
@@ -127,26 +129,6 @@ public:
     }
 
     /**
-     * @brief Retrieves the option's value.
-     * @return The parsed value of the option,
-               or the default value if the option is not found or its value is invalid.
-     */
-    T get() {
-        if (passedSubCmd_ != activeSubCmd_) { return defaultValue_; }
-
-        auto [found, valueStr] = getValueStr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
-
-        if (!found) { return defaultValue_; }
-
-        try {
-            return convertType<T>(valueStr);
-        } catch (...) {
-            appendOptValErrorMsg(data_, optName_, typeName_, valueStr);
-        }
-        return defaultValue_;
-    }
-
-    /**
      * @brief Sets the default value for the option.
      * @param defaultValue The value to be used as the default.
      * @return A reference to the current OptValBuilder instance for chaining.
@@ -154,6 +136,68 @@ public:
     OptValBuilder<T> &setDefault(T defaultValue) {
         defaultValue_ = defaultValue;
         return *this;
+    }
+
+    /**
+     * @brief Retrieves the option's value.
+     * @return The parsed value of the option,
+               or the default value if the option is not found or its value is invalid.
+     */
+    T get() {
+        if (passedSubCmd_ != activeSubCmd_) { return defaultValue_; }
+
+        auto [found, longOptInfoArr, shortOptInfoArr] =
+            getLongShortOptArr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
+
+        if (!found) { return defaultValue_; }
+
+        auto valueStr = getValueStr(longOptInfoArr, shortOptInfoArr);
+
+        try {
+            return convertType<T>(valueStr);
+        } catch (...) {
+            appendOptValErrorMsg(data_, optName_, typeName_, std::move(valueStr));
+        }
+        return defaultValue_;
+    }
+
+    /**
+     * @brief Retrieves the option's value as a vector of type T.
+     *
+     * @details This function is used to retrieve the value of an option that,
+     *          expects multiple arguments, which are then converted to a vector<T>.
+     *          It handles the parsing and conversion of the option's value,
+     *          splitting it into individual elements based on the provided delimiter.
+     * @param delimiter The delimiter character used to split the option's value string into
+     *                  individual elements. If '\0' is provided (the default), the value is not split,
+     *                  and the entire value string is treated as a single element.
+     * @return A vector of type T containing the parsed values of the option's arguments.
+     *         Returns an empty vector if the option is not found or if an error occurs
+     *         during value conversion.
+     */
+    std::vector<T> getVec(char delimiter = '\0') {
+        if (passedSubCmd_ != activeSubCmd_) { return {}; }
+
+        auto [found, longOptInfoArr, shortOptInfoArr] =
+            getLongShortOptArr(optName_, std::move(description_), toString(defaultValue_), getTypeName<T>(), data_);
+
+        if (!found) { return {}; }
+
+        auto valueStrVec    = getValueStrVec(longOptInfoArr, shortOptInfoArr);
+        auto splittedStrVec = getSplittedStrVec(valueStrVec, delimiter);
+
+        // Convert each string to T
+        std::vector<T> resultVec;
+        resultVec.reserve(splittedStrVec.size());
+        for (auto &valueStr : splittedStrVec) {
+            try {
+                resultVec.push_back(convertType<T>(valueStr));
+            } catch (...) {
+                appendOptValErrorMsg(data_, optName_, typeName_, std::move(valueStr));
+            }
+        }
+
+        return resultVec;
     }
 
 private:
@@ -204,22 +248,13 @@ private:
         data.errorMessages.push_back(std::move(msg));
     }
 
-    // Parses option name (e.g., "o,out") and return a formatted string (e.g., "-o, --out")
-    // Uses the option name to get a value string from the options_ map.
-    std::pair<bool, std::string> getValueStr(
-        std::string_view optName, std::string description,
-        std::string defaultValueStr, std::string typeName,
-        InternalData &data) {
+    bool hasNoValOpt(const std::vector<OptionInfo> &optInfoArr,
+                     std::string_view optName, std::vector<std::string> &errorMessages) {
+        bool hasNoValOpt = false;
 
-        auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
-        data.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description), std::move(defaultValueStr), std::move(typeName)});
-
-        auto optNode = findOption(shortOpt, longOpt, data);
-
-        if (!optNode.empty()) {
-            const auto &optInfo = optNode.mapped();
-
-            if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
+        for (const auto &it : optInfoArr) {
+            if (it.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
+                hasNoValOpt = true;
                 std::string msg("Option '");
 #ifdef ARGLITE_ENABLE_FORMATTER
                 msg.append(Formatter::bold(parseOptName(optName)));
@@ -227,16 +262,123 @@ private:
                 msg.append(parseOptName(optName));
 #endif
                 msg.append("' requires a value.");
-                data.errorMessages.push_back(std::move(msg));
-                return {false, ""};
+                errorMessages.push_back(std::move(msg));
             }
-            if (!optInfo.valueStr.empty()) { // From -n123 or --opt=val form
-                return {true, optInfo.valueStr};
-            }
-            return {true, argv_[optInfo.argvIndex]};
         }
 
-        return {false, defaultValueStr};
+        return hasNoValOpt;
+    }
+
+    // Uses the option name to get a value string from the options_ map.
+    std::tuple<bool, std::vector<OptionInfo>, std::vector<OptionInfo>> getLongShortOptArr(
+        std::string_view optName, std::string description,
+        std::string defaultValueStr, std::string typeName,
+        InternalData &data) {
+
+        auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
+        data.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description), std::move(defaultValueStr), std::move(typeName)});
+
+        auto longNode  = data.options.extract(longOpt);
+        auto shortNode = data.options.extract(shortOpt);
+
+        // Both long and short options are not found
+        if (longNode.empty() && shortNode.empty()) {
+            return {false, {}, {}};
+        }
+
+        // At least one option is found, so at least one array is not empty
+        auto  emptyArr        = std::vector<OptionInfo>();
+        auto &longOptInfoArr  = longNode.empty() ? emptyArr : longNode.mapped();
+        auto &shortOptInfoArr = shortNode.empty() ? emptyArr : shortNode.mapped();
+
+        if (hasNoValOpt(longOptInfoArr, optName, data.errorMessages) ||
+            hasNoValOpt(shortOptInfoArr, optName, data.errorMessages)) {
+            return {false, {}, {}};
+        }
+
+        return {true, longOptInfoArr, shortOptInfoArr};
+    }
+
+    std::string getValueStr(
+        std::vector<OptionInfo> longOptInfoArr, std::vector<OptionInfo> shortOptInfoArr) {
+
+        auto longIndex  = longOptInfoArr.empty() ? 0 : longOptInfoArr.back().argvIndex;
+        auto shortIndex = shortOptInfoArr.empty() ? 0 : shortOptInfoArr.back().argvIndex;
+
+        auto &optInfo = longIndex > shortIndex ? longOptInfoArr.back() : shortOptInfoArr.back();
+        if (!optInfo.valueStr.empty()) { return std::move(optInfo.valueStr); }
+        return argv_[optInfo.argvIndex];
+    }
+
+    std::vector<std::string> getValueStrVec(
+        std::vector<OptionInfo> longOptInfoArr, std::vector<OptionInfo> shortOptInfoArr) {
+
+        std::vector<std::string> valueStrVec;
+        valueStrVec.reserve(longOptInfoArr.size() + shortOptInfoArr.size());
+
+        size_t longIdx  = 0;
+        size_t shortIdx = 0;
+
+        while (longIdx < longOptInfoArr.size() && shortIdx < shortOptInfoArr.size()) {
+            OptionInfo *currentOptInfo = nullptr;
+            if (longOptInfoArr[longIdx].argvIndex < shortOptInfoArr[shortIdx].argvIndex) {
+                currentOptInfo = &longOptInfoArr[longIdx++];
+            } else {
+                currentOptInfo = &shortOptInfoArr[shortIdx++];
+            }
+
+            if (!currentOptInfo->valueStr.empty()) {
+                valueStrVec.push_back(std::move(currentOptInfo->valueStr));
+            } else {
+                valueStrVec.emplace_back(argv_[currentOptInfo->argvIndex]);
+            }
+        }
+
+        while (longIdx < longOptInfoArr.size()) {
+            if (!longOptInfoArr[longIdx].valueStr.empty()) {
+                valueStrVec.push_back(std::move(longOptInfoArr[longIdx].valueStr));
+            } else {
+                valueStrVec.emplace_back(argv_[longOptInfoArr[longIdx].argvIndex]);
+            }
+            longIdx++;
+        }
+
+        while (shortIdx < shortOptInfoArr.size()) {
+            if (!shortOptInfoArr[shortIdx].valueStr.empty()) {
+                valueStrVec.push_back(std::move(shortOptInfoArr[shortIdx].valueStr));
+            } else {
+                valueStrVec.emplace_back(argv_[shortOptInfoArr[shortIdx].argvIndex]);
+            }
+            shortIdx++;
+        }
+
+        return valueStrVec;
+    }
+
+    std::vector<std::string> getSplittedStrVec(
+        std::vector<std::string> &valueStrVec, char delimiter) {
+
+        std::vector<std::string> splittedStrVec;
+        splittedStrVec.reserve(valueStrVec.size());
+
+        for (auto &valueStr : valueStrVec) {
+            auto delimiterPos = valueStr.find(delimiter);
+            if (delimiterPos == std::string::npos) {
+                splittedStrVec.push_back(std::move(valueStr));
+            }
+            // The delemiter is found, split the string
+            else {
+                size_t currentPos = 0;
+                while ((delimiterPos = valueStr.find(delimiter, currentPos)) != std::string::npos) {
+                    splittedStrVec.push_back(valueStr.substr(currentPos, delimiterPos - currentPos));
+                    currentPos = delimiterPos + 1;
+                }
+                // Add the last part
+                splittedStrVec.push_back(valueStr.substr(currentPos));
+            }
+        }
+
+        return splittedStrVec;
     }
 };
 
@@ -295,10 +437,13 @@ inline void Parser::appendPosValErrorMsg(
 inline void Parser::fixPositionalArgsArray(
     std::vector<int> &positionalArgsIndices, OptMap &options) {
 
-    for (auto &it : options) {
-        if (it.second.argvIndex > 0) { // Unrecognized option that consumed a positional arg
-            positionalArgsIndices.push_back(it.second.argvIndex);
-            it.second.argvIndex = 0; // Remove the option from the options_ map
+    for (auto &option : options) {
+        auto &optInfoArr = option.second;
+        for (auto &it : optInfoArr) {
+            if (it.argvIndex > 0) { // Unrecognized option that consumed a positional arg
+                positionalArgsIndices.push_back(it.argvIndex);
+                it.argvIndex = 0; // Remove the option from the options_ map
+            }
         }
     }
 

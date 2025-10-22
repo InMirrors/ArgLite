@@ -76,15 +76,15 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
             std::string value;
             // --opt=val form
             if (auto equalsPos = arg.find('='); equalsPos != std::string::npos) {
-                key               = arg.substr(0, equalsPos);
-                value             = arg.substr(equalsPos + 1);
-                data.options[key] = {i, std::move(value)};
+                key   = arg.substr(0, equalsPos);
+                value = arg.substr(equalsPos + 1);
+                data.options[key].push_back({i, std::move(value)});
             } else {
                 if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    data.options[key] = {i + 1, ""};
+                    data.options[key].push_back({i + 1, ""});
                     i++; // Consume next arg as value
                 } else {
-                    data.options[key] = {-i, ""}; // Flag
+                    data.options[key].push_back({-i, ""}); // Flag
                 }
             }
         }
@@ -101,14 +101,14 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
                 // Check if the current character is a short option that requires a value
                 if (shortNonFlagOptsStr.find(arg[j]) != std::string::npos && j + 1 < arg.length()) {
                     // `-n123` or `-abn123` form. It requires a value, the rest of the string is its value
-                    std::string value           = arg.substr(j + 1);
-                    data.options[currentOptKey] = {i, std::move(value)};
+                    std::string value = arg.substr(j + 1);
+                    data.options[currentOptKey].push_back({i, std::move(value)});
                     isValueConsumedInCurrentArg = true;
                     break; // Stop processing this argument, as the rest is a value for this option
                 }
 
                 // It's a flag
-                data.options[currentOptKey] = {-i, ""};
+                data.options[currentOptKey].push_back({-i, ""});
                 // Keep track of the last flag, in case it needs to consume the next argument
                 lastFlagKey = currentOptKey;
             }
@@ -117,11 +117,12 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
             // If no value was consumed within the current argument (not `-n123` form)
             // and there was a last flag, check if it takes a value from the next argument.
             if (!isValueConsumedInCurrentArg && !lastFlagKey.empty()) {
-                // This condition applies to the *last* flag in a bundle (e.g., 'c' in -abc)
-                // or a single short option (e.g., 'a' in -a).
+                // This condition applies to the *last* flag in a bundle (e.g., 'n' in '-abn 123')
+                // or a single short option (e.g., 'n' in '-n 123').
                 // If the next argument exists and is not another option, it's the value.
                 if (i + 1 < argc && argv[i + 1][0] != '-') {
-                    data.options[lastFlagKey] = {i + 1, ""};
+                    // It was treated as a flag, correct it
+                    data.options[lastFlagKey].back() = {i + 1, ""};
                     i++; // Consume the next argument
                 }
             }

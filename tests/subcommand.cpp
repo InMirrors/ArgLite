@@ -16,8 +16,10 @@ int main(int argc, char **argv) {
 
     SubParser status("status", "Show the working tree status");
     SubParser commit("commit", "Record changes to the repository");
+    SubParser grep("grep", "Print lines matching a pattern");
     SubParser mv("mv", "Move or rename a file, a directory, or a symlink");
     commit.setShortNonFlagOptsStr("mF");
+    grep.setShortNonFlagOptsStr("e");
 
     Parser::preprocess(argc, argv);
 
@@ -40,6 +42,8 @@ int main(int argc, char **argv) {
     auto commitFile     = commit.get<string>("F,file", "Take the commit message from the given file.").get();
     auto commitDate     = commit.get<int>("date", "Override the author date used in the commit.").get();
     auto commitPathSpec = commit.getRemainingPositionals("pathspec", " When pathspec is given on the command line, ...", false);
+
+    auto grepPatterns = grep.get<string>("e,regexp", "The pattern to search for. Multiple patterns are combined by or.").getVec();
 
     auto mvSrc   = mv.getPositional("source", "The source file or directory.");
     auto mvDst   = mv.getPositional("destination", "The destination file or directory.");
@@ -73,6 +77,12 @@ int main(int argc, char **argv) {
         cout << "date    : " << commitDate << '\n';
         cout << "pathspec:" << '\n';
         for (const auto &it : commitPathSpec) { cout << it << '\n'; }
+    }
+
+    if (grep.isActive()) {
+        cout << ArgLite::Formatter::bold("Grep") << " command is active." << '\n';
+        cout << "patterns:" << '\n';
+        for (const auto &it : grepPatterns) { cout << it << '\n'; }
     }
 
     if (mv.isActive()) {

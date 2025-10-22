@@ -64,6 +64,16 @@ def main():
     )
 
     all_tests_passed &= test_case(
+        "Grep subcommand: multiple -e options",
+        ["grep", "-eabc", "-e", "123"],
+        expected_output_substrings=[
+            "Grep command is active.",
+            "patterns:",
+            "abc\n123",
+        ]
+    )
+
+    all_tests_passed &= test_case(
         "Move subcommand: flexible positional arguments",
         ["mv", "src", "-f", "dst"],
         expected_output_substrings=[
