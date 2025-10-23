@@ -27,6 +27,13 @@ template <> inline bool               Parser::convertType(const std::string &val
     throw std::invalid_argument("Invalid boolean value: " + valueStr);
     return false; // Should not reach here
 }
+template <> inline char Parser::convertType(const std::string &valueStr) {
+    if (valueStr.empty()) { throw std::invalid_argument("Empty string"); }
+    if (valueStr.size() == 1) { return valueStr[0]; }
+    return valueStr.substr(0, 2) == "0x"
+               ? (char)std::stoul(valueStr, nullptr, 16) // NOLINT(readability-magic-numbers)
+               : (char)std::stoi(valueStr);
+}
 
 template <typename T> inline T Parser::convertType(const std::string &valueStr) { // remaining types
     if constexpr (isOptionalType<T>::value) {
