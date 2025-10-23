@@ -13,7 +13,7 @@ def main():
         "Repeated option -I, --include",
         ["-I123", "-v", "--include", "a,bc", "-d,", "-I", "45,6", "--include=def"],
         expected_output_substrings=[
-            "Verbose    : true",
+            "Verbose    : 1",
             "Feature X  : false",
             "Indent     : 26",
             "Delimiter  : ','",
@@ -26,12 +26,25 @@ def main():
         "Repeated option -I, --include",
         ["-I123", "-v", "--include", "a,bc", "-i30,", "-d ", "-I", "45,6", "--include=def"],
         expected_output_substrings=[
-            "Verbose    : true",
+            "Verbose    : 1",
             "Feature X  : false",
             "Indent     : 30",
             "Delimiter  : ' '",
             "Include:",
             "123\na,bc\n45,6\ndef",
+        ]
+    )
+
+    all_tests_passed &= test_case(
+        "Repeated flag -v, --verbose",
+        ["-I123", "-vv", "--include", "a,bc", "-v", "-i30,", "-d "],
+        expected_output_substrings=[
+            "Verbose    : 3",
+            "Feature X  : false",
+            "Indent     : 30",
+            "Delimiter  : ' '",
+            "Include:",
+            "123\na,bc",
         ]
     )
 

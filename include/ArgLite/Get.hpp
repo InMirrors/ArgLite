@@ -15,6 +15,12 @@ namespace ArgLite {
 inline bool Parser::hasFlag_(
     std::string_view optName, std::string description, InternalData &data) {
 
+    return countFlag_(optName, std::move(description), data) > 0;
+}
+
+inline unsigned Parser::countFlag_(
+    std::string_view optName, std::string description, InternalData &data) {
+
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
     data.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description), ""});
 
@@ -28,7 +34,7 @@ inline bool Parser::hasFlag_(
     restorePosArgsInFlags(shortOptInfoArr, data.positionalArgsIndices);
     restorePosArgsInFlags(longOptInfoArr, data.positionalArgsIndices);
 
-    return !(longNode.empty() && shortNode.empty());
+    return longOptInfoArr.size() + shortOptInfoArr.size();
 }
 
 bool Parser::hasMutualExFlag_(HasMutualExArgs args, InternalData &data) {

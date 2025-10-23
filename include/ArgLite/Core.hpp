@@ -65,6 +65,17 @@ public:
         return hasFlag_(optName, std::move(description), data_);
     }
 
+    /**
+     * @brief Counts the number of times a flag option appears.
+     * @param names Option names (e.g., "v", "verbose" or "v,verbose").
+     * @param description Option description, used for the help message.
+     * @return Returns the number of times the option appears in the command line.
+     */
+    static unsigned countFlag(std::string_view optName, std::string description) {
+        if (!isMainCmdActive()) { return 0; }
+        return countFlag_(optName, std::move(description), data_);
+    }
+
     //  Structure for arguments of mutually exclusive flag options.
     struct HasMutualExArgs {
         std::string trueOptName;      // Name of the option that represents the true condition.
@@ -234,6 +245,7 @@ private:
     // Internal helper functions
     // Get functions, internal data can be changed
     static inline bool                     hasFlag_(std::string_view optName, std::string description, InternalData &data);
+    static inline unsigned                 countFlag_(std::string_view optName, std::string description, InternalData &data);
     static inline bool                     hasMutualExFlag_(HasMutualExArgs args, InternalData &data);
     static inline std::string              getPositional_(const std::string &posName, std::string description, bool required, InternalData &data);
     static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, std::string description, bool isRequired, InternalData &data);
@@ -323,6 +335,17 @@ public:
     bool hasFlag(std::string_view optName, std::string description) {
         if (!isActive()) { return false; }
         return Parser::hasFlag_(optName, std::move(description), Parser::data_);
+    }
+
+    /**
+     * @brief Counts the number of times a flag option appears.
+     * @param names Option names (e.g., "v", "verbose" or "v,verbose").
+     * @param description Option description, used for the help message.
+     * @return Returns the number of times the option appears in the command line.
+     */
+    unsigned countFlag(std::string_view optName, std::string description) {
+        if (!isActive()) { return 0; }
+        return Parser::countFlag_(optName, std::move(description), Parser::data_);
     }
 
     /**

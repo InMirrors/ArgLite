@@ -12,9 +12,9 @@ def main():
     # mmv is not a valid subcommand, should be treated as a main command positional argument
     all_tests_passed &= test_case(
         "Main command: 'mmv' as positional argument, grouped short options",
-        ["mmv", "-vxi123", "input1", "input2"],
+        ["mmv", "-vxvi123", "input1", "input2"],
         expected_output_substrings=[
-            "Verbose    : true",
+            "Verbose    : 2",
             "Feature X  : true",
             "Indent     : 123",
             "Output file: mmv",

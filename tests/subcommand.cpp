@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 
     Parser::preprocess(argc, argv);
 
-    auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
+    auto verbose    = Parser::countFlag("v,verbose", "Enable verbose output.");
     auto enableX    = Parser::hasMutualExFlag({"x,enable-x", "Enable feature x.", "X,disable-x", "Disable feature x.", false});
     auto indent     = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).get();
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
