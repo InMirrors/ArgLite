@@ -2,6 +2,7 @@
 
 #include "ArgLite/Core.hpp"
 #include <iostream>
+#include <optional>
 #include <string>
 
 using namespace std;
@@ -18,6 +19,7 @@ int main(int argc, char **argv) {
     auto indent    = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).get();
     auto delimiter = Parser::get<char>("d,delimiter", "--include delimiter.").setDefault(':').get();
     auto include   = Parser::get<string>("I,include", "Include directory.").setDefault("include").getVec(delimiter);
+    auto optional  = Parser::get<std::optional<string>>("o,optional", "Optional argument.").get();
 
     Parser::changeDescriptionIndent(indent);
     Parser::runAllPostprocess();
@@ -26,6 +28,10 @@ int main(int argc, char **argv) {
     cout << "Feature X  : " << enableX << '\n';
     cout << "Indent     : " << indent << '\n';
     cout << "Delimiter  : '" << delimiter << "'\n";
+    if (optional)
+        cout << "Optional   : " << *optional << '\n';
+    else
+        cout << "Optional   : (not set)\n";
     cout << "Include:\n";
     for (const auto &it : include) { cout << it << '\n'; }
 

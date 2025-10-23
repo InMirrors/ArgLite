@@ -45,15 +45,22 @@ template <typename T> inline T Parser::convertType(const std::string &valueStr) 
 
 template <typename T>
 inline std::string Parser::toString(const T &val) {
-    std::stringstream ss;
-    ss << val;
-    std::string result(ss.str());
-    if constexpr (std::is_floating_point_v<T>) {
-        if (result.find('.') == std::string::npos) {
-            result.append(".0");
+    if constexpr (isOptionalType<T>::value) {
+        if (val) {
+            return toString(*val);
         }
+        return "None";
+    } else {
+        std::stringstream ss;
+        ss << val;
+        std::string result(ss.str());
+        if constexpr (std::is_floating_point_v<T>) {
+            if (result.find('.') == std::string::npos) {
+                result.append(".0");
+            }
+        }
+        return result;
     }
-    return result;
 }
 
 template <typename T>
@@ -61,8 +68,12 @@ std::string Parser::getTypeName() {
     // Remove const, volatile qualifiers and references for consistent type comparison
     using DecayedT = remove_cvref_t<T>;
 
+    if constexpr (isOptionalType<T>::value) {
+        return getTypeName<typename T::value_type>();
+    }
+
     // Group all signed integer types as "int"
-    if constexpr (
+    else if constexpr (
         std::disjunction_v<
             std::is_same<DecayedT, int>,
             std::is_same<DecayedT, short>,

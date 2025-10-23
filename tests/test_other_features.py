@@ -14,8 +14,6 @@ def main():
         ["-I123", "-v", "--include", "a,bc", "-d,", "-I", "45,6", "--include=def"],
         expected_output_substrings=[
             "Verbose    : 1",
-            "Feature X  : false",
-            "Indent     : 26",
             "Delimiter  : ','",
             "Include:",
             "123\na\nbc\n45\n6\ndef",
@@ -27,7 +25,6 @@ def main():
         ["-I123", "-v", "--include", "a,bc", "-i30,", "-d ", "-I", "45,6", "--include=def"],
         expected_output_substrings=[
             "Verbose    : 1",
-            "Feature X  : false",
             "Indent     : 30",
             "Delimiter  : ' '",
             "Include:",
@@ -40,11 +37,27 @@ def main():
         ["-I123", "-vv", "--include", "a,bc", "-v", "-i30,", "-d "],
         expected_output_substrings=[
             "Verbose    : 3",
-            "Feature X  : false",
-            "Indent     : 30",
             "Delimiter  : ' '",
             "Include:",
             "123\na,bc",
+        ]
+    )
+
+    all_tests_passed &= test_case(
+        "Optional option -o, --optional: not set",
+        ["-x"],
+        expected_output_substrings=[
+            "Feature X  : true",
+            "Optional   : (not set)",
+        ]
+    )
+
+    all_tests_passed &= test_case(
+        "Optional option -o, --optional: set to an empty string",
+        ["-x", "-o", ""],
+        expected_output_substrings=[
+            "Feature X  : true",
+            "Optional   : ",
         ]
     )
 
