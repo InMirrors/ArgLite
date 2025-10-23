@@ -321,6 +321,16 @@ public:
     }
 
     /**
+     * @brief Sets the type name used for the help message.
+     * @param typeName The type name to be used for the help message.
+     * @return A reference to the current OptValBuilder instance for chaining.
+     */
+    OptValBuilder<T> &setTypeName(std::string typeName) {
+        typeName_ = std::move(typeName);
+        return *this;
+    }
+
+    /**
      * @brief Retrieves the option's value.
      * @return The parsed value of the option,
                or the default value if the option is not found or its value is invalid.
@@ -329,7 +339,9 @@ public:
         if (passedSubCmd_ != activeSubCmd_) { return defaultValue_; }
 
         auto [shortOpt, longOpt] = parseOptNameAsPair(optName_);
-        data_.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description_), toString(defaultValue_), getTypeName<T>()});
+        data_.optionHelpEntries.push_back(
+            {shortOpt, longOpt, std::move(description_),
+             toString(defaultValue_), typeName_});
 
         auto [found, longOptInfoArr, shortOptInfoArr] =
             Helper::getLongShortOptArr(optName_, shortOpt, longOpt, data_);
@@ -341,7 +353,7 @@ public:
         try {
             return convertType<T>(valueStr);
         } catch (...) {
-            Helper::appendOptValErrorMsg(data_, optName_, typeName_, valueStr);
+            Helper::appendOptValErrorMsg(data_, optName_, getTypeName<T>(), valueStr);
         }
         return defaultValue_;
     }
@@ -365,7 +377,9 @@ public:
         if (passedSubCmd_ != activeSubCmd_) { return {}; }
 
         auto [shortOpt, longOpt] = parseOptNameAsPair(optName_);
-        data_.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description_), toString(defaultValue_), getTypeName<T>()});
+        data_.optionHelpEntries.push_back(
+            {shortOpt, longOpt, std::move(description_),
+             toString(defaultValue_), typeName_});
 
         auto [found, longOptInfoArr, shortOptInfoArr] =
             Helper::getLongShortOptArr(optName_, shortOpt, longOpt, data_);
@@ -382,7 +396,7 @@ public:
             try {
                 resultVec.push_back(convertType<T>(valueStr));
             } catch (...) {
-                Helper::appendOptValErrorMsg(data_, optName_, typeName_, valueStr);
+                Helper::appendOptValErrorMsg(data_, optName_, getTypeName<T>(), valueStr);
             }
         }
 

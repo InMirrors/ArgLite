@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 
     auto verbose    = Parser::countFlag("v,verbose", "Enable verbose output.");
     auto enableX    = Parser::hasMutualExFlag({"x,enable-x", "Enable feature x.", "X,disable-x", "Disable feature x.", false});
-    auto indent     = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).get();
+    auto indent     = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).setTypeName("num").get();
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
@@ -43,7 +43,8 @@ int main(int argc, char **argv) {
     auto commitDate     = commit.get<int>("date", "Override the author date used in the commit.").get();
     auto commitPathSpec = commit.getRemainingPositionals("pathspec", " When pathspec is given on the command line, ...", false);
 
-    auto grepPatterns = grep.get<string>("e,regexp", "The pattern to search for. Multiple patterns are combined by or.").getVec();
+    auto grepPatterns = grep.get<string>("e,regexp", "The pattern to search for. Multiple patterns are combined by or.").setTypeName("pattern").getVec();
+    auto grepColor    = grep.get<string>("color", "Show colored matches. The value must be auto (the default), never, or always.").setDefault("auto").setTypeName("when").get();
 
     auto mvSrc   = mv.getPositional("source", "The source file or directory.");
     auto mvDst   = mv.getPositional("destination", "The destination file or directory.");
@@ -81,6 +82,7 @@ int main(int argc, char **argv) {
 
     if (grep.isActive()) {
         cout << ArgLite::Formatter::bold("Grep") << " command is active." << '\n';
+        cout << "color: " << grepColor << '\n';
         cout << "patterns:" << '\n';
         for (const auto &it : grepPatterns) { cout << it << '\n'; }
     }

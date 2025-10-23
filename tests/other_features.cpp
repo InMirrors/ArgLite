@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
 
     auto verbose   = Parser::countFlag("v,verbose", "Verbose output.");
     auto enableX   = Parser::hasMutualExFlag({"x,enable-x", "Enable feature x.", "X,disable-x", "Disable feature x.", false});
-    auto indent    = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).get();
+    auto indent    = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).setTypeName("num").get();
     auto delimiter = Parser::get<char>("d,delimiter", "--include delimiter.").setDefault(':').get();
     auto include   = Parser::get<string>("I,include", "Include directory.").setDefault("include").getVec(delimiter);
     auto optional  = Parser::get<std::optional<string>>("o,optional", "Optional argument.").get();
