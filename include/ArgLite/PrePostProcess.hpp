@@ -201,6 +201,13 @@ inline void Parser::printHelpUsage(const InternalData &data, std::string_view cm
 #endif
     if (!subCmdPtrs_.empty()) { std::cout << " [SUBCOMMAND]"; }
     if (!data.optionHelpEntries.empty()) { std::cout << " [OPTIONS]"; }
+
+    for (const auto &o : data.optionHelpEntries) {
+        if (o.isRequired) {
+            std::cout << ' ' << o.longOpt << "=<" << o.typeName << ">";
+        }
+    }
+
     for (const auto &p : data.positionalHelpEntries) {
         std::cout << " " << (p.required ? "" : "[") << p.name << (p.required ? "" : "]");
     }

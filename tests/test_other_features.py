@@ -1,4 +1,3 @@
-import sys
 import os
 import test_utils
 from test_utils import colored_print, test_case, reset_test_counter
@@ -11,7 +10,7 @@ def main():
 
     all_tests_passed &= test_case(
         "Repeated option -I, --include",
-        ["-I123", "-v", "--include", "a,bc", "-d,", "-I", "45,6", "--include=def"],
+        ["-nAdmin", "-I123", "-v", "--include", "a,bc", "-d,", "-I", "45,6", "--include=def"],
         expected_output_substrings=[
             "Verbose    : 1",
             "Delimiter  : ','",
@@ -22,7 +21,7 @@ def main():
 
     all_tests_passed &= test_case(
         "Repeated option -I, --include",
-        ["-I123", "-v", "--include", "a,bc", "-i30,", "-d ", "-I", "45,6", "--include=def"],
+        ["-nAdmin", "-I123", "-v", "--include", "a,bc", "-i30,", "-d ", "-I", "45,6", "--include=def"],
         expected_output_substrings=[
             "Verbose    : 1",
             "Indent     : 30",
@@ -34,7 +33,7 @@ def main():
 
     all_tests_passed &= test_case(
         "Repeated flag -v, --verbose",
-        ["-I123", "-vv", "--include", "a,bc", "-v", "-i30,", "-d "],
+        ["-nAdmin", "-I123", "-vv", "--include", "a,bc", "-v", "-i30,", "-d "],
         expected_output_substrings=[
             "Verbose    : 3",
             "Delimiter  : ' '",
@@ -45,7 +44,7 @@ def main():
 
     all_tests_passed &= test_case(
         "Optional option -o, --optional: not set",
-        ["-x"],
+        ["-nAdmin", "-x"],
         expected_output_substrings=[
             "Feature X  : true",
             "Optional   : (not set)",
@@ -54,14 +53,43 @@ def main():
 
     all_tests_passed &= test_case(
         "Optional option -o, --optional: set to an empty string",
-        ["-x", "-o", ""],
+        ["-nAdmin", "-x", "-o", ""],
         expected_output_substrings=[
             "Feature X  : true",
             "Optional   : ",
         ]
     )
 
+    all_tests_passed &= test_case(
+        "Usage in the help message",
+        ["-h"],
+        expected_output_substrings=[
+            "[OPTIONS] --name=<string>",
+        ]
+    )
+
     # --- Error usage test cases ---
+
+    all_tests_passed &= test_case(
+        "Missing required option -n, --name",
+        ["-x"],
+        expected_error_keywords=[
+            "Error:",
+            "-n, --name",
+            "required",
+        ],
+        expected_return_code=1
+    )
+
+    all_tests_passed &= test_case(
+        "Missing the value for required option -n, --name",
+        ["-n"],
+        expected_error_keywords=[
+            "-n, --name",
+            "requires a value",
+        ],
+        expected_return_code=1
+    )
 
 if __name__ == "__main__":
     _local_binary_name = "other_features"

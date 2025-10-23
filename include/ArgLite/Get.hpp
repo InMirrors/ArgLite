@@ -153,17 +153,18 @@ class Parser::OptValHelper {
         data.errorMessages.push_back(std::move(errorStr));
     }
 
-    static void appendPosValErrorMsg(
-        InternalData &data, std::string_view posName, std::string_view errorMsg) {
+    static void appendNoOptErrorMsg(
+        InternalData &data, std::string_view optName) {
 
-        std::string msg(errorMsg);
+        std::string errorStr;
+        errorStr += "Option '";
 #ifdef ARGLITE_ENABLE_FORMATTER
-        msg.append(Formatter::bold(posName));
+        errorStr += Formatter::bold(parseOptName(optName));
 #else
-        msg.append(posName);
+        errorStr += parseOptName(optName);
 #endif
-        msg.append("'.");
-        data.errorMessages.push_back(std::move(msg));
+        errorStr += "' is required, you cannot run this command without it.";
+        data.errorMessages.push_back(std::move(errorStr));
     }
 
     static bool hasNoValOpt(const std::vector<OptionInfo> &optInfoArr,
@@ -188,7 +189,8 @@ class Parser::OptValHelper {
     }
 
     // Uses the option name to get a value string from the options_ map.
-    static std::tuple<bool, std::vector<OptionInfo>, std::vector<OptionInfo>> getLongShortOptArr(
+    // Returns {found, hasNoValOpt, longOptInfoArr, shortOptInfoArr}
+    static std::tuple<bool, bool, std::vector<OptionInfo>, std::vector<OptionInfo>> getLongShortOptArr(
         std::string_view optName, const std::string &shortOpt, const std::string &longOpt,
         InternalData &data) {
 
@@ -197,7 +199,7 @@ class Parser::OptValHelper {
 
         // Both long and short options are not found
         if (longNode.empty() && shortNode.empty()) {
-            return {false, {}, {}};
+            return {false, false, {}, {}};
         }
 
         // At least one option is found, so at least one array is not empty
@@ -207,10 +209,10 @@ class Parser::OptValHelper {
 
         if (hasNoValOpt(longOptInfoArr, optName, data.errorMessages) ||
             hasNoValOpt(shortOptInfoArr, optName, data.errorMessages)) {
-            return {false, {}, {}};
+            return {false, true, {}, {}};
         }
 
-        return {true, longOptInfoArr, shortOptInfoArr};
+        return {true, false, longOptInfoArr, shortOptInfoArr};
     }
 
     static std::string getValueStr(
@@ -331,6 +333,15 @@ public:
     }
 
     /**
+     * @brief Make this option required, the program must be launched with this option.
+     * @return A reference to the current OptValBuilder instance for chaining.
+     */
+    OptValBuilder<T> &isRequired() {
+        isRequied_ = true;
+        return *this;
+    }
+
+    /**
      * @brief Retrieves the option's value.
      * @return The parsed value of the option,
                or the default value if the option is not found or its value is invalid.
@@ -341,12 +352,19 @@ public:
         auto [shortOpt, longOpt] = parseOptNameAsPair(optName_);
         data_.optionHelpEntries.push_back(
             {shortOpt, longOpt, std::move(description_),
-             toString(defaultValue_), typeName_});
+             toString(defaultValue_), typeName_, isRequied_});
 
-        auto [found, longOptInfoArr, shortOptInfoArr] =
+        auto [found, hasNoValOpt, longOptInfoArr, shortOptInfoArr] =
             Helper::getLongShortOptArr(optName_, shortOpt, longOpt, data_);
 
-        if (!found) { return defaultValue_; }
+        if (hasNoValOpt) { return defaultValue_; }
+
+        if (!found) {
+            if (isRequied_) {
+                Helper::appendNoOptErrorMsg(data_, optName_);
+            }
+            return defaultValue_;
+        }
 
         auto valueStr = Helper::getValueStr(longOptInfoArr, shortOptInfoArr);
 
@@ -379,12 +397,19 @@ public:
         auto [shortOpt, longOpt] = parseOptNameAsPair(optName_);
         data_.optionHelpEntries.push_back(
             {shortOpt, longOpt, std::move(description_),
-             toString(defaultValue_), typeName_});
+             toString(defaultValue_), typeName_, isRequied_});
 
-        auto [found, longOptInfoArr, shortOptInfoArr] =
+        auto [found, hasNoValOpt, longOptInfoArr, shortOptInfoArr] =
             Helper::getLongShortOptArr(optName_, shortOpt, longOpt, data_);
 
-        if (!found) { return {}; }
+        if (hasNoValOpt) { return {}; }
+
+        if (!found) {
+            if (isRequied_) {
+                Helper::appendNoOptErrorMsg(data_, optName_);
+            }
+            return {};
+        }
 
         auto valueStrVec    = Helper::getValueStrVec(longOptInfoArr, shortOptInfoArr);
         auto splittedStrVec = Helper::getSplittedStrVec(valueStrVec, delimiter);
@@ -406,10 +431,11 @@ public:
 private:
     std::string_view optName_;
     std::string      description_;
-    InternalData    &data_;
     std::string      typeName_;
-    T                defaultValue_{};
+    InternalData    &data_;
     SubParser       *passedSubCmd_{nullptr};
+    T                defaultValue_{};
+    bool             isRequied_{false};
 };
 
 // === Positional Args ===

@@ -210,6 +210,7 @@ private:
         std::string description;
         std::string defaultValue;
         std::string typeName;
+        bool        isRequired;
     };
 
     struct PositionalHelpInfo {
