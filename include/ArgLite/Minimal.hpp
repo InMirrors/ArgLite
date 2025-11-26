@@ -360,6 +360,15 @@ inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-f
                 }
 
                 // It's a flag
+                auto node = data.options.extract(currentOptKey);
+                // Try to restore the positional argument if it was consumed by a flag
+                if (!node.empty()) {
+                    auto argvIndex = node.mapped().argvIndex;
+                    if (argvIndex > 0) {
+                        data.positionalArgsIndices.push_back(argvIndex);
+                    }
+                }
+                // Add or update the option
                 data.options[currentOptKey] = {-i, ""};
                 // Keep track of the last flag, in case it needs to consume the next argument
                 lastFlagKey = currentOptKey;
