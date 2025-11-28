@@ -52,7 +52,7 @@ public:
      * @param argc The argc from the main function.
      * @param argv The argv from the main function.
      */
-    static void preprocess(int argc, char **argv) { preprocess_(argc, argv); }
+    static void preprocess(int argc, const char *const *argv) { preprocess_(argc, argv); }
 
     /**
      * @brief Checks if a flag option exists.
@@ -232,8 +232,9 @@ private:
     };
 
     // Internal data storage
-    static inline int          argc_;
-    static inline char       **argv_;
+    static inline int                argc_;
+    static inline const char *const *argv_;
+
     static inline size_t       positionalIdx_;
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
     static inline std::string  programDescription_;
@@ -269,7 +270,7 @@ private:
     template <typename T>
     using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
     // Other helper functions
-    static inline void preprocess_(int argc, char **argv);
+    static inline void preprocess_(int argc, const char *const *argv);
     static inline void tryToPrintVersion_(InternalData &data);
     static inline void tryToPrintHelp_(InternalData &data);
     static inline bool tryToPrintInvalidOpts_(InternalData &data, bool notExit = false);

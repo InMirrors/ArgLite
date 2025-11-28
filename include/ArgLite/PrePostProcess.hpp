@@ -18,7 +18,7 @@
 
 namespace ArgLite {
 
-inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
+inline void Parser::preprocess_(int argc, const char *const *argv) { // NOLINT(readability-function-cognitive-complexity)
     argc_ = argc;
     argv_ = argv;
 
@@ -199,7 +199,7 @@ inline void Parser::printHelpUsage(const InternalData &data, std::string_view cm
 #else
     std::cout << cmdName;
 #endif
-    if (!subCmdPtrs_.empty()) { std::cout << " [SUBCOMMAND]"; }
+    if (!subCmdPtrs_.empty() && isMainCmdActive()) { std::cout << " [SUBCOMMAND]"; }
     if (!data.optionHelpEntries.empty()) { std::cout << " [OPTIONS]"; }
 
     for (const auto &o : data.optionHelpEntries) {
@@ -297,7 +297,7 @@ inline void Parser::printHelpOptions(const InternalData &data) {
 
             std::string descStr = o.description;
             if (!o.defaultValue.empty()) {
-                descStr += std::string(" [default: ").append(o.defaultValue).append("]");
+                descStr.append(" [default: ").append(o.defaultValue).append("]");
             }
             // the option string is too long, start a new line
             // -2: two separeting spaces after the type name

@@ -46,7 +46,7 @@ public:
      * @param argc The argc from the main function.
      * @param argv The argv from the main function.
      */
-    static void preprocess(int argc, char **argv) { preprocess_(argc, argv); }
+    static void preprocess(int argc, const char *const *argv) { preprocess_(argc, argv); }
 
     /**
      * @brief Checks if a flag option exists.
@@ -226,8 +226,9 @@ private:
     };
 
     // Internal data storage
-    static inline int          argc_;
-    static inline char       **argv_;
+    static inline int                argc_;
+    static inline const char *const *argv_;
+
     static inline size_t       positionalIdx_;
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
     static inline std::string  programVersion_;
@@ -257,7 +258,7 @@ private:
     // Other helper functions
     static inline void setDescription_(std::string_view description, InternalData &data);
     static inline void setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr, InternalData &data);
-    static inline void preprocess_(int argc, char **argv);
+    static inline void preprocess_(int argc, const char *const *argv);
     static inline void tryToPrintVersion_(InternalData &data);
     static inline void tryToPrintHelp_(InternalData &data);
     static inline bool tryToPrintInvalidOpts_(InternalData &data, bool notExit = false);
@@ -287,7 +288,7 @@ inline void Parser::setShortNonFlagOptsStr_(std::string_view shortNonFlagOptsStr
     data.shortNonFlagOptsStr = shortNonFlagOptsStr;
 }
 
-inline void Parser::preprocess_(int argc, char **argv) { // NOLINT(readability-function-cognitive-complexity)
+inline void Parser::preprocess_(int argc, const char *const *argv) { // NOLINT(readability-function-cognitive-complexity)
     argc_ = argc;
     argv_ = argv;
 
@@ -524,7 +525,7 @@ inline void Parser::printHelpOptions(const InternalData &data) {
 
             std::string descStr = o.description;
             if (!o.defaultValue.empty()) {
-                descStr += std::string(" [default: ").append(o.defaultValue).append("]");
+                descStr.append(" [default: ").append(o.defaultValue).append("]");
             }
             // the option string is too long, start a new line
             // -2: two separeting spaces after the type name
