@@ -336,7 +336,7 @@ public:
      * @brief Make this option required, the program must be launched with this option.
      * @return A reference to the current OptValBuilder instance for chaining.
      */
-    OptValBuilder<T> &isRequired() {
+    OptValBuilder<T> &required() {
         isRequied_ = true;
         return *this;
     }
