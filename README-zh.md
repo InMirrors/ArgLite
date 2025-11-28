@@ -1,0 +1,459 @@
+# 概述
+
+写这个库的原因: 想找一个轻量并且易用的库，但没找到满意的。
+
+- [CLI11](https://github.com/CLIUtils/CLI11) 太重了。
+- [cxxopts](https://github.com/jarro2783/cxxopts) 号称轻量但其实也挺重的，而且接口不好用。
+- [args](https://github.com/Taywee/args) 更轻量，但接口不好用。
+- [argh](https://github.com/adishavit/argh) 足够轻量但太简陋了，连自动生成帮助都没有。
+- [argparse](https://github.com/morrisfranken/argparse) 足够轻量，接口易用，实现的方式很巧妙，我最满意的库。不过帮助的格式比较特殊，不支持一些语法，例如 `-n123`。
+
+所以我就写一个真正轻量、易用并且功能足够丰富的库。关于它有多轻量，请查阅[跑分](#跑分)章节。
+
+本库有两个版本，一个是精简版，一个是完整版，分别 `#include "ArgLite/Minimal.hpp"`, `#include "ArgLite/Core.hpp"` 就能使用对应的版本。因为是头文件库，所以 include 后就能正常使用。
+
+因为一开始就不追求全能，所以采用受限但轻量的特殊思路: 预处理后在注册单个选项时就返回解析结果，而不是先注册全部选项然后再解析。后来发现这种思路其实能实现很多高级功能，只是要引入更复杂的设计。所以分成两个版本，精简版仍保持极致的轻量，支持基本功能；完整版支持许多高级功能，比精简版复杂，但仍比大部分库轻量。当然完整版的功能还是比不上 CLI11 这种全能库，只是支持的功能更多。
+
+精简版支持以下功能
+
+- 位置参数: `arg1 arg2 ...`
+- 标志选项: `-v`, `--verbose`
+- 带值选项: `-f file`, `--file=file`, `-ffile`
+- 短选项组合: `-abc` (等同于 `-a -b -c`)
+- 短选项组合带值: `-abcf file` (等同于 `-a -b -c -f file`)
+- 对于标志参数 `-v, --verbose`, `-a` 和带值的选项 `-f, --file`，以下写法的效果一样
+  - `--verbose -a --file path`
+  - `-va --file=path`
+  - `-vaf path`
+  - `-vafpath`
+- 互斥选项: `--enable-feature`, `--disable-feature`
+- 选项结束标记: `--` 后面的参数都当成位置参数
+- 解析 `bool`, `long long`, `double`, `std::string`
+- 设置带值选项的默认值
+- 自动生成帮助 (`-h, --help`)
+- 格式化打印帮助和报错信息（例如彩色、加粗）
+
+完整版支持
+
+- 全部精简版的功能
+- 子命令
+- 标志计数: `-vvv`
+- 多值选项: `-f file1 -f file2`, `-f file1,file2`
+- 解析各种基本类型, 用 `std::optional` 区分有没有传值
+- 修改帮助中选项的值的名称
+- 将选项设置为必须提供
+
+完整版的很多额外的功能都是通过链式调用实现，相关接口请查阅[这里](#optvalbuildert)。
+
+完整版虽然功能更多，但对比其他现有的同类库优势不大，毕竟需要复杂功能的程序通常不要求命令行解析库能做得非常轻量。所以如果你正在考虑要不要使用这个库，我推荐你重点关注精简版，它是能提供基本参数解析和帮助生成的库中最轻量的（起码我没找到更轻量的）。它非常适合用于需要基础命令行参数解析功能的小型程序，以很低的成本获取易用的命令行解析功能。确实有一些更轻量的库（例如上面提到的 argh），但它们的功能非常简陋，你可能需要写更多的和命令行参数解析相关的代码。
+
+# 用法
+
+首先介绍精简版的用法。两个版本的接口相似度很高，可以轻松迁移。
+
+```cpp
+#include "ArgLite/Minimal.hpp"
+
+using namespace std;
+using ArgLite::Parser;
+
+int main(int argc, char **argv) {
+    Parser::setDescription("A simple program to demonstrate ArgLite.");
+    Parser::preprocess(argc, argv);
+
+    auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
+    auto number     = Parser::getInt("number", "Number of iterations."); // long option only
+    auto rate       = Parser::getDouble("r", "Rate.", 123.0); // short option only, with default value
+    auto outputPath = Parser::getString("o,out-path", "Output file Path.", ".");
+    auto outputFile = Parser::getPositional("output-file", "The output file name.");
+    auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
+
+    Parser::runAllPostprocess();
+
+    cout << "Verbose    : " << boolalpha << verbose << '\n';
+    cout << "Number     : " << number << '\n';
+    cout << "Rate       : " << rate << '\n';
+    cout << "Output Path: " << outputPath << '\n';
+    cout << "Output file: " << outputFile << '\n';
+    cout << "Input files:" << '\n';
+    for (const auto &it : inputFiles) { cout << it << '\n'; }
+
+    return 0;
+}
+```
+
+可见接口的命名已经足够清晰，使用方法也不难理解。先设置程序的描述和预处理，然后调用对应接口获取值，用变量保存返回值，最后后处理即可。这时你已经用变量获取到了所需的值，之后使用你自己定义的变量即可。
+
+获取带值选项的函数的第一个参数都是选项名，第二个都是选项的描述，第三个是可选的默认值。选项名可以是短选项名或长选项名（不需要加上 `-` 或 `--`），也可以是两个都有（短选项名在前，长选项名在后，用 `,` 分隔）。如果不设置默认值的话，返回该类型的默认值（例如整数是 0）。
+
+虽然上面说的是变量，但实际上用常量保存返回值也是可以的，因为返回的是一个右值。这也是本库的一个特点，其他库通常不能直接用常量保存，要先用变量保存然后赋值给常量才能使用常量。
+
+```cpp
+    const auto number = Parser::getInt("number", "Number of iterations.");
+```
+
+完整版的用法类似，只是接口更多。对于上面用到的基本接口，区别在于 `getType()` 这种形式的函数换成 `get<T>()`，支持更多类型和更多功能。查阅[这里](#获取带值选项)了解详情。
+
+## 流程
+
+许多接口的调用顺序有一定要求，错误的顺序可能造成意外的结果。下面是一种合法的并且容易理解的顺序，如果你不想深究具体哪些接口有怎样的顺序要求的话，建议按照例子中的顺序使用。这个例子用的是完整版，精简版同理，只是没有子命令的接口，获取带值选项的接口不同。
+
+```cpp
+using ArgLite::Parser;
+using ArgLite::SubParser;
+
+// === Program info, optional
+Parser::setDescription("A simple program to demonstrate ArgLite subcommand feature.");
+Parser::setVersion("1.2.3");
+
+// === Subcommands, optional
+SubParser status("status", "Show the working tree status");
+SubParser commit("commit", "Record changes to the repository");
+
+// === setShortNonFlagOptsStr(), optional
+Parser::setShortNonFlagOptsStr("i");
+commit.setShortNonFlagOptsStr("mF");
+
+// === preprocess()
+Parser::preprocess(argc, argv);
+
+// === get functions
+// 这部分的顺序其实就是按照一般命令行参数的顺序，选项在前，位置参数在后。选项之间没有先后顺序，位置参数之间有。
+auto verbose    = Parser::countFlag("v,verbose", "Enable verbose output.");
+auto indent     = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).setTypeName("num").get();
+// 获取全部选项后才能获取位置参数，并且有多个位置参数时要按在命令行中的顺序写。
+auto outputFile = Parser::getPositional("output-file", "The output file name.");
+// 获取全部的单个位置参数后才能获取剩余的位置参数
+auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
+
+// 主命令和子命令各自内部保持上述顺序就行，之间的顺序没有要求，不一定是主命令在前。
+// 因为这些函数不会影响到其他命令的数据。
+auto commitAll      = commit.hasFlag("a,all", "Commit all changes.");
+auto commitMsg      = commit.get<string>("m,message", "Use the given <msg> as the commit message.").get();
+auto commitDate     = commit.get<int>("date", "Override the author date used in the commit.").get();
+auto commitPathSpec = commit.getRemainingPositionals("pathspec", " When pathspec is given on the command line, ...", false);
+
+// === Post process
+Parser::changeDescriptionIndent(indent); // optional
+Parser::runAllPostprocess(); // 有更精细的控制需求的话，可以按照下方的接口说明手动逐个运行
+```
+
+本库设计成解析时返回解析结果，由用户自己管理解析结果，完成解析后不需要再使用这个库，库内部的中间数据会被清除，降低运行时开销。所以如果你不使用子命令功能的话，运行 `Parser::runAllPostprocess();` 后你就不应该再次使用这个库的接口了。如果使用子命令的话，之后应该只使用 `Parser::isMainCmdActive()` 和 `.isActive()`。如果你继续使用各种获取参数的接口，只能获取到错误的数据。
+
+本库也不支持多线程（应该也没人用多线程解析命令行参数吧）。本库只支持最常见的用法：单线程环境单次解析。
+
+## 美化打印
+
+使用前加上这个宏就能启用美化打印的功能。库会在输出到终端时，加上 ANSI 格式序列，给文本加上颜色、粗体或下划线。如果输出到管道或文件，则不会输出这些序列。
+
+```cpp
+#define ARGLITE_ENABLE_FORMATTER
+```
+
+![](https://raw.githubusercontent.com/InMirrors/images/main/ArgLite/formatter-help.png)
+![](https://raw.githubusercontent.com/InMirrors/images/main/ArgLite/formatter-error.png)
+
+## 接口说明
+
+所有接口都在 `ArgLite::Parser` 类中以静态函数的形式提供。完整版还提供了 `ArgLite::SubParser` 类用于子命令。某个版本才有的接口会有提示，没有提示的话表明是两个版本都有的接口，并且用法一样，只是内部实现可能不同。
+
+所有 `optName` 都是短选项名或长选项名（不需要加上 `-` 或 `--`），也可以是两个都有（短选项名在前，长选项名在后，用 `,` 分隔），例如 `o`, `--output`, `o,output`. `description` 都是用于在帮助中显示。
+
+### 程序信息
+
+```cpp
+void setDescription(std::string description);
+```
+
+设置程序描述，在帮助信息的第一行显示。
+
+---
+
+```cpp
+void setVersion(std::string versionStr);
+```
+
+设置程序版本，并添加 `-V` 和 `--version` 选项用于打印版本信息。如果不想 `-V` 被库占用的话，可以不调用这个函数，自己处理版本打印。
+
+### 预处理
+
+```cpp
+void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr);
+```
+
+因为在预处理的时候，库并不知道选项的具体信息，当遇到 `-n123` 这种参数时，不知道是 `-n -1 -2 -3`, `-n 123`, `-n -1 23` 还是 `-n -1 -2 3`。默认是把它们都当成短标志选项，即 `-n -1 -2 -3`。如果你想支持带值短选项后面马上接它的值的话，你必须提在预处理前告诉库，即调用 `setShortNonFlagOptsStr()`，它的参数是以字符串的形式书写的所有带值短选项。这样预处理时才能正确识别带值短选项和值。注意只是传入需要一个值的短选项，不是所有的短选项，用作标志的短选项不需要也不能传入。
+
+这个缺点是这个库最不优雅的一点。虽然不调用这个函数也能用，但支持的语法会少一种。
+
+为了减少在添加带值短选项时出现遗漏的可能性，建议使用下面的 RegEx 查找所有的带值短选项。在支持多光标的编辑器 / IDE 中通常可以用它选中所有带值短选项。
+
+```js
+// 用于查找主命令的带值短选项
+(?<=::get.+?\(").(?=[,"])
+// 用于查找子命令的带值短选项, `subcmd` 要替换成实际的子命令变量名
+(?<=subcmd\.get.+?\(").(?=[,"])
+```
+
+---
+
+```cpp
+void preprocess(int argc, const char *const *argv);
+```
+
+预处理命令行参数，这是使用本库的第一步。你可能注意到前面给的[流程](#流程)中 `preprocess()` 并不是第一步。因为前面的都是可选的，这个是必须运行的函数中最前面的。
+
+程序信息其实在[后处理](#后处理)前提供就行，写在最前面只是为了符合一般同类库的实践。也就是说你可以像其他库那样一开始就写程序信息。
+
+真正要在 `preprocess()` 前面的是 `setShortNonFlagOptsStr()` 和[子命令](#子命令)。
+
+### 获取标志选项
+
+```cpp
+bool hasFlag(std::string_view optName, std::string description);
+```
+
+检查是否存在标志选项，存在一个或多个时返回 `true`。
+
+---
+
+```cpp
+struct HasMutualExArgs {
+    std::string trueOptName;
+    std::string trueDescription;
+    std::string falseOptName;
+    std::string falseDescription;
+    bool        defaultValue;
+};
+bool hasMutualExFlag(HasMutualExArgs args);
+```
+
+检查两个互斥选项是否存在。如果前者存在后者不存在，返回 `true`；如果后者存在前者不存在，返回 `false`；如果两者都不存在，返回 `defaultValue`；如果两者都存在，则后出现的选项生效。因为传入的是一个结构体，传入参数时要加上 `{}`。在 C++20 及以上，你可以使用指定初始化器 (Designated initializers) 增强代码的可读性：
+
+```cpp
+auto enableX = Parser::hasMutualExFlag({
+     .trueOptName      = "x,enable-x",
+     .trueDescription  = "Enable feature x.",
+     .falseOptName     = "X,disable-x",
+     .falseDescription = "Disable feature x.",
+     .defaultValue     = false
+});
+```
+
+---
+
+```cpp
+unsigned countFlag(std::string_view optName, std::string description);
+```
+
+**完整版独有。** 计算标志选项出现的次数，不管是长选项还是短选项都会使计数器 +1。
+
+### 获取带值选项
+
+```cpp
+// 精简版
+// getInt, getDouble, getString, getBool 的签名都差不多，只是具体的类型不同
+type getType(std::string_view optName, const std::string &description, type defaultValue = type{});
+
+// 完整版
+template <typename T>
+OptValBuilder<T> get(std::string_view optName, std::string description);
+```
+
+精简版直接返回指定类型的值，整数和浮点数都只返回一种，需要其他类型的话，需要手动转换类型。例如需要 `unsigned` 的话需要自己从返回的 `long long` 转换。如果需要的类型会溢出的话，例如需要 `unsigned long long`，需要改用完整版，或者用 `getString()` 获取字符串后自己解析。
+
+完整版返回一个 `OptValBuilder<T>` 对象，支持几乎全部的内置类型，可以通过链式调用配置更多功能，最后调用 `get()` 或 `getVec()` 获取值。
+
+不管哪个版本，获取 `bool` 类型时，都是不区分大小写，除以下参数外的参数都是错误参数。
+
+- 真: `1`, `true`, `yes`, `on`
+- 假: `0`, `false`, `no`, `off`
+
+#### `OptValBuilder<T>`
+
+**完整版独有。** `get<T>()` 返回的中间对象，提供以下方法：
+
+- `setDefault(T defaultValue)`: 设置默认值。
+
+- `setTypeName(std::string typeName)`: 在帮助信息中设置值的类型名称。
+
+  例如默认会显示 `--file <string>`, `setTypeName("path")` 后变成 `--file <path>`。
+
+- `required()`: 将选项设置为必需，运行程序而不提供这个选项的话会报错。
+
+- `T get()`: 获取单个值。
+
+- `std::vector<T> getVec(char delimiter = '\0')`: 获取多个值组成的 `vector`。
+
+  直接调用的话，`-f file1 -f file2` 得到 `[file1, file2]`
+
+  如果提供了分隔符，每个值都会根据分隔符进一步分割成多个值。`getVec(',')` 后传入 `-f file1 -f file2,file3` 会得到 `[file1, file2, file3]`
+
+### 获取位置参数
+
+两个接口都有一个可选参数 `required`，只有后面调用的函数才能设置为 `false`。类似于 C++ 中的函数默认参数，只有后面的才能可选，并且不能跳过中间的可选参数写后面的可选参数。可选时分别返回空的字符串和空的字符串数组。
+
+```cpp
+std::string getPositional(const std::string &posName, std::string description, bool required = true);
+```
+
+获取一个位置参数。必须在所有调用完全部和选项相关的接口（就是上面两个小节的接口）之后调用，并按顺序调用。
+
+---
+
+```cpp
+std::vector<std::string> getRemainingPositionals(const std::string &posName, std::string description, bool required = true);
+```
+
+获取所有剩余的位置参数。必须在所有 `getPositional()` 调用之后调用。如果不调用 `getPositional()` 的话，调用顺序和 `getPositional()` 一样。
+
+其实就是按照一般命令行参数的顺序，选项在前，位置参数在后。选项之间没有先后顺序，位置参数之间有。
+
+### 后处理
+
+```cpp
+void changeDescriptionIndent(size_t indent);
+```
+
+更改帮助信息中选项描述的缩进，默认是 25。它用于调整帮助信息的显示，一般不需要使用它。例如程序的选项名部分很多都是刚好超长了一点，超长的选项的描述会在下一行显示，用这个函数把缩进调大点，就能让这些选项的描述在同一行显示，更加美观。
+
+和下面的后处理接口不同，这个其实不一定要在后处理阶段调用，在 `tryToPrintHelp()` 前调用就行，你甚至可以在一开始就调用。只是在这里调用的话更容易理解使用流程。
+
+---
+
+```cpp
+void tryToPrintHelp();
+```
+
+如果用户提供了 `-h` 或 `--help`，则打印帮助信息并退出程序。
+
+```cpp
+bool tryToPrintInvalidOpts(bool notExit = false);
+```
+
+检查并报告所有未知的选项。
+
+```cpp
+bool finalize(bool notExit = false);
+```
+
+完成解析，打印所有累积的错误信息。例如带值选项缺少参数、带值选项参数类型错误、缺少位置参数。运行这个函数后，除了使用[子命令](#子命令)功能时可以使用检查当前激活命令的接口外，任何本库的接口都不要再使用。这时库已经将所有解析结果返回，你只需使用之前保存的结果。
+
+```cpp
+bool runAllPostprocess(bool notExit = false);
+```
+
+依次运行 `tryToPrintHelp()`, `tryToPrintInvalidOpts()` 和 `finalize()`。
+
+一般情况下直接运行 `runAllPostprocess()` 就行。后面几个函数都会在出错时直接退出程序。如果你不想直接退出程序的话，传入 `true`，函数会在发生错误时返回 `true`。如果你需要更精细的控制，例如有未知选项时不退出，但解析错误时退出，可以依次运行 `tryToPrintHelp(); auto hasInvalidOpts = tryToPrintInvalidOpts(true); finalize();`。
+
+### 子命令
+
+**完整版独有。**通过创建 `SubParser` 对象来定义子命令。对于本库，有这条规则：“静态方法用于主命令，成员方法用于子命令”。所以不使用子命令功能时，你不会创建任何对象，使用子命令功能时也只会创建子命令对象。绝大部分同类库都会创建一个对象用于解析命令行参数。本库为了轻量和易用，采用以静态为主的设计思路。毕竟一般都是只解析一份命令行参数，不会多次解析，所以静态方法和静态数据就能满足。
+
+具体用法参考这个[示例](examples/subcommand.cpp)，这个示例也演示了完整版的绝大部分功能。
+
+---
+
+```cpp
+SubParser(std::string subCommandName, std::string subCmdDescription);
+```
+
+构造函数。`subCommandName` 是子命令的名称，`subCmdDescription` 是子命令描述。这两者都会在帮助信息中显示。
+
+---
+
+```cpp
+bool isActive();
+```
+
+检查该子命令是否被激活。因为注册选项时就会返回一个值，不管当前激活的命令是哪个，没激活时会返回类型的默认值。所以提供这个成员方法用于检查该命令是否激活。提供 `bool Parser::isMainCmdActive()` 用于检查主命令是否激活。
+
+---
+
+`SubParser` 对象也拥有 `setShortNonFlagOptsStr`, `hasFlag`, `countFlag`, `hasMutualExFlag`, `get`, `getPositional`, `getRemainingPositionals` 等方法，用法与 `Parser` 中的版本相同，但只在该子命令激活时生效。
+
+# 跑分
+
+todo
+
+# 其他特性
+
+不像绝大部分库，添加选项时还不能获取值，要等解析时才统一赋值，本库添加选项和获取值都由同一个函数完成，添加选项时就已经获取值。所以可以在拿到值后，将这个值作为参数传递给库的接口，控制库的行为。
+
+```cpp
+#include "ArgLite/Core.hpp"
+
+using namespace std;
+using ArgLite::Parser;
+
+int main(int argc, char **argv) {
+    Parser::setShortNonFlagOptsStr("iId");
+    Parser::preprocess(argc, argv);
+
+    auto indent    = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).setTypeName("num").get();
+    auto delimiter = Parser::get<char>("d,delimiter", "--include delimiter.").setDefault(':').get();
+    auto include   = Parser::get<string>("I,include", "Include directory.").setDefault("include").getVec(delimiter);
+
+    Parser::changeDescriptionIndent(indent);
+    Parser::runAllPostprocess();
+
+    cout << "Indent     : " << indent << '\n';
+    cout << "Delimiter  : '" << delimiter << "'\n";
+    cout << "Include:\n";
+    for (const auto &it : include) { cout << it << '\n'; }
+
+    return 0;
+}
+```
+
+这个例子可以用 `-i, --indent` 控制帮助信息的缩进。
+
+```pwsh
+> app -h
+Usage: app [OPTIONS]
+
+Options:
+  -i, --indent <num>      Option Description indent. [default: 26]
+  -d, --delimiter <char>  --include delimiter. [default: :]
+  -I, --include <string>  Include directory. [default: include]
+  -h, --help              Show this help message and exit
+
+
+> app -h -i20
+Usage: app [OPTIONS]
+
+Options:
+  -i, --indent <num>
+                    Option Description indent. [default: 26]
+  -d, --delimiter <char>
+                    --include delimiter. [default: :]
+  -I, --include <string>
+                    Include directory. [default: include]
+  -h, --help        Show this help message and exit
+```
+
+这个用法似乎什么实际意义，只是演示上述特性。接下来看一个比较实用的例子——改变多值选项的分隔符。
+
+```pwsh
+> app -I "path1:path2"
+Indent     : 26
+Delimiter  : ':'
+Include:
+path1
+path2
+
+> app -I "path1 path2"
+Indent     : 26
+Delimiter  : ':'
+Include:
+path1 path2
+
+> app -I "path1 path2" -d " "
+Indent     : 26
+Delimiter  : ' '
+Include:
+path1
+path2
+```
+
+如果传入的参数不能用一个固定的分隔符应对所有情况，可以利用这个特性，动态控制分隔符，选取适合当前参数的分隔符。
