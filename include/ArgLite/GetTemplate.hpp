@@ -35,11 +35,11 @@ template <> inline char Parser::convertType(const std::string &valueStr) {
                : (char)std::stoi(valueStr);
 }
 
-template <typename T> inline T Parser::convertType(const std::string &valueStr) { // remaining types
+template <typename T> inline T Parser::convertType(const std::string &valueStr) {
     if constexpr (isOptionalType<T>::value) {
         return convertType<typename T::value_type>(valueStr);
     } else {
-        return T(valueStr);
+        return T(valueStr); // remaining types
     }
 }
 

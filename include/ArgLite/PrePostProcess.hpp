@@ -237,80 +237,80 @@ inline void Parser::printHelpSubCmd(const std::vector<SubParser *> &subCmdPtrs) 
 }
 
 inline void Parser::printHelpPositional(const InternalData &data) {
-    if (!data.positionalHelpEntries.empty()) {
+    if (data.positionalHelpEntries.empty()) { return; }
+
 #ifdef ARGLITE_ENABLE_FORMATTER
-        std::cout << '\n'
-                  << Formatter::boldUnderline("Positional Arguments:") << '\n';
+    std::cout << '\n'
+              << Formatter::boldUnderline("Positional Arguments:") << '\n';
 #else
-        std::cout << "\nPositional Arguments:\n";
+    std::cout << "\nPositional Arguments:\n";
 #endif
-        size_t maxNameWidth = 0;
-        for (const auto &p : data.positionalHelpEntries) {
-            maxNameWidth = std::max(maxNameWidth, p.name.length());
-        }
-        for (const auto &p : data.positionalHelpEntries) {
-            std::cout << "  " << std::left;
+    size_t maxNameWidth = 0;
+    for (const auto &p : data.positionalHelpEntries) {
+        maxNameWidth = std::max(maxNameWidth, p.name.length());
+    }
+    for (const auto &p : data.positionalHelpEntries) {
+        std::cout << "  " << std::left;
 #ifdef ARGLITE_ENABLE_FORMATTER
-            constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
-            std::cout << std::setw(static_cast<int>(maxNameWidth) + 2 + ANSI_CODE_LENGTH)
-                      << Formatter::bold(p.name);
+        constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
+        std::cout << std::setw(static_cast<int>(maxNameWidth) + 2 + ANSI_CODE_LENGTH)
+                  << Formatter::bold(p.name);
 #else
-            std::cout << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name;
+        std::cout << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name;
 #endif
-            std::cout << p.description << '\n';
-        }
+        std::cout << p.description << '\n';
     }
 }
 
 inline void Parser::printHelpOptions(const InternalData &data) {
-    if (!data.optionHelpEntries.empty()) {
+    if (data.optionHelpEntries.empty()) { return; }
+
 #ifdef ARGLITE_ENABLE_FORMATTER
-        std::cout << '\n'
-                  << Formatter::boldUnderline("Options:") << '\n';
+    std::cout << '\n'
+              << Formatter::boldUnderline("Options:") << '\n';
 #else
-        std::cout << "\nOptions:\n";
+    std::cout << "\nOptions:\n";
 #endif
 
-        for (const auto &o : data.optionHelpEntries) {
-            std::string optStr("  ");
-            if (!o.shortOpt.empty()) {
-                optStr += o.shortOpt;
-                if (!o.longOpt.empty()) { optStr += ", "; }
-            } else {
-                optStr += "    "; // Pad for alignment
-            }
-            optStr += o.longOpt;
-
-            std::cout << std::left;
-#ifdef ARGLITE_ENABLE_FORMATTER
-            constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
-            std::cout << std::setw(static_cast<int>(descriptionIndent_) + ANSI_CODE_LENGTH);
-            optStr = Formatter::bold(optStr);
-#else
-            std::cout << std::setw(static_cast<int>(descriptionIndent_));
-#endif
-
-            if (!o.typeName.empty()) {
-                optStr.append(" <").append(o.typeName).append(">");
-            }
-            std::cout << optStr;
-
-            std::string descStr = o.description;
-            if (!o.defaultValue.empty()) {
-                descStr.append(" [default: ").append(o.defaultValue).append("]");
-            }
-            // the option string is too long, start a new line
-            // -2: two separeting spaces after the type name
-            auto optPartLength = optStr.length();
-#ifdef ARGLITE_ENABLE_FORMATTER
-            optPartLength -= ANSI_CODE_LENGTH;
-#endif
-            if (optPartLength > descriptionIndent_ - 2) {
-                std::cout << '\n'
-                          << std::left << std::setw(static_cast<int>(descriptionIndent_)) << "";
-            }
-            std::cout << descStr << '\n';
+    for (const auto &o : data.optionHelpEntries) {
+        std::string optStr("  ");
+        if (!o.shortOpt.empty()) {
+            optStr += o.shortOpt;
+            if (!o.longOpt.empty()) { optStr += ", "; }
+        } else {
+            optStr += "    "; // Pad for alignment
         }
+        optStr += o.longOpt;
+
+        std::cout << std::left;
+#ifdef ARGLITE_ENABLE_FORMATTER
+        constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
+        std::cout << std::setw(static_cast<int>(descriptionIndent_) + ANSI_CODE_LENGTH);
+        optStr = Formatter::bold(optStr);
+#else
+        std::cout << std::setw(static_cast<int>(descriptionIndent_));
+#endif
+
+        if (!o.typeName.empty()) {
+            optStr.append(" <").append(o.typeName).append(">");
+        }
+        std::cout << optStr;
+
+        std::string descStr = o.description;
+        if (!o.defaultValue.empty()) {
+            descStr.append(" [default: ").append(o.defaultValue).append("]");
+        }
+        // the option string is too long, start a new line
+        // -2: two separeting spaces after the type name
+        auto optPartLength = optStr.length();
+#ifdef ARGLITE_ENABLE_FORMATTER
+        optPartLength -= ANSI_CODE_LENGTH;
+#endif
+        if (optPartLength > descriptionIndent_ - 2) {
+            std::cout << '\n'
+                      << std::left << std::setw(static_cast<int>(descriptionIndent_)) << "";
+        }
+        std::cout << descStr << '\n';
     }
 }
 
