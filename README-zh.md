@@ -58,9 +58,10 @@ using namespace std;
 using ArgLite::Parser;
 
 int main(int argc, char **argv) {
-    Parser::setDescription("A simple program to demonstrate ArgLite.");
+    // Step 1: Preprocessing
     Parser::preprocess(argc, argv);
 
+    // Step 2: Get command line arguments
     auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
     auto number     = Parser::getInt("number", "Number of iterations."); // long option only
     auto rate       = Parser::getDouble("r", "Rate.", 123.0); // short option only, with default value
@@ -68,6 +69,7 @@ int main(int argc, char **argv) {
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
+    // Step 3: Postprocessing
     Parser::runAllPostprocess();
 
     cout << "Verbose    : " << boolalpha << verbose << '\n';
@@ -82,7 +84,27 @@ int main(int argc, char **argv) {
 }
 ```
 
+```pwsh
+> app --help
+Usage: app [OPTIONS] output-file input-files
+
+Positional Arguments:
+  output-file  The output file name.
+  input-files  The input files to process.
+
+Options:
+  -v, --verbose          Enable verbose output.
+      --number <integer>
+                         Number of iterations. [default: 0]
+  -r <float>             Rate. [default: 123.0]
+  -o, --out-path <string>
+                         Output file Path. [default: .]
+  -h, --help             Show this help message and exit
+```
+
 可见接口的命名已经足够清晰，使用方法也不难理解。先设置程序的描述和预处理，然后调用对应接口获取值，用变量保存返回值，最后后处理即可。这时你已经用变量获取到了所需的值，之后使用你自己定义的变量即可。
+
+本库和其他同类库最大的区别是注册选项的同时就能获取值。上面的 `hasFlag` 和 `getXxx` 和其他库的 `add_option` 类似，都是提供参数的相关信息。
 
 获取带值选项的函数的第一个参数都是选项名，第二个都是选项的描述，第三个是可选的默认值。选项名可以是短选项名或长选项名（不需要加上 `-` 或 `--`），也可以是两个都有（短选项名在前，长选项名在后，用 `,` 分隔）。如果不设置默认值的话，返回该类型的默认值（例如整数是 0）。
 
@@ -98,27 +120,38 @@ int main(int argc, char **argv) {
 
 许多接口的调用顺序有一定要求，错误的顺序可能造成意外的结果。下面是一种合法的并且容易理解的顺序，如果你不想深究具体哪些接口有怎样的顺序要求的话，建议按照例子中的顺序使用。这个例子用的是完整版，精简版同理，只是没有子命令的接口，获取带值选项的接口不同。
 
+```markdown
+- 程序信息（可选）
+- 子命令（可选）
+- 提供带值短选项（可选）
+- 预处理
+- 获取命令行选项
+  - 获取标志选项或带值选项
+  - 获取位置参数
+  - （这部分的内部参数按照一般命令行参数的传递顺序，即各个选项间没有顺序要求，位置参数在最后）
+- 后处理
+```
+
 ```cpp
 using ArgLite::Parser;
 using ArgLite::SubParser;
 
-// === Program info, optional
+// === 程序信息（可选）
 Parser::setDescription("A simple program to demonstrate ArgLite subcommand feature.");
 Parser::setVersion("1.2.3");
 
-// === Subcommands, optional
+// === 子命令（可选）
 SubParser status("status", "Show the working tree status");
 SubParser commit("commit", "Record changes to the repository");
 
-// === setShortNonFlagOptsStr(), optional
+// === 提供带值短选项（可选）
 Parser::setShortNonFlagOptsStr("i");
 commit.setShortNonFlagOptsStr("mF");
 
-// === preprocess()
+// === 预处理
 Parser::preprocess(argc, argv);
 
-// === get functions
-// 这部分的顺序其实就是按照一般命令行参数的顺序，选项在前，位置参数在后。选项之间没有先后顺序，位置参数之间有。
+// === 获取命令行选项
 auto verbose    = Parser::countFlag("v,verbose", "Enable verbose output.");
 auto indent     = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).setTypeName("num").get();
 // 获取全部选项后才能获取位置参数，并且有多个位置参数时要按在命令行中的顺序写。
@@ -133,10 +166,12 @@ auto commitMsg      = commit.get<string>("m,message", "Use the given <msg> as th
 auto commitDate     = commit.get<int>("date", "Override the author date used in the commit.").get();
 auto commitPathSpec = commit.getRemainingPositionals("pathspec", " When pathspec is given on the command line, ...", false);
 
-// === Post process
+// === 后处理
 Parser::changeDescriptionIndent(indent); // optional
 Parser::runAllPostprocess(); // 有更精细的控制需求的话，可以按照下方的接口说明手动逐个运行
 ```
+
+可见其实按照一般人的思路调用就行了。其他同类库对顺序更宽容，但给的例子大致上也是这样的流程。
 
 本库设计成解析时返回解析结果，由用户自己管理解析结果，完成解析后不需要再使用这个库，库内部的中间数据会被清除，降低运行时开销。所以如果你不使用子命令功能的话，运行 `Parser::runAllPostprocess();` 后你就不应该再次使用这个库的接口了。如果使用子命令的话，之后应该只使用 `Parser::isMainCmdActive()` 和 `.isActive()`。如果你继续使用各种获取参数的接口，只能获取到错误的数据。
 
@@ -165,7 +200,7 @@ Parser::runAllPostprocess(); // 有更精细的控制需求的话，可以按照
 void setDescription(std::string description);
 ```
 
-设置程序描述，在帮助信息的第一行显示。
+设置程序描述，在帮助信息的第一行显示。不调用的话只是帮助中没有这行而已，不影响其他功能。
 
 ---
 
@@ -181,9 +216,9 @@ void setVersion(std::string versionStr);
 void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr);
 ```
 
-因为在预处理的时候，库并不知道选项的具体信息，当遇到 `-n123` 这种参数时，不知道是 `-n -1 -2 -3`, `-n 123`, `-n -1 23` 还是 `-n -1 -2 3`。默认是把它们都当成短标志选项，即 `-n -1 -2 -3`。如果你想支持带值短选项后面马上接它的值的话，你必须提在预处理前告诉库，即调用 `setShortNonFlagOptsStr()`，它的参数是以字符串的形式书写的所有带值短选项。这样预处理时才能正确识别带值短选项和值。注意只是传入需要一个值的短选项，不是所有的短选项，用作标志的短选项不需要也不能传入。
+因为在预处理的时候，库并不知道选项的具体信息，当遇到 `-n123` 这种参数时，不知道是 `-n -1 -2 -3`, `-n 123`, `-n -1 23` 还是 `-n -1 -2 3`。默认是把它们都当成短标志选项，即 `-n -1 -2 -3`。如果你想支持带值短选项后面马上接它的值的话，你必须在预处理前告诉库，即调用 `setShortNonFlagOptsStr()`，它的参数是以字符串的形式书写的所有带值短选项。这样预处理时才能正确识别带值短选项和值。注意只是传入*带值选短选项*，不是所有的短选项，用作标志的短选项不需要也不能传入。
 
-这个缺点是这个库最不优雅的一点。虽然不调用这个函数也能用，但支持的语法会少一种。
+不调用这个函数也能用，但支持的语法会少一种。这个缺点是这个库最不优雅的一点，这种独特的处理思路很难优雅地提供这个语法，好在不影响核心功能。
 
 为了减少在添加带值短选项时出现遗漏的可能性，建议使用下面的 RegEx 查找所有的带值短选项。在支持多光标的编辑器 / IDE 中通常可以用它选中所有带值短选项。
 
@@ -290,23 +325,16 @@ OptValBuilder<T> get(std::string_view optName, std::string description);
 
 ### 获取位置参数
 
+```cpp
+std::string getPositional(
+  const std::string &posName, std::string description, bool required = true);
+std::vector<std::string> getRemainingPositionals(
+  const std::string &posName, std::string description, bool required = true);
+```
+
+提供获取一个位置参数和剩余全部位置参数的接口。必须在所有调用完全部和选项相关的接口（就是上面两个小节的接口）之后调用，并按顺序调用。也就是按照命令行参数的出现顺序调用。因为这个库是即时返回解析结果，所以调用时会消耗掉一个位置参数，调用 `getRemainingPositionals()` 会消耗全部的位置参数。
+
 两个接口都有一个可选参数 `required`，只有后面调用的函数才能设置为 `false`。类似于 C++ 中的函数默认参数，只有后面的才能可选，并且不能跳过中间的可选参数写后面的可选参数。可选时分别返回空的字符串和空的字符串数组。
-
-```cpp
-std::string getPositional(const std::string &posName, std::string description, bool required = true);
-```
-
-获取一个位置参数。必须在所有调用完全部和选项相关的接口（就是上面两个小节的接口）之后调用，并按顺序调用。
-
----
-
-```cpp
-std::vector<std::string> getRemainingPositionals(const std::string &posName, std::string description, bool required = true);
-```
-
-获取所有剩余的位置参数。必须在所有 `getPositional()` 调用之后调用。如果不调用 `getPositional()` 的话，调用顺序和 `getPositional()` 一样。
-
-其实就是按照一般命令行参数的顺序，选项在前，位置参数在后。选项之间没有先后顺序，位置参数之间有。
 
 ### 后处理
 
@@ -314,7 +342,9 @@ std::vector<std::string> getRemainingPositionals(const std::string &posName, std
 void changeDescriptionIndent(size_t indent);
 ```
 
-更改帮助信息中选项描述的缩进，默认是 25。它用于调整帮助信息的显示，一般不需要使用它。例如程序的选项名部分很多都是刚好超长了一点，超长的选项的描述会在下一行显示，用这个函数把缩进调大点，就能让这些选项的描述在同一行显示，更加美观。
+更改帮助信息中选项描述的缩进，默认是 25。它用于调整帮助信息的显示，一般不需要使用它。
+
+例如程序的选项名部分很多都是刚好超长了一点，超长的选项的描述会在下一行显示，用这个函数把缩进调大点，就能让这些选项的描述在同一行显示，更加美观。其实[用法](#用法)中的简单示例就属于这种情况，调成 27 后就能全部在同一行显示
 
 和下面的后处理接口不同，这个其实不一定要在后处理阶段调用，在 `tryToPrintHelp()` 前调用就行，你甚至可以在一开始就调用。只是在这里调用的话更容易理解使用流程。
 
@@ -345,6 +375,10 @@ bool runAllPostprocess(bool notExit = false);
 依次运行 `tryToPrintHelp()`, `tryToPrintInvalidOpts()` 和 `finalize()`。
 
 一般情况下直接运行 `runAllPostprocess()` 就行。后面几个函数都会在出错时直接退出程序。如果你不想直接退出程序的话，传入 `true`，函数会在发生错误时返回 `true`。如果你需要更精细的控制，例如有未知选项时不退出，但解析错误时退出，可以依次运行 `tryToPrintHelp(); auto hasInvalidOpts = tryToPrintInvalidOpts(true); finalize();`。
+
+### 选项分组
+
+todo
 
 ### 子命令
 
