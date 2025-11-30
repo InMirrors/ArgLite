@@ -316,6 +316,9 @@ inline void Parser::printHelpOptions(const InternalData &data) {
 
 // Clear internal data
 inline void Parser::clearData(InternalData &data) {
+    data.cmdName.clear();
+    data.positionalIdx = 0;
+
     InternalData temp;
     temp.options.swap(data.options);
     temp.optionHelpEntries.swap(data.optionHelpEntries);

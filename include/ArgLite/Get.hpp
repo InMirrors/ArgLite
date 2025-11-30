@@ -442,37 +442,43 @@ private:
 
 inline std::string Parser::getPositional_(
     const std::string &posName, std::string description, bool isRequired,
-    InternalData &data) {
+    std::string defaultValue, InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
     data.positionalHelpEntries.push_back({posName, std::move(description), isRequired});
-    if (positionalIdx_ < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[positionalIdx_];
-        positionalIdx_++;
+    if (data.positionalIdx < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
+        data.positionalIdx++;
         return argv_[argvIdx];
     }
+
     if (isRequired) {
         appendPosValErrorMsg(data, posName, "Missing required positional argument '");
     }
-    return "";
+    return defaultValue;
 }
 
 inline std::vector<std::string> Parser::getRemainingPositionals_(
     const std::string &posName, std::string description, bool required,
-    InternalData &data) {
+    const std::vector<std::string> &defaultValue, InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
     data.positionalHelpEntries.push_back({posName, std::move(description), required});
     std::vector<std::string> remaining;
-    while (positionalIdx_ < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[positionalIdx_];
+    while (data.positionalIdx < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
         remaining.emplace_back(argv_[argvIdx]);
-        positionalIdx_++;
+        data.positionalIdx++;
     }
-    if (required && remaining.empty()) {
-        appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
+
+    if (remaining.empty()) {
+        if (required) {
+            appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
+        } else {
+            return defaultValue;
+        }
     }
     return remaining;
 }
