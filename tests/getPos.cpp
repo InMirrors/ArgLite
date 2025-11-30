@@ -1,6 +1,11 @@
 #define ARGLITE_ENABLE_FORMATTER
-
+#ifdef MINIMAL
+#define VERSION "Minimal"
 #include "ArgLite/Minimal.hpp"
+#else
+#define VERSION "Full"
+#include "ArgLite/Core.hpp"
+#endif
 #include <cassert>
 #include <iostream>
 #include <vector>
@@ -208,6 +213,9 @@ void testMissingRequiredPositional() {
 }
 
 int main() {
+    cout << "Testing " VERSION " version" << '\n'
+         << '\n';
+
     testRequiredPositionals();
     testRequiredRemainingPositionals();
     testOptionalPositionals();
