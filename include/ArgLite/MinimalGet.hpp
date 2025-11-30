@@ -122,9 +122,9 @@ inline std::string Parser::getPositional_(
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
     data.positionalHelpEntries.push_back({posName, description, isRequired});
-    if (positionalIdx_ < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[positionalIdx_];
-        positionalIdx_++;
+    if (data.positionalIdx < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
+        data.positionalIdx++;
         return argv_[argvIdx];
     }
 
@@ -142,10 +142,10 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
 
     data.positionalHelpEntries.push_back({posName, description, required});
     std::vector<std::string> remaining;
-    while (positionalIdx_ < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[positionalIdx_];
+    while (data.positionalIdx < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
         remaining.emplace_back(argv_[argvIdx]);
-        positionalIdx_++;
+        data.positionalIdx++;
     }
 
     if (remaining.empty()) {

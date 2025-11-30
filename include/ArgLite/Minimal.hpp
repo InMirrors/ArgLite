@@ -226,6 +226,7 @@ private:
         std::string programName;
         std::string programDescription;
         std::string shortNonFlagOptsStr;
+        size_t      positionalIdx;
         // Containers
         OptMap                          options;
         std::vector<OptionHelpInfo>     optionHelpEntries;
@@ -238,7 +239,6 @@ private:
     static inline int                argc_;
     static inline const char *const *argv_;
 
-    static inline size_t       positionalIdx_;
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
     static inline std::string  programVersion_;
     static inline InternalData data_;
@@ -553,6 +553,11 @@ inline void Parser::printHelpOptions(const InternalData &data) {
 
 // Clear internal data
 inline void Parser::clearData(InternalData &data) {
+    data.programName.clear();
+    data.programDescription.clear();
+    data.shortNonFlagOptsStr.clear();
+    data.positionalIdx = 0;
+
     InternalData temp;
     temp.options.swap(data.options);
     temp.optionHelpEntries.swap(data.optionHelpEntries);
