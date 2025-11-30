@@ -223,7 +223,9 @@ private:
     struct PositionalHelpInfo {
         std::string name;
         std::string description;
-        bool        required;
+        std::string defaultValue;
+        bool        isRequired;
+        bool        isRemaining;
     };
 
     using OptMap = std::unordered_map<std::string, std::vector<OptionInfo>>;
