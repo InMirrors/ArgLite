@@ -17,75 +17,206 @@ vector<char *> create_argv(const vector<string> &args) {
     return argv;
 }
 
-void test_positional_only() {
-    cerr << "--- Running test_positional_only ---" << '\n';
-    vector<string> args = {"./getPosMinimal", "arg1", "arg2", "arg3"};
-    auto             argv = create_argv(args);
+void testRequiredPositionals() {
+    cerr << "--- Testing required positionals ---\n";
+    vector<string> args = {"./getPosMinimal", "req1", "req2"};
+    auto           argv = create_argv(args);
     Parser::preprocess(argv.size(), argv.data());
-    auto pos1 = Parser::getPositional("pos1", "First positional arg.");
-    auto rem  = Parser::getRemainingPositionals("rem", "Remaining positional args.");
-    Parser::runAllPostprocess();
 
-    assert(pos1 == "arg1");
-    assert(rem.size() == 2);
-    assert(rem[0] == "arg2");
-    assert(rem[1] == "arg3");
-    cerr << "test_positional_only PASSED" << '\n'
+    auto pos1 = Parser::getPositional("pos1", "Required positional 1.");
+    auto pos2 = Parser::getPositional("pos2", "Required positional 2.");
+
+    assert(!Parser::runAllPostprocess(true));
+    assert(pos1 == "req1");
+    assert(pos2 == "req2");
+
+    cerr << "Required positionals PASSED\n"
          << '\n';
 }
 
-void test_with_flags_and_valued_options() {
-    cerr << "--- Running test_with_flags_and_valued_options ---" << '\n';
-    vector<string> args = {"./getPosMinimal", "-v", "--number", "123", "--file=test.txt"};
-    auto             argv = create_argv(args);
-
-    Parser::setShortNonFlagOptsStr("f"); // For valued short options if any, not used in this case but good practice
+void testRequiredRemainingPositionals() {
+    cerr << "--- Testing required remaining positionals ---\n";
+    vector<string> args = {"./getPosMinimal", "req1", "req2", "req3", "req4"};
+    auto           argv = create_argv(args);
     Parser::preprocess(argv.size(), argv.data());
 
-    auto verbose = Parser::hasFlag("v,verbose", "Enable verbose output.");
-    auto number  = Parser::getInt("number", "A number.");
-    auto file    = Parser::getString("f,file", "A file path.");
+    auto pos1   = Parser::getPositional("pos1", "Required positional 1.");
+    auto pos2   = Parser::getPositional("pos2", "Required positional 2.");
+    auto posVec = Parser::getRemainingPositionals("posVec", "Remaining required positionals.");
 
-    Parser::runAllPostprocess();
+    assert(!Parser::runAllPostprocess(true));
+    assert(pos1 == "req1");
+    assert(pos2 == "req2");
+    assert(posVec.size() == 2);
+    assert(posVec[0] == "req3");
+    assert(posVec[1] == "req4");
 
-    assert(verbose == true);
-    assert(number == 123);
-    assert(file == "test.txt");
-    cerr << "test_with_flags_and_valued_options PASSED" << '\n'
+    cerr << "Required remaining positionals PASSED\n"
          << '\n';
 }
 
-void test_all_together() {
-    cerr << "--- Running test_all_together ---" << '\n';
-    vector<string> args = {"./getPosMinimal", "pos_arg1", "-v", "--rate", "9.8", "pos_arg2", "--", "pos_arg3"};
-    auto             argv = create_argv(args);
+void testOptionalPositionals() {
+    cerr << "--- Testing optional positionals ---\n";
+    // Test case 1: Optional arguments not provided
+    {
+        vector<string> args = {"./getPosMinimal", "req1"};
+        auto           argv = create_argv(args);
+        Parser::preprocess(argv.size(), argv.data());
 
-    Parser::preprocess(argv.size(), argv.data());
+        auto pos1 = Parser::getPositional("pos1", "Required positional.");
+        auto opt1 = Parser::getPositional("opt1", "Optional positional.", false, "default1");
+        auto opt2 = Parser::getPositional("opt2", "Optional positional 2.", false, "default2");
 
-    auto verbose = Parser::hasFlag("v,verbose", "Enable verbose output.");
-    auto rate    = Parser::getDouble("r,rate", "A rate value.");
-    auto pos1    = Parser::getPositional("pos1", "First positional arg.");
-    auto rem     = Parser::getRemainingPositionals("rem", "Remaining positional args.");
+        assert(!Parser::runAllPostprocess(true));
+        assert(pos1 == "req1");
+        assert(opt1 == "default1");
+        assert(opt2 == "default2");
+    }
 
-    Parser::runAllPostprocess();
+    // Test case 2: Optional arguments provided
+    {
+        vector<string> args = {"./getPosMinimal", "req1", "val1", "val2"};
+        auto           argv = create_argv(args);
+        Parser::preprocess(argv.size(), argv.data());
 
-    assert(verbose == true);
-    assert(rate == 9.8);
-    assert(pos1 == "pos_arg1");
-    assert(rem.size() == 2);
-    assert(rem[0] == "pos_arg2");
-    assert(rem[1] == "pos_arg3");
-    cerr << "test_all_together PASSED" << '\n'
+        auto pos1 = Parser::getPositional("pos1", "Required positional.");
+        auto opt1 = Parser::getPositional("opt1", "Optional positional.", false, "default1");
+        auto opt2 = Parser::getPositional("opt2", "Optional positional 2.", false, "default2");
+
+        assert(!Parser::runAllPostprocess(true));
+        assert(pos1 == "req1");
+        assert(opt1 == "val1");
+        assert(opt2 == "val2");
+    }
+
+    cerr << "Optional positionals PASSED\n"
          << '\n';
 }
 
+void testOptionalRemainingPositionals() {
+    cerr << "--- Testing optional remaining positionals ---\n";
+    // Test case 1: Optional arguments not provided, using default value
+    {
+        vector<string> args = {"./getPosMinimal", "req1"};
+        auto           argv = create_argv(args);
+        Parser::preprocess(argv.size(), argv.data());
+
+        auto pos1   = Parser::getPositional("pos1", "Required positional 1.");
+        auto posVec = Parser::getRemainingPositionals("posVec", "Remaining optional positionals.", false, {"d1", "d2"});
+
+        assert(!Parser::runAllPostprocess(true));
+        assert(pos1 == "req1");
+        assert(posVec.size() == 2);
+        assert(posVec[0] == "d1");
+        assert(posVec[1] == "d2");
+    }
+
+    // Test case 2: Optional arguments provided
+    {
+        vector<string> args = {"./getPosMinimal", "req1", "val1", "val2", "val3"};
+        auto           argv = create_argv(args);
+        Parser::preprocess(argv.size(), argv.data());
+
+        auto pos1   = Parser::getPositional("pos1", "Required positional 1.");
+        auto posVec = Parser::getRemainingPositionals("posVec", "Remaining optional positionals.", false, {"d1", "d2"});
+
+        assert(!Parser::runAllPostprocess(true));
+        assert(pos1 == "req1");
+        assert(posVec.size() == 3);
+        assert(posVec[0] == "val1");
+        assert(posVec[1] == "val2");
+        assert(posVec[2] == "val3");
+    }
+
+    cerr << "Optional remaining positionals PASSED\n"
+         << '\n';
+}
+
+void testMixedPositionals() {
+    cerr << "--- Testing mixed positionals ---\n";
+    vector<string> args = {"./getPosMinimal", "req1", "opt1_val"};
+    auto           argv = create_argv(args);
+    Parser::preprocess(argv.size(), argv.data());
+
+    auto pos1 = Parser::getPositional("pos1", "Required positional.");
+    auto opt1 = Parser::getPositional("opt1", "Optional positional.", false, "default1");
+    auto opt2 = Parser::getPositional("opt2", "Optional positional 2.", false, "default2");
+
+    assert(!Parser::runAllPostprocess(true));
+    assert(pos1 == "req1");
+    assert(opt1 == "opt1_val");
+    assert(opt2 == "default2");
+
+    cerr << "Mixed positionals PASSED\n"
+         << '\n';
+}
+
+void testMixedRemainingPositionals() {
+    cerr << "--- Testing mixed remaining positionals ---\n";
+    // Test case 1: Optional argument not provided
+    {
+        vector<string> args = {"./getPosMinimal", "req1"};
+        auto           argv = create_argv(args);
+        Parser::preprocess(argv.size(), argv.data());
+
+        auto pos1   = Parser::getPositional("pos1", "Required positional.");
+        auto opt1   = Parser::getPositional("opt1", "Optional positional.", false, "default1");
+        auto posVec = Parser::getRemainingPositionals("posVec", "Remaining optional positionals.", false, {"d1", "d2"});
+
+        assert(!Parser::runAllPostprocess(true));
+        assert(pos1 == "req1");
+        assert(opt1 == "default1");
+        assert(posVec.size() == 2);
+        assert(posVec[0] == "d1");
+        assert(posVec[1] == "d2");
+    }
+
+    // Test case 2: Optional argument provided
+    {
+        vector<string> args = {"./getPosMinimal", "req1", "opt1_val", "rem1", "rem2"};
+        auto           argv = create_argv(args);
+        Parser::preprocess(argv.size(), argv.data());
+
+        auto pos1   = Parser::getPositional("pos1", "Required positional.");
+        auto opt1   = Parser::getPositional("opt1", "Optional positional.", false, "default1");
+        auto posVec = Parser::getRemainingPositionals("posVec", "Remaining optional positionals.", false, {"d1", "d2"});
+
+        assert(!Parser::runAllPostprocess(true));
+        assert(pos1 == "req1");
+        assert(opt1 == "opt1_val");
+        assert(posVec.size() == 2);
+        assert(posVec[0] == "rem1");
+        assert(posVec[1] == "rem2");
+    }
+
+    cerr << "Mixed remaining positionals PASSED\n"
+         << '\n';
+}
+
+void testMissingRequiredPositional() {
+    cerr << "--- Testing missing required positional ---\n";
+    vector<string> args = {"./getPosMinimal"};
+    auto           argv = create_argv(args);
+    Parser::preprocess(argv.size(), argv.data());
+
+    auto pos1 = Parser::getPositional("pos1", "Required positional.");
+
+    assert(Parser::runAllPostprocess(true)); // Expect error
+
+    cerr << "Missing required positional PASSED\n"
+         << '\n';
+}
 
 int main() {
-    test_positional_only();
-    test_with_flags_and_valued_options();
-    test_all_together();
+    testRequiredPositionals();
+    testRequiredRemainingPositionals();
+    testOptionalPositionals();
+    testOptionalRemainingPositionals();
+    testMixedPositionals();
+    testMixedRemainingPositionals();
+    testMissingRequiredPositional();
 
-    cerr << "All tests passed!" << '\n';
+    cerr << "All tests passed!\n";
 
     return 0;
 }
