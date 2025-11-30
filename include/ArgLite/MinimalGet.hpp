@@ -117,7 +117,7 @@ inline bool Parser::getBool_(
 
 inline std::string Parser::getPositional_(
     const std::string &posName, const std::string &description, bool isRequired,
-    InternalData &data) {
+    const std::string &defaultValue, InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
@@ -127,15 +127,16 @@ inline std::string Parser::getPositional_(
         positionalIdx_++;
         return argv_[argvIdx];
     }
+
     if (isRequired) {
         appendPosValErrorMsg(data, posName, "Missing required positional argument '");
     }
-    return "";
+    return defaultValue;
 }
 
 inline std::vector<std::string> Parser::getRemainingPositionals_(
     const std::string &posName, const std::string &description, bool required,
-    InternalData &data) {
+    const std::vector<std::string> &defaultValue, InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
@@ -146,8 +147,13 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
         remaining.emplace_back(argv_[argvIdx]);
         positionalIdx_++;
     }
-    if (required && remaining.empty()) {
-        appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
+
+    if (remaining.empty()) {
+        if (required) {
+            appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
+        } else {
+            return defaultValue;
+        }
     }
     return remaining;
 }

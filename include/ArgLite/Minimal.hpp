@@ -125,11 +125,16 @@ public:
      * @details Must be called after all get/hasFlag calls. Should be called in order.
      * @param name Argument name, used for the help message (e.g., "input-file").
      * @param description Argument description.
-     * @param required If true and the user does not provide the argument, the program will report an error and exit.
+     * @param required If true and the user does not provide the argument,
+                       the program will report an error and exit.
+        @param defaultValue The default value to return if the argument
+                            is not provided and not required.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
-    static std::string getPositional(const std::string &posName, const std::string &description, bool required = true) {
-        return getPositional_(posName, description, required, data_);
+    static std::string getPositional(
+        const std::string &posName, const std::string &description,
+        bool required = true, const std::string &defaultValue = "") {
+        return getPositional_(posName, description, required, defaultValue, data_);
     }
 
     /**
@@ -137,12 +142,16 @@ public:
      * @details Must be called after all getPositional calls.
      * @param name Argument name, used for the help message (e.g., "extra-files").
      * @param description Argument description.
-     * @param required If true and there are no remaining arguments, the program will report an error and exit.
+     * @param required If true and there are no remaining arguments,
+                       the program will report an error and exit.
+        @param defaultValue The default value to return if the argument
+                            is not provided and not required.
      * @return A string vector containing all remaining arguments.
      */
     static std::vector<std::string> getRemainingPositionals(
-        const std::string &posName, const std::string &description, bool required = true) {
-        return getRemainingPositionals_(posName, description, required, data_);
+        const std::string &posName, const std::string &description,
+        bool required = true, const std::vector<std::string> &defaultValue = {}) {
+        return getRemainingPositionals_(posName, description, required, defaultValue, data_);
     }
 
     /**
@@ -242,8 +251,8 @@ private:
     static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue, InternalData &data);
     static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue, InternalData &data);
     static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue, InternalData &data);
-    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, InternalData &data);
-    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, InternalData &data);
+    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, const std::string &defaultValue, InternalData &data);
+    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, const std::vector<std::string> &defaultValue, InternalData &data);
     // Helper functions for get functions
     static inline void appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
     static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
