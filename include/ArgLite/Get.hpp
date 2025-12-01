@@ -473,6 +473,7 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
         defaultValueStr.append(defaultValue[i]);
     }
     defaultValueStr.append("\"]");
+    if (defaultValue.empty()) { defaultValueStr.clear(); }
 
     data.positionalHelpEntries.push_back({posName, std::move(description), std::move(defaultValueStr), required, true});
 
