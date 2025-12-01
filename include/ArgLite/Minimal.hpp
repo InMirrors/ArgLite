@@ -125,11 +125,16 @@ public:
      * @details Must be called after all get/hasFlag calls. Should be called in order.
      * @param name Argument name, used for the help message (e.g., "input-file").
      * @param description Argument description.
-     * @param required If true and the user does not provide the argument, the program will report an error and exit.
+     * @param required If true and the user does not provide the argument,
+                       the program will report an error and exit.
+        @param defaultValue The default value to return if the argument
+                            is not provided and not required.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
-    static std::string getPositional(const std::string &posName, const std::string &description, bool required = true) {
-        return getPositional_(posName, description, required, data_);
+    static std::string getPositional(
+        const std::string &posName, const std::string &description,
+        bool required = true, const std::string &defaultValue = "") {
+        return getPositional_(posName, description, required, defaultValue, data_);
     }
 
     /**
@@ -137,12 +142,16 @@ public:
      * @details Must be called after all getPositional calls.
      * @param name Argument name, used for the help message (e.g., "extra-files").
      * @param description Argument description.
-     * @param required If true and there are no remaining arguments, the program will report an error and exit.
+     * @param required If true and there are no remaining arguments,
+                       the program will report an error and exit.
+        @param defaultValue The default value to return if the argument
+                            is not provided and not required.
      * @return A string vector containing all remaining arguments.
      */
     static std::vector<std::string> getRemainingPositionals(
-        const std::string &posName, const std::string &description, bool required = true) {
-        return getRemainingPositionals_(posName, description, required, data_);
+        const std::string &posName, const std::string &description,
+        bool required = true, const std::vector<std::string> &defaultValue = {}) {
+        return getRemainingPositionals_(posName, description, required, defaultValue, data_);
     }
 
     /**
@@ -208,7 +217,9 @@ private:
     struct PositionalHelpInfo {
         std::string name;
         std::string description;
-        bool        required;
+        std::string defaultValue;
+        bool        isRequired;
+        bool        isRemaining;
     };
 
     using OptMap = std::unordered_map<std::string, OptionInfo>;
@@ -217,6 +228,7 @@ private:
         std::string programName;
         std::string programDescription;
         std::string shortNonFlagOptsStr;
+        size_t      positionalIdx;
         // Containers
         OptMap                          options;
         std::vector<OptionHelpInfo>     optionHelpEntries;
@@ -229,7 +241,6 @@ private:
     static inline int                argc_;
     static inline const char *const *argv_;
 
-    static inline size_t       positionalIdx_;
     static inline size_t       descriptionIndent_ = 25; // NOLINT(readability-magic-numbers)
     static inline std::string  programVersion_;
     static inline InternalData data_;
@@ -242,8 +253,8 @@ private:
     static inline long long                getInt_(std::string_view optName, const std::string &description, long long defaultValue, InternalData &data);
     static inline double                   getDouble_(std::string_view optName, const std::string &description, double defaultValue, InternalData &data);
     static inline bool                     getBool_(std::string_view optName, const std::string &description, bool defaultValue, InternalData &data);
-    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, InternalData &data);
-    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, InternalData &data);
+    static inline std::string              getPositional_(const std::string &posName, const std::string &description, bool required, const std::string &defaultValue, InternalData &data);
+    static inline std::vector<std::string> getRemainingPositionals_(const std::string &posName, const std::string &description, bool isRequired, const std::vector<std::string> &defaultValue, InternalData &data);
     // Helper functions for get functions
     static inline void appendOptValErrorMsg(InternalData &data, std::string_view optName, const std::string &typeName, const std::string &valueStr);
     static inline void appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg);
@@ -459,7 +470,8 @@ inline void Parser::printHelpUsage(const InternalData &data, std::string_view cm
 #endif
     if (!data.optionHelpEntries.empty()) std::cout << " [OPTIONS]";
     for (const auto &p : data.positionalHelpEntries) {
-        std::cout << " " << (p.required ? "" : "[") << p.name << (p.required ? "" : "]");
+        std::cout << " " << (p.isRequired ? "" : "[") << p.name << (p.isRequired ? "" : "]");
+        if (p.isRemaining) { std::cout << "..."; }
     }
     std::cout << '\n';
 }
@@ -467,17 +479,21 @@ inline void Parser::printHelpUsage(const InternalData &data, std::string_view cm
 inline void Parser::printHelpPositional(const InternalData &data) {
     if (data.positionalHelpEntries.empty()) { return; }
 
+    // Print header
 #ifdef ARGLITE_ENABLE_FORMATTER
     std::cout << '\n'
               << Formatter::boldUnderline("Positional Arguments:") << '\n';
 #else
     std::cout << "\nPositional Arguments:\n";
 #endif
+
     size_t maxNameWidth = 0;
     for (const auto &p : data.positionalHelpEntries) {
         maxNameWidth = std::max(maxNameWidth, p.name.length());
     }
+    // Print each positional argument
     for (const auto &p : data.positionalHelpEntries) {
+        // Print name
         std::cout << "  " << std::left;
 #ifdef ARGLITE_ENABLE_FORMATTER
         constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
@@ -486,13 +502,20 @@ inline void Parser::printHelpPositional(const InternalData &data) {
 #else
         std::cout << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name;
 #endif
-        std::cout << p.description << '\n';
+
+        // Print description
+        std::string descStr = p.description;
+        if (!p.defaultValue.empty()) {
+            descStr.append(" [default: ").append(p.defaultValue).append("]");
+        }
+        std::cout << descStr << '\n';
     }
 }
 
 inline void Parser::printHelpOptions(const InternalData &data) {
     if (data.optionHelpEntries.empty()) { return; }
 
+    // Print header
 #ifdef ARGLITE_ENABLE_FORMATTER
     std::cout << '\n'
               << Formatter::boldUnderline("Options:") << '\n';
@@ -500,7 +523,9 @@ inline void Parser::printHelpOptions(const InternalData &data) {
     std::cout << "\nOptions:\n";
 #endif
 
+    // Print each option
     for (const auto &o : data.optionHelpEntries) {
+        // Print name
         std::string optStr("  ");
         if (!o.shortOpt.empty()) {
             optStr += o.shortOpt;
@@ -524,6 +549,7 @@ inline void Parser::printHelpOptions(const InternalData &data) {
         }
         std::cout << optStr;
 
+        // Print description
         std::string descStr = o.description;
         if (!o.defaultValue.empty()) {
             descStr.append(" [default: ").append(o.defaultValue).append("]");
@@ -544,6 +570,11 @@ inline void Parser::printHelpOptions(const InternalData &data) {
 
 // Clear internal data
 inline void Parser::clearData(InternalData &data) {
+    data.programName.clear();
+    data.programDescription.clear();
+    data.shortNonFlagOptsStr.clear();
+    data.positionalIdx = 0;
+
     InternalData temp;
     temp.options.swap(data.options);
     temp.optionHelpEntries.swap(data.optionHelpEntries);

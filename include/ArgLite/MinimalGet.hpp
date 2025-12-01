@@ -117,37 +117,53 @@ inline bool Parser::getBool_(
 
 inline std::string Parser::getPositional_(
     const std::string &posName, const std::string &description, bool isRequired,
-    InternalData &data) {
+    const std::string &defaultValue, InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
-    data.positionalHelpEntries.push_back({posName, description, isRequired});
-    if (positionalIdx_ < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[positionalIdx_];
-        positionalIdx_++;
+    data.positionalHelpEntries.push_back({posName, description, defaultValue, isRequired});
+
+    if (data.positionalIdx < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
+        data.positionalIdx++;
         return argv_[argvIdx];
     }
+
     if (isRequired) {
         appendPosValErrorMsg(data, posName, "Missing required positional argument '");
     }
-    return "";
+    return defaultValue;
 }
 
 inline std::vector<std::string> Parser::getRemainingPositionals_(
     const std::string &posName, const std::string &description, bool required,
-    InternalData &data) {
+    const std::vector<std::string> &defaultValue, InternalData &data) {
 
     fixPositionalArgsArray(data.positionalArgsIndices, data.options);
 
-    data.positionalHelpEntries.push_back({posName, description, required});
-    std::vector<std::string> remaining;
-    while (positionalIdx_ < data.positionalArgsIndices.size()) {
-        int argvIdx = data.positionalArgsIndices[positionalIdx_];
-        remaining.emplace_back(argv_[argvIdx]);
-        positionalIdx_++;
+    // Construct the default value string
+    std::string defaultValueStr("[\"");
+    for (unsigned long long i = 0; i < defaultValue.size(); i++) {
+        if (i != 0) { defaultValueStr.append("\", \""); }
+        defaultValueStr.append(defaultValue[i]);
     }
-    if (required && remaining.empty()) {
-        appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
+    defaultValueStr.append("\"]");
+
+    data.positionalHelpEntries.push_back({posName, description, std::move(defaultValueStr), required, true});
+
+    std::vector<std::string> remaining;
+    while (data.positionalIdx < data.positionalArgsIndices.size()) {
+        int argvIdx = data.positionalArgsIndices[data.positionalIdx];
+        remaining.emplace_back(argv_[argvIdx]);
+        data.positionalIdx++;
+    }
+
+    if (remaining.empty()) {
+        if (required) {
+            appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
+        } else {
+            return defaultValue;
+        }
     }
     return remaining;
 }

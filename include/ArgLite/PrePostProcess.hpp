@@ -202,14 +202,17 @@ inline void Parser::printHelpUsage(const InternalData &data, std::string_view cm
     if (!subCmdPtrs_.empty() && isMainCmdActive()) { std::cout << " [SUBCOMMAND]"; }
     if (!data.optionHelpEntries.empty()) { std::cout << " [OPTIONS]"; }
 
+    // Print required options
     for (const auto &o : data.optionHelpEntries) {
         if (o.isRequired) {
             std::cout << ' ' << o.longOpt << "=<" << o.typeName << ">";
         }
     }
 
+    // Print positional arguments
     for (const auto &p : data.positionalHelpEntries) {
-        std::cout << " " << (p.required ? "" : "[") << p.name << (p.required ? "" : "]");
+        std::cout << " " << (p.isRequired ? "" : "[") << p.name << (p.isRequired ? "" : "]");
+        if (p.isRemaining) { std::cout << "..."; }
     }
     std::cout << '\n';
 }
@@ -239,17 +242,21 @@ inline void Parser::printHelpSubCmd(const std::vector<SubParser *> &subCmdPtrs) 
 inline void Parser::printHelpPositional(const InternalData &data) {
     if (data.positionalHelpEntries.empty()) { return; }
 
+    // Print header
 #ifdef ARGLITE_ENABLE_FORMATTER
     std::cout << '\n'
               << Formatter::boldUnderline("Positional Arguments:") << '\n';
 #else
     std::cout << "\nPositional Arguments:\n";
 #endif
+
     size_t maxNameWidth = 0;
     for (const auto &p : data.positionalHelpEntries) {
         maxNameWidth = std::max(maxNameWidth, p.name.length());
     }
+    // Print each positional argument
     for (const auto &p : data.positionalHelpEntries) {
+        // Print name
         std::cout << "  " << std::left;
 #ifdef ARGLITE_ENABLE_FORMATTER
         constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
@@ -258,13 +265,20 @@ inline void Parser::printHelpPositional(const InternalData &data) {
 #else
         std::cout << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name;
 #endif
-        std::cout << p.description << '\n';
+
+        // Print description
+        std::string descStr = p.description;
+        if (!p.defaultValue.empty()) {
+            descStr.append(" [default: ").append(p.defaultValue).append("]");
+        }
+        std::cout << descStr << '\n';
     }
 }
 
 inline void Parser::printHelpOptions(const InternalData &data) {
     if (data.optionHelpEntries.empty()) { return; }
 
+    // Print header
 #ifdef ARGLITE_ENABLE_FORMATTER
     std::cout << '\n'
               << Formatter::boldUnderline("Options:") << '\n';
@@ -272,7 +286,9 @@ inline void Parser::printHelpOptions(const InternalData &data) {
     std::cout << "\nOptions:\n";
 #endif
 
+    // Print each option
     for (const auto &o : data.optionHelpEntries) {
+        // Print name
         std::string optStr("  ");
         if (!o.shortOpt.empty()) {
             optStr += o.shortOpt;
@@ -296,6 +312,7 @@ inline void Parser::printHelpOptions(const InternalData &data) {
         }
         std::cout << optStr;
 
+        // Print description
         std::string descStr = o.description;
         if (!o.defaultValue.empty()) {
             descStr.append(" [default: ").append(o.defaultValue).append("]");
@@ -316,6 +333,9 @@ inline void Parser::printHelpOptions(const InternalData &data) {
 
 // Clear internal data
 inline void Parser::clearData(InternalData &data) {
+    data.cmdName.clear();
+    data.positionalIdx = 0;
+
     InternalData temp;
     temp.options.swap(data.options);
     temp.optionHelpEntries.swap(data.optionHelpEntries);
