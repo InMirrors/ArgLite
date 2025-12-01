@@ -2,30 +2,33 @@
 
 写这个库的原因: 想找一个轻量并且易用的库，但没找到满意的。
 
-- [CLI11](https://github.com/CLIUtils/CLI11) 太重了。
+- [CLI11](https://github.com/CLIUtils/CLI11) 功能全面，接口易用，但太重了。
 - [cxxopts](https://github.com/jarro2783/cxxopts) 号称轻量但其实也挺重的，而且接口不好用。
 - [args](https://github.com/Taywee/args) 更轻量，但接口不好用。
-- [argh](https://github.com/adishavit/argh) 足够轻量但太简陋了，连自动生成帮助都没有。
-- [argparse](https://github.com/morrisfranken/argparse) 足够轻量，接口易用，实现的方式很巧妙，我最满意的库。不过帮助的格式比较特殊，不支持一些语法，例如 `-n123`。
+- [argh](https://github.com/adishavit/argh) 足够轻量但太简陋了，连自动生成帮助都没有，所以也不好用。
+- [argparse](https://github.com/morrisfranken/argparse) 足够轻量，接口易用，实现的方式很巧妙，是我最满意的库。不过帮助的格式比较特殊，不支持一些语法，例如 `-n123`。
 
 所以我就写一个真正轻量、易用并且功能足够丰富的库。关于它有多轻量，请查阅[跑分](#跑分)章节。
 
 本库有两个版本，一个是精简版，一个是完整版，分别 `#include "ArgLite/Minimal.hpp"`, `#include "ArgLite/Core.hpp"` 就能使用对应的版本。因为是头文件库，所以 include 后就能正常使用。
 
-因为一开始就不追求全能，所以采用受限但轻量的特殊思路: 预处理后在注册单个选项时就返回解析结果，而不是先注册全部选项然后再解析。后来发现这种思路其实能实现很多高级功能，只是要引入更复杂的设计。所以分成两个版本，精简版仍保持极致的轻量，支持基本功能；完整版支持许多高级功能，比精简版复杂，但仍比大部分库轻量。当然完整版的功能还是比不上 CLI11 这种全能库，只是支持的功能更多。
+因为一开始就不追求全能，所以采用受限但轻量的特殊思路: 预处理后在注册单个选项时就返回解析结果，而不是先注册全部选项然后再解析。后来发现这种思路其实能实现很多高级功能，只是要引入更复杂的设计。所以分成两个版本，精简版仍保持极致的轻量，支持基本功能；完整版支持许多高级功能，比精简版复杂，但仍比大部分库轻量。当然完整版的功能还是比不上 CLI11 这种全能库，定位还是轻量库，只是支持的功能更多。
 
 精简版支持以下功能
 
 - 位置参数: `arg1 arg2 ...`
 - 标志选项: `-v`, `--verbose`
-- 带值选项: `-f file`, `--file=file`, `-ffile`
+- 带值选项: `-f path`, `--file=path`, `-fpath`
 - 短选项组合: `-abc` (等同于 `-a -b -c`)
 - 短选项组合带值: `-abcf file` (等同于 `-a -b -c -f file`)
-- 对于标志参数 `-v, --verbose`, `-a` 和带值的选项 `-f, --file`，以下写法的效果一样
+- 所以对于标志参数 `-v, --verbose`, `-a` 和带值的选项 `-f, --file`，以下写法的效果一样
   - `--verbose -a --file path`
   - `-va --file=path`
   - `-vaf path`
   - `-vafpath`
+- 灵活的位置参数: 位置参数不一定要在末尾，不在带值选项后面就行。以下写法的效果一样
+  - `-v -n 123 file1 file2`
+  - `-v file1 -n 123 file2`
 - 互斥选项: `--enable-feature`, `--disable-feature`
 - 选项结束标记: `--` 后面的参数都当成位置参数
 - 解析 `bool`, `long long`, `double`, `std::string`
@@ -58,18 +61,18 @@ using namespace std;
 using ArgLite::Parser;
 
 int main(int argc, char **argv) {
-    // Step 1: Preprocessing
+    // 步骤1: 预处理，都是写这句
     Parser::preprocess(argc, argv);
 
-    // Step 2: Get command line arguments
-    auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
-    auto number     = Parser::getInt("number", "Number of iterations."); // long option only
-    auto rate       = Parser::getDouble("r", "Rate.", 123.0); // short option only, with default value
+    // 步骤2: 获取命令行参数
+    auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output."); // 同时设置长短选项
+    auto number     = Parser::getInt("number", "Number of iterations."); // 仅设置长选项
+    auto rate       = Parser::getDouble("r", "Rate.", 123.0); // 仅设置短选项并设置默认值
     auto outputPath = Parser::getString("o,out-path", "Output file Path.", ".");
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
-    // Step 3: Postprocessing
+    // 步骤3: 后处理，没有特殊需求的话直接调用这个函数就行了
     Parser::runAllPostprocess();
 
     cout << "Verbose    : " << boolalpha << verbose << '\n';
@@ -84,8 +87,8 @@ int main(int argc, char **argv) {
 }
 ```
 
-```pwsh
-> app --help
+```
+> ./app --help
 Usage: app [OPTIONS] output-file input-files
 
 Positional Arguments:
@@ -336,6 +339,8 @@ std::vector<std::string> getRemainingPositionals(
 
 两个接口都有一个可选参数 `required`，只有后面调用的函数才能设置为 `false`。类似于 C++ 中的函数默认参数，只有后面的才能可选，并且不能跳过中间的可选参数写后面的可选参数。可选时分别返回空的字符串和空的字符串数组。
 
+因为绝大部分应用的位置参数都是字符串类型，所以为了轻量和易用，本库只支持以字符串形式解析位置参数。如果你需要解析成其他类型，请尝试改成带值选项或使用其他库。如果非要用这个库并且用位置参数形式提供，你可以获取字符串后手动转换，或者修改源代码，暴露 `ArgLite::Parser::convertType<T>()`, 它支持 `bool`, `char`, `std::optional` 这几种标准库不支持转换的类型。
+
 ### 后处理
 
 ```cpp
@@ -376,13 +381,19 @@ bool runAllPostprocess(bool notExit = false);
 
 一般情况下直接运行 `runAllPostprocess()` 就行。后面几个函数都会在出错时直接退出程序。如果你不想直接退出程序的话，传入 `true`，函数会在发生错误时返回 `true`。如果你需要更精细的控制，例如有未知选项时不退出，但解析错误时退出，可以依次运行 `tryToPrintHelp(); auto hasInvalidOpts = tryToPrintInvalidOpts(true); finalize();`。
 
+可见本库不会抛出异常，用返回值判断是否出现错误。因为这种轻量库会出现错误的地方基本只有传入错误的命令行参数，返回值已经足够，并且契合轻量的定位。
+
 ### 选项分组
 
 todo
 
 ### 子命令
 
-**完整版独有。**通过创建 `SubParser` 对象来定义子命令。对于本库，有这条规则：“静态方法用于主命令，成员方法用于子命令”。所以不使用子命令功能时，你不会创建任何对象，使用子命令功能时也只会创建子命令对象。绝大部分同类库都会创建一个对象用于解析命令行参数。本库为了轻量和易用，采用以静态为主的设计思路。毕竟一般都是只解析一份命令行参数，不会多次解析，所以静态方法和静态数据就能满足。
+**完整版独有。**通过创建 `SubParser` 对象来定义子命令。对于本库，有这条规则：“**静态方法用于主命令，成员方法用于子命令**”。所以不使用子命令功能时，你不会创建任何对象，使用子命令功能时也只会创建子命令对象。绝大部分同类库都会创建一个对象用于解析命令行参数。本库为了轻量和易用，采用以静态为主的设计思路。毕竟一般都是只解析一份命令行参数，不会多次解析，所以静态方法和静态数据就能满足。
+
+本库只支持一级子命令，不支持多级子命令。需要多级子命令的程序应该也不会要求命令行参数解析库能做得很轻量，不是本库的目标用户。
+
+为什么只支持一级子命令？类本身就有层级结构，静态的是底层，成员的是上一层，并且前者只有一份，后者可以有多份。这个结构正好是一级子命令的样子，所以可以利用这个特点轻松地实现一级子命令。`Parser` 和 `SubParser` 对象本身没有任何的层级结构，是借助语言特性才能以低成本形成二级树形结构，要实现更高层级的子命令的话会让库显著变重。因此现在没有多级子命令功能，以后大概率也不会有。
 
 具体用法参考这个[示例](examples/subcommand.cpp)，这个示例也演示了完整版的绝大部分功能。
 
