@@ -30,8 +30,8 @@ bool Parser::hasMutualExFlag_(const GetMutualExArgs &args, InternalData &data) {
     auto [shortTrueOpt, longTrueOpt]   = parseOptNameAsPair(args.trueOptName);
     auto [shortFalseOpt, longFalseOpt] = parseOptNameAsPair(args.falseOptName);
 
-    data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, args.trueDescription, ""});
-    data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, args.falseDescription, ""});
+    data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, args.trueDescription, "", "", args.defaultValue});
+    data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, args.falseDescription, "", "", !args.defaultValue});
 
     auto trueNode  = findOption(shortTrueOpt, longTrueOpt, data);
     auto falseNode = findOption(shortFalseOpt, longFalseOpt, data);

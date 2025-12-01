@@ -223,6 +223,7 @@ private:
         std::string defaultValue;
         std::string typeName;
         bool        isRequired;
+        bool        isMutualExDefault;
     };
 
     struct PositionalHelpInfo {

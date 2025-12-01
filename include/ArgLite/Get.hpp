@@ -41,8 +41,8 @@ bool Parser::hasMutualExFlag_(HasMutualExArgs args, InternalData &data) {
     auto [shortTrueOpt, longTrueOpt]   = parseOptNameAsPair(args.trueOptName);
     auto [shortFalseOpt, longFalseOpt] = parseOptNameAsPair(args.falseOptName);
 
-    data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, std::move(args.trueDescription), ""});
-    data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, std::move(args.falseDescription), ""});
+    data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, std::move(args.trueDescription), "", "", false, args.defaultValue});
+    data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, std::move(args.falseDescription), "", "", false, !args.defaultValue});
 
     auto trueLongNode   = data.options.extract(longTrueOpt);
     auto trueShortNode  = data.options.extract(shortTrueOpt);

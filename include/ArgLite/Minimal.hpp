@@ -212,6 +212,7 @@ private:
         std::string description;
         std::string defaultValue;
         std::string typeName;
+        bool        isMutualExDefault;
     };
 
     struct PositionalHelpInfo {
@@ -554,6 +555,7 @@ inline void Parser::printHelpOptions(const InternalData &data) {
         if (!o.defaultValue.empty()) {
             descStr.append(" [default: ").append(o.defaultValue).append("]");
         }
+        if (o.isMutualExDefault) { descStr.append(" (default)"); }
         // the option string is too long, start a new line
         // -2: two separeting spaces after the type name
         auto optPartLength = optStr.length();
