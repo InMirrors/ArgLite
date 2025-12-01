@@ -107,6 +107,7 @@ public:
      */
     template <typename T>
     static OptValBuilder<T> get(std::string_view optName, std::string description) {
+        // This class is responsible for checking the currently active command
         return OptValBuilder<T>(optName, std::move(description), data_, nullptr);
     }
 
@@ -124,6 +125,8 @@ public:
     static std::string getPositional(
         const std::string &posName, std::string description,
         bool required = true, std::string defaultValue = "") {
+
+        if (!isMainCmdActive()) { return ""; }
         return getPositional_(posName, std::move(description), required, std::move(defaultValue), data_);
     }
 
@@ -141,6 +144,8 @@ public:
     static std::vector<std::string> getRemainingPositionals(
         const std::string &posName, const std::string &description,
         bool required = true, const std::vector<std::string> &defaultValue = {}) {
+
+        if (!isMainCmdActive()) { return {}; }
         return getRemainingPositionals_(posName, description, required, defaultValue, data_);
     }
 
@@ -378,6 +383,7 @@ public:
      */
     template <typename T>
     Parser::OptValBuilder<T> get(std::string_view optName, std::string description) {
+        // This class is responsible for checking the currently active command
         return Parser::OptValBuilder<T>(optName, std::move(description), Parser::data_, this);
     }
 
@@ -395,6 +401,7 @@ public:
     std::string getPositional(
         const std::string &posName, std::string description,
         bool required = true, std::string defaultValue = "") {
+
         if (!isActive()) { return ""; }
         return Parser::getPositional_(posName, std::move(description), required, std::move(defaultValue), Parser::data_);
     }
@@ -413,6 +420,7 @@ public:
     std::vector<std::string> getRemainingPositionals(
         const std::string &posName, std::string description,
         bool required = true, const std::vector<std::string> &defaultValue = {}) {
+
         if (!isActive()) { return {}; }
         return Parser::getRemainingPositionals_(posName, std::move(description), required, defaultValue, Parser::data_);
     }
