@@ -1,3 +1,4 @@
+import sys
 import os
 import test_utils
 from test_utils import colored_print, test_case, reset_test_counter
@@ -90,6 +91,14 @@ def main():
         ],
         expected_return_code=1
     )
+
+    if all_tests_passed:
+        colored_print("\nAll tests PASSED!", color="green")
+        sys.exit(0)
+    else:
+        colored_print("\nSome tests FAILED!", color="red", file=sys.stderr)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     _local_binary_name = "other_features"

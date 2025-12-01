@@ -1,19 +1,24 @@
 import subprocess
 import sys
+import os
+import time
+from typing import Optional
 
 # --- Color Output Configuration ---
 ENABLE_COLOR_OUTPUT = True
 
 # ANSI color codes
 COLORS = {
-    "reset": "\033[0m",
-    "blue": "\033[94m",
-    "green": "\033[92m",
-    "red": "\033[91m",
-    "yellow": "\033[93m",
-    "cyan": "\033[96m",
+    "reset"  : "\033[0m",
+    "black"  : "\033[30m",
+    "red"    : "\033[91m",
+    "green"  : "\033[92m",
+    "yellow" : "\033[93m",
+    "blue"   : "\033[94m",
     "magenta": "\033[95m",
-    "bold": "\033[1m",
+    "cyan"   : "\033[96m",
+    "white"  : "\033[97m",
+    "bold"     : "\033[1m",
     "underline": "\033[4m"
 }
 
@@ -28,10 +33,79 @@ def colored_print(text, color=None, end='\n', file=sys.stdout):
 
 # --- End Color Output Configuration ---
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
+INCLUDE_PATH = os.path.abspath(os.path.join(REPO_DIR, 'include'))
+BIN_DIR = os.path.abspath(os.path.join(REPO_DIR, 'bin'))
 BINARY_PATH = None
 test_counter = 0
 
-def run_binary(args: list, binary_path: str | None = None):
+def compile_cpp(source_path: str, compile_args: Optional[list] = None) -> tuple[str, int, float]:
+    """
+    Compiles a C++ source file using g++ and returns information about the compilation.
+
+    Args:
+        source_path (str): The path to the source file.
+        compile_args (Optional[list], optional): A list of additional arguments for g++. Defaults to None.
+
+    Returns:
+        tuple[str, int, float]: A tuple containing:
+            - The path to the compiled binary.
+            - The size of the binary in bytes.
+            - The compilation time in seconds.
+    """
+    if not os.path.exists(BIN_DIR):
+        os.makedirs(BIN_DIR)
+
+    source_filename = os.path.basename(source_path)
+    base_name, _ = os.path.splitext(source_filename)
+    output_name = f"{base_name}.exe" if sys.platform == "win32" else base_name
+    output_path = os.path.join(BIN_DIR, output_name)
+
+    command = ['g++', source_path, '-o', output_path]
+    if compile_args:
+        command.extend(compile_args)
+
+    colored_print(f"Compiling: {' '.join(command)}", color="blue")
+
+    start_time = time.time()
+
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True, encoding='utf-8')
+
+        end_time = time.time()
+        compile_time = end_time - start_time
+
+        if result.stdout:
+            colored_print("Compiler STDOUT:", color="blue")
+            print(result.stdout)
+        if result.stderr:
+            colored_print("Compiler STDERR:", color="blue")
+            print(result.stderr)
+
+        binary_size = os.path.getsize(output_path)
+        colored_print(f"Successfully compiled {source_path} to {output_path}", color="green")
+        colored_print(f"Binary size: {binary_size} bytes, Time: {compile_time:.2f}s", color="green")
+
+        return output_path, binary_size, compile_time
+
+    except subprocess.CalledProcessError as e:
+        colored_print(f"Compilation failed for {source_path}.", color="red", file=sys.stderr)
+        colored_print(f"Return Code: {e.returncode}", color="red", file=sys.stderr)
+        colored_print("STDOUT:", color="red", file=sys.stderr)
+        print(e.stdout, file=sys.stderr)
+        colored_print("STDERR:", color="red", file=sys.stderr)
+        print(e.stderr, file=sys.stderr)
+        sys.exit(1)
+    except FileNotFoundError:
+        colored_print("Error: g++ not found. Please ensure it is installed and in your PATH.", color="red", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        colored_print(f"An unexpected error occurred during compilation: {e}", color="red", file=sys.stderr)
+        sys.exit(1)
+
+
+def run_binary(args: list, binary_path: Optional[str] = None) -> tuple[str, str, int]:
     """
     Runs the binary executable and captures its stdout, stderr, and return code.
     If binary_path is not provided, it uses the global BINARY_PATH.
@@ -53,11 +127,12 @@ def run_binary(args: list, binary_path: str | None = None):
         colored_print(f"An error occurred: {e}", color="red", file=sys.stderr)
         sys.exit(1)
 
+
 def test_case(name: str, args: list,
               expected_output_substrings: list[str] = [],
               expected_error_keywords: list[str] = [],
               expected_return_code: int = 0,
-              binary_path: str | None = None) -> bool:
+              binary_path: Optional[str] = None) -> bool:
     """
     Runs a test case and validates the results.
 
