@@ -1,9 +1,6 @@
 #define ARGLITE_ENABLE_FORMATTER
 
 #include "ArgLite/Minimal.hpp"
-#include <ios>
-#include <iostream>
-#include <string>
 
 using namespace std;
 using ArgLite::Parser;
@@ -14,10 +11,12 @@ int main(int argc, char **argv) {
     Parser::setShortNonFlagOptsStr("diro");
     Parser::preprocess(argc, argv);
 
-    auto verbose    = Parser::hasFlag("v,verbose", "Enable verbose output.");
-    auto switch1    = Parser::hasFlag("1,switch1", "Switch 1.");
-    auto switch2    = Parser::hasFlag("2,switch2", "Switch 2.");
-    auto enableX    = Parser::hasMutualExFlag({"x,enable-x", "Enable feature x.", "X,disable-x", "Disable feature x.", false});
+    Parser::insertOptHeader("Flags");
+    auto verbose = Parser::hasFlag("v,verbose", "Enable verbose output.");
+    auto switch1 = Parser::hasFlag("1,switch1", "Switch 1.");
+    auto switch2 = Parser::hasFlag("2,switch2", "Switch 2.");
+    auto enableX = Parser::hasMutualExFlag({"x,enable-x", "Enable feature x.", "X,disable-x", "Disable feature x.", false});
+    Parser::insertOptHeader("Options");
     auto debug      = Parser::getBool("d,whether-enable-debug-mode", "Whether enable debug mode.");
     auto indent     = Parser::getInt("i,indent", "Option Description indent.", 26);
     auto number     = Parser::getInt("number", "Number of iterations."); // long option only

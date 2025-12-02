@@ -127,7 +127,7 @@ public:
      * @param description Argument description.
      * @param required If true and the user does not provide the argument,
                        the program will report an error and exit.
-        @param defaultValue The default value to return if the argument
+     * @param defaultValue The default value to return if the argument
                             is not provided and not required.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
@@ -144,7 +144,7 @@ public:
      * @param description Argument description.
      * @param required If true and there are no remaining arguments,
                        the program will report an error and exit.
-        @param defaultValue The default value to return if the argument
+     * @param defaultValue The default value to return if the argument
                             is not provided and not required.
      * @return A string vector containing all remaining arguments.
      */
@@ -153,6 +153,13 @@ public:
         bool required = true, const std::vector<std::string> &defaultValue = {}) {
         return getRemainingPositionals_(posName, description, required, defaultValue, data_);
     }
+
+    /**
+     * @brief Inserts a custom option header in the help message.
+     * @details See the README for details.
+     * @param header The option header text.
+     */
+    static void insertOptHeader(std::string header) { insertOptHeader_(std::move(header)); }
 
     /**
      * @brief Changes the description indent of option descriptions in the help message. Default is 25.
@@ -213,6 +220,7 @@ private:
         std::string defaultValue;
         std::string typeName;
         bool        isMutualExDefault;
+        bool        isOptHeader; // The first member (shortOpt) will be an option header if it is true
     };
 
     struct PositionalHelpInfo {
@@ -230,6 +238,7 @@ private:
         std::string programDescription;
         std::string shortNonFlagOptsStr;
         size_t      positionalIdx;
+        bool        hasCustumOptHeader;
         // Containers
         OptMap                          options;
         std::vector<OptionHelpInfo>     optionHelpEntries;
@@ -282,6 +291,11 @@ private:
     static inline void clearData(InternalData &data);
     static inline bool finalize_(InternalData &data, bool notExit = false);
     static inline bool runAllPostprocess_(InternalData &data, bool notExit = false);
+    // Other functions
+    static void insertOptHeader_(std::string header) {
+        data_.hasCustumOptHeader = true;
+        data_.optionHelpEntries.push_back({std::move(header), "", "", "", "", false, true});
+    }
 
 #ifdef ARGLITE_ENABLE_FORMATTER
     static inline const std::string ERROR_STR = Formatter::red("Error: ");
@@ -517,15 +531,28 @@ inline void Parser::printHelpOptions(const InternalData &data) {
     if (data.optionHelpEntries.empty()) { return; }
 
     // Print header
+    if (!data.hasCustumOptHeader) {
 #ifdef ARGLITE_ENABLE_FORMATTER
-    std::cout << '\n'
-              << Formatter::boldUnderline("Options:") << '\n';
+        std::cout << '\n'
+                  << Formatter::boldUnderline("Options:") << '\n';
 #else
-    std::cout << "\nOptions:\n";
+        std::cout << "\nOptions:\n";
 #endif
+    }
 
     // Print each option
     for (const auto &o : data.optionHelpEntries) {
+        // It is a option header
+        if (o.isOptHeader) {
+            std::cout << '\n';
+#ifdef ARGLITE_ENABLE_FORMATTER
+            std::cout << Formatter::boldUnderline(o.shortOpt + ":\n");
+#else
+            std::cout << o.shortOpt + ":\n";
+#endif
+            continue;
+        }
+
         // Print name
         std::string optStr("  ");
         if (!o.shortOpt.empty()) {

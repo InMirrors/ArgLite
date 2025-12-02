@@ -279,15 +279,28 @@ inline void Parser::printHelpOptions(const InternalData &data) {
     if (data.optionHelpEntries.empty()) { return; }
 
     // Print header
+    if (!data.hasCustumOptHeader) {
 #ifdef ARGLITE_ENABLE_FORMATTER
-    std::cout << '\n'
-              << Formatter::boldUnderline("Options:") << '\n';
+        std::cout << '\n'
+                  << Formatter::boldUnderline("Options:") << '\n';
 #else
-    std::cout << "\nOptions:\n";
+        std::cout << "\nOptions:\n";
 #endif
+    }
 
     // Print each option
     for (const auto &o : data.optionHelpEntries) {
+        // It is a option header
+        if (o.isOptHeader) {
+            std::cout << '\n';
+#ifdef ARGLITE_ENABLE_FORMATTER
+            std::cout << Formatter::boldUnderline(o.shortOpt + ":\n");
+#else
+            std::cout << o.shortOpt + ":\n";
+#endif
+            continue;
+        }
+
         // Print name
         std::string optStr("  ");
         if (!o.shortOpt.empty()) {

@@ -118,7 +118,7 @@ public:
      * @param description Argument description.
      * @param required If true and the user does not provide the argument,
                        the program will report an error and exit.
-        @param defaultValue The default value to return if the argument
+     * @param defaultValue The default value to return if the argument
                             is not provided and not required.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
@@ -137,7 +137,7 @@ public:
      * @param description Argument description.
      * @param required If true and there are no remaining arguments,
                        the program will report an error and exit.
-        @param defaultValue The default value to return if the argument
+     * @param defaultValue The default value to return if the argument
                             is not provided and not required.
      * @return A string vector containing all remaining arguments.
      */
@@ -147,6 +147,16 @@ public:
 
         if (!isMainCmdActive()) { return {}; }
         return getRemainingPositionals_(posName, description, required, defaultValue, data_);
+    }
+
+    /**
+     * @brief Inserts a custom option header in the help message.
+     * @details See the README for details.
+     * @param header The option header text.
+     */
+    static void insertOptHeader(std::string header) {
+        if (!isMainCmdActive()) { return; }
+        insertOptHeader_(std::move(header));
     }
 
     /**
@@ -224,6 +234,7 @@ private:
         std::string typeName;
         bool        isRequired;
         bool        isMutualExDefault;
+        bool        isOptHeader; // The first member (shortOpt) will be an option header if it is true
     };
 
     struct PositionalHelpInfo {
@@ -239,6 +250,7 @@ private:
     struct InternalData {
         std::string cmdName;
         size_t      positionalIdx;
+        bool        hasCustumOptHeader;
         // Containers
         OptMap                          options;
         std::vector<OptionHelpInfo>     optionHelpEntries;
@@ -298,6 +310,11 @@ private:
     static inline void clearData(InternalData &data);
     static inline bool finalize_(InternalData &data, bool notExit = false);
     static inline bool runAllPostprocess_(InternalData &data, bool notExit = false);
+    // Other functions
+    static void insertOptHeader_(std::string header) {
+        data_.hasCustumOptHeader = true;
+        data_.optionHelpEntries.push_back({std::move(header), "", "", "", "", false, false, true});
+    }
 
 #ifdef ARGLITE_ENABLE_FORMATTER
     static inline const std::string ERROR_STR = Formatter::red("Error: ");
@@ -395,7 +412,7 @@ public:
      * @param description Argument description.
      * @param required If true and the user does not provide the argument,
                        the program will report an error and exit.
-        @param defaultValue The default value to return if the argument
+     * @param defaultValue The default value to return if the argument
                             is not provided and not required.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
@@ -414,7 +431,7 @@ public:
      * @param description Argument description.
      * @param required If true and there are no remaining arguments,
                        the program will report an error and exit.
-        @param defaultValue The default value to return if the argument
+     * @param defaultValue The default value to return if the argument
                             is not provided and not required.
      * @return A string vector containing all remaining arguments.
      */
@@ -424,6 +441,16 @@ public:
 
         if (!isActive()) { return {}; }
         return Parser::getRemainingPositionals_(posName, std::move(description), required, defaultValue, Parser::data_);
+    }
+
+    /**
+     * @brief Inserts a custom option header in the help message.
+     * @details See the README for details.
+     * @param header The option header text.
+     */
+    void insertOptHeader(std::string header) {
+        if (!isActive()) { return; }
+        Parser::insertOptHeader_(std::move(header));
     }
 
 private:

@@ -29,15 +29,17 @@ int main(int argc, char **argv) {
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
-    auto commitAll      = commit.hasFlag("a,all", "Commit all changes.");
-    auto commitSquash   = commit.hasFlag("squash", "Squash all changes into one commit.");
-    auto commitSignOff  = commit.hasMutualExFlag({
+    commit.insertOptHeader("Flags");
+    auto commitAll     = commit.hasFlag("a,all", "Commit all changes.");
+    auto commitSquash  = commit.hasFlag("squash", "Squash all changes into one commit.");
+    auto commitSignOff = commit.hasMutualExFlag({
         "s,signoff",
         "Add a Signed-off-by trailer by the committer at the end of the commit log message.",
         "no-signoff",
         "Do not add a Signed-off-by trailer by the committer at the end of the commit log message.",
         false,
     });
+    commit.insertOptHeader("Options");
     auto commitMsg      = commit.get<string>("m,message", "Use the given <msg> as the commit message.").get();
     auto commitFile     = commit.get<string>("F,file", "Take the commit message from the given file.").get();
     auto commitDate     = commit.get<int>("date", "Override the author date used in the commit.").get();
