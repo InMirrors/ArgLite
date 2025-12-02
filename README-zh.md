@@ -32,8 +32,9 @@
 - 互斥选项: `--enable-feature`, `--disable-feature`
 - 选项结束标记: `--` 后面的参数都当成位置参数
 - 解析 `bool`, `long long`, `double`, `std::string`
-- 设置带值选项的默认值
+- 设置带值选项和位置参数的默认值
 - 自动生成帮助 (`-h, --help`)
+- 在帮助信息中给选项分组
 - 格式化打印帮助和报错信息（例如彩色、加粗）
 
 完整版支持
@@ -116,6 +117,8 @@ Options:
 ```cpp
     const auto number = Parser::getInt("number", "Number of iterations.");
 ```
+
+和主流库相比，本库的一大优势是可以做到一条语句完成一个参数，多加一个参数只要多加一条语句。 CLI11 加一个参数要加一条声明语句，提供用于后续绑定的变量，然后添加一条注册语句。 cxxopts 则是要一条注册语句，解析后要一条取值语句。其他库大部分都是这两种情况，都有同一个参数的代码不够集中的问题，只是具体的操作不同。 CLI11 这种模式在直接用变量保存结果的情景下比本库更啰嗦，不过在使用对象保存结果的情景下表现得很好，因为对象的定义中总是要先声明成员。所以对于复杂程序来说，CLI11 的接口很好用，对于简单程序来说，本库的接口更好用。
 
 完整版的用法类似，只是接口更多。对于上面用到的基本接口，区别在于 `getType()` 这种形式的函数换成 `get<T>()`，支持更多类型和更多功能。查阅[这里](#获取带值选项)了解详情。
 
@@ -393,7 +396,70 @@ bool runAllPostprocess(bool notExit = false);
 
 ### 选项分组
 
-todo
+```cpp
+void insertOptHeader(std::string header);
+```
+
+本库像其他库那样，帮助信息中的选项按注册顺序排列，注册一个选项就会在帮助信息中插入一个条目。添加选项分组的思路也是如此，用这个函数插入一个分组标题。打印帮助信息的函数遇到分组标题时，会自动加上换行符和 `:`，保持和默认标题相同的风格。调用这个函数后，原本的 `Options:` 标题会消失，所以你要自己补上你想要的标题。
+
+以下是一个模仿 [ripgrep](https://github.com/BurntSushi/ripgrep) 的帮助，你可以在 examples 文件夹中找到[完整代码](./examples/option_grouping.cpp)。
+
+```cpp
+Parser::preprocess(argc, argv);
+
+Parser::insertOptHeader("Input Options");
+auto regexp = Parser::getString("e,regexp", "A pattern to search for.");
+auto file   = Parser::getString("f,file", "Search for patterns from the given file.");
+
+Parser::insertOptHeader("Search Options");
+auto ignoreCase = Parser::hasMutualExFlag({
+    "i,ignore-case",
+    "Case insensitive search.",
+    "s,case-sensitive",
+    "Search case sensitively",
+    false,
+});
+auto maxCount   = Parser::getInt("m,max-count", "Limit the number of matching lines.");
+
+// Add a header for "-h, --help" and "-V, --version"
+Parser::insertOptHeader("Other Behaviors:");
+
+Parser::runAllPostprocess();
+```
+
+它会得到这样的帮助信息：
+
+```
+Input Options:
+  -e, --regexp <string>  A pattern to search for.
+  -f, --file <string>    Search for patterns from the given file.
+
+Search Options:
+  -i, --ignore-case      Case insensitive search.
+  -s, --case-sensitive   Search case sensitively (default)
+  -m, --max-count <integer>
+                         Limit the number of matching lines. [default: 0]
+
+Other Behaviors:
+  -V, --version          Show version information and exit
+  -h, --help             Show this help message and exit
+```
+
+如果不加任何的 `insertOptHeader()` 语句，帮助信息是这样的：
+
+```
+Options:
+  -e, --regexp <string>  A pattern to search for.
+  -f, --file <string>    Search for patterns from the given file.
+  -i, --ignore-case      Case insensitive search.
+  -s, --case-sensitive   Search case sensitively (default)
+  -m, --max-count <integer>
+                         Limit the number of matching lines. [default: 0]
+  -V, --version          Show version information and exit
+  -h, --help             Show this help message and exit
+```
+
+你可能会觉得这种实现太粗糙了，根本没有把选项打包到各个组内，只是简单地插入一个帮助条目。实际上其他库的分组一般也只是影响帮助中的显示，各个选项的存储和使用和不分组时没有本质区别，不是按照类似于 `args["group"]["opt"]` 的方式取值。本库定位轻量，能以简单的方式实现就不会用复杂的方式，虽然这种方式比较另类。
 
 ### 子命令
 
