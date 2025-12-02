@@ -1,3 +1,7 @@
+#include "ArgLite/Minimal.hpp"
+
+using namespace std;
+using ArgLite::Parser;
 
 int main(int argc, char **argv) {
     // Step 1: Preprocessing
