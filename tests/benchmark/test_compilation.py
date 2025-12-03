@@ -1,6 +1,7 @@
+#!/usr/bin/env python3
 import sys
 import os
-import argparse # 导入 argparse
+import argparse
 from dataclasses import dataclass, field
 from typing import List
 
@@ -23,25 +24,42 @@ class BenchmarkTarget:
     binary_size: int = 0
     extra_compile_args: List[str] = field(default_factory=list)
 
+
+def test_single_file(source_path: str, compile_args: List[str], iterations: int):
+        """ Benchmark a single specified file """
+        compile_time, binary_size = perform_compilation_test(
+            source_path, compile_args, iterations
+        )
+        custom_target = BenchmarkTarget(name="Custom File", source=source_path, compile_time=compile_time, binary_size=binary_size)
+        print_results([custom_target])
+
+
 def run_benchmarks(targets: List[BenchmarkTarget], common_compile_args: List[str], iterations: int):
     """Compiles each target n times, records average time and final size."""
     for target in targets:
+        colored_print(f"=== Benchmarking {target.name} ({iterations} iterations) ===", color="magenta")
         source_path = os.path.join(SCRIPT_DIR, target.source)
         compile_args = common_compile_args + target.extra_compile_args
-
-        total_time = 0.0
-        binary_size = 0
-
-        colored_print(f"=== Benchmarking {target.name} ({iterations} iterations) ===", color="magenta")
-        for i in range(iterations):
-            _, size, time = compile_cpp(source_path, compile_args)
-            total_time += time
-            if i == iterations - 1: # On the last iteration, store path and size
-                binary_size = size
-
-        target.compile_time = total_time / iterations
-        target.binary_size = binary_size
+        target.compile_time, target.binary_size = perform_compilation_test(
+            source_path, compile_args, iterations
+        )
         colored_print(f"Average time for {target.name}: {target.compile_time:.4f}s\n", color="magenta")
+
+
+def perform_compilation_test(source_path: str, compile_args: List[str], iterations: int):
+    """Performs compilation test for a single target and returns average time and binary size."""
+    total_time = 0.0
+    binary_size = 0
+
+    for i in range(iterations):
+        _, size, time = compile_cpp(source_path, compile_args)
+        total_time += time
+        if i == iterations - 1: # On the last iteration, store path and size
+            binary_size = size
+
+    avg_time = total_time / iterations
+    return avg_time, binary_size
+
 
 def print_results(targets: List[BenchmarkTarget]):
     """Prints the benchmark results in a Markdown table."""
@@ -53,17 +71,26 @@ def print_results(targets: List[BenchmarkTarget]):
         size_str = f"{target.binary_size / 1024:.1f}"
         print(f"| {target.name:<12} | {time_str:>8} | {size_str:>9} |")
 
+
 def main():
     """Main function to define and run benchmarks."""
     parser = argparse.ArgumentParser(description="Run compilation benchmarks.")
     parser.add_argument("iterations", type=int, nargs="?", default=10, help="Number of compilation iterations (default: 10)")
     parser.add_argument("-a", "--arg", dest="extra_args", action="append", default=[], help="Additional compilation arguments (can be specified multiple times)")
+    parser.add_argument("-f", "--file", dest="source_file", help="Specify a single source file to benchmark")
     args = parser.parse_args()
 
     # These arguments are common for all targets
     COMMON_COMPILE_ARGS = [f"-I{INCLUDE_DIR}", "-s", "-DNDEBUG"] + args.extra_args
 
-    # Data-driven list of benchmark targets
+    if not os.path.exists(BIN_DIR):
+        os.makedirs(BIN_DIR)
+
+    if args.source_file:
+        # Run a single file benchmark
+        test_single_file(args.source_file, COMMON_COMPILE_ARGS, args.iterations)
+        return 0
+
     benchmark_targets = [
         BenchmarkTarget(name="ArgLite Full", source="full.cpp"),
         BenchmarkTarget(name="ArgLite Mini", source="minimal.cpp"),
@@ -72,10 +99,6 @@ def main():
         BenchmarkTarget(name="args",         source="args.cpp"),
         BenchmarkTarget(name="argparse",     source="argparse.cpp"),
     ]
-
-    if not os.path.exists(BIN_DIR):
-        os.makedirs(BIN_DIR)
-
     run_benchmarks(benchmark_targets, COMMON_COMPILE_ARGS, args.iterations)
     print_results(benchmark_targets)
 
