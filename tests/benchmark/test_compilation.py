@@ -65,7 +65,7 @@ def print_results(targets: List[BenchmarkTarget]):
     """Prints the benchmark results in a Markdown table."""
     colored_print("=== Results ===", color="magenta")
     print("| Name         | Time (s) | Size (KB) |")
-    print("|--------------|----------|-----------|")
+    print("| ------------ | -------: | --------: |")
     for target in targets:
         time_str = f"{target.compile_time:.2f}"
         size_str = f"{target.binary_size / 1024:.1f}"
