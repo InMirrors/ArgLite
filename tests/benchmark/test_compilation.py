@@ -92,8 +92,8 @@ def main():
         return 0
 
     benchmark_targets = [
-        BenchmarkTarget(name="ArgLite Full", source="full.cpp"),
         BenchmarkTarget(name="ArgLite Mini", source="minimal.cpp"),
+        BenchmarkTarget(name="ArgLite Full", source="full.cpp"),
         BenchmarkTarget(name="CLI11",        source="CLI11.cpp", extra_compile_args=["-lCLI11"]),
         BenchmarkTarget(name="cxxopts",      source="cxxopts.cpp", extra_compile_args=["-DCXXOPTS_NO_REGEX"]),
         BenchmarkTarget(name="args",         source="args.cpp"),
