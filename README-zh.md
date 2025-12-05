@@ -514,6 +514,88 @@ bool isActive();
 
 `SubParser` 对象也拥有 `setShortNonFlagOptsStr`, `hasFlag`, `countFlag`, `hasMutualExFlag`, `get`, `getPositional`, `getRemainingPositionals` 等方法，用法与 `Parser` 中的版本相同，但只在该子命令激活时生效。
 
+## 其他特性
+
+不像绝大部分库，添加选项时还不能获取值，要等解析时才统一赋值，本库添加选项和获取值都由同一个函数完成，添加选项时就已经获取值。所以可以在拿到值后，将这个值作为参数传递给库的接口，控制库的行为。即可以在运行时调整解析行为。
+
+```cpp
+#include "ArgLite/Core.hpp"
+
+using namespace std;
+using ArgLite::Parser;
+
+int main(int argc, char **argv) {
+    Parser::setShortNonFlagOptsStr("iId");
+    Parser::preprocess(argc, argv);
+
+    auto indent    = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).setTypeName("num").get();
+    auto delimiter = Parser::get<char>("d,delimiter", "--include delimiter.").setDefault(':').get();
+    auto include   = Parser::get<string>("I,include", "Include directory.").setDefault("include").getVec(delimiter);
+
+    Parser::changeDescriptionIndent(indent);
+    Parser::runAllPostprocess();
+
+    cout << "Indent     : " << indent << '\n';
+    cout << "Delimiter  : '" << delimiter << "'\n";
+    cout << "Include:\n";
+    for (const auto &it : include) { cout << it << '\n'; }
+
+    return 0;
+}
+```
+
+这个例子可以用 `-i, --indent` 控制帮助信息的缩进。
+
+```pwsh
+> app -h
+Usage: app [OPTIONS]
+
+Options:
+  -i, --indent <num>      Option Description indent. [default: 26]
+  -d, --delimiter <char>  --include delimiter. [default: :]
+  -I, --include <string>  Include directory. [default: include]
+  -h, --help              Show this help message and exit
+
+
+> app -h -i20
+Usage: app [OPTIONS]
+
+Options:
+  -i, --indent <num>
+                    Option Description indent. [default: 26]
+  -d, --delimiter <char>
+                    --include delimiter. [default: :]
+  -I, --include <string>
+                    Include directory. [default: include]
+  -h, --help        Show this help message and exit
+```
+
+这个用法似乎什么实际意义，只是演示上述特性。接下来看一个比较实用的例子——改变多值选项的分隔符。
+
+```pwsh
+> app -I "path1:path2"
+Indent     : 26
+Delimiter  : ':'
+Include:
+path1
+path2
+
+> app -I "path1 path2"
+Indent     : 26
+Delimiter  : ':'
+Include:
+path1 path2
+
+> app -I "path1 path2" -d " "
+Indent     : 26
+Delimiter  : ' '
+Include:
+path1
+path2
+```
+
+如果传入的参数不能用一个固定的分隔符应对所有情况，可以利用这个特性，动态控制分隔符，选取适合当前参数的分隔符。
+
 # 跑分
 
 本环节测试的 argparse 库不是常见的 [p-ranav/argparse](https://github.com/p-ranav/argparse), 而是 [morrisfranken/argparse](https://github.com/morrisfranken/argparse)。前者的接口类似于 Python argparse, 也类似于 cxxopts, 都是用字符串查询解析结果。这种用法对于 Python 这类动态类型语言来说很方便，但对于 C++ 这种静态类型语言来说并不方便，需要写额外的代码才能获取结果，补全工具不能提供补全。所以这里只测试了同类的、知名度更高的 cxxopts。后者只是名字一样，但外部接口和内部实现的差异巨大，提供了更易用的接口。
@@ -606,85 +688,3 @@ args 的表现也很好，虽然它在上一个环节的表现一般般。 CLI11
 ArgLite 确实在轻量方面表现最好，无论是编译时还是运行时都是如此，而且提供了易用的接口和美观的输出。 argparse 在轻量和易用方面也做得好，只是它的输出不够友好。 CLI11 也有易用的接口，但它是个全能库，对于简单和中等程序来说太重了。其他两个库无论是轻量还是接口易用性都表现得不好，比不上其他库。特别是 cxxopts, 禁用 `<regex>` 后表现仍是一般，不禁用的话结果会翻倍。
 
 当然，易用性和美观都是相对主观的指标，只有轻量性可以用客观指标衡量。我已经提供了测试文件，你可以很轻松地对比谁更易用。除了 CLI11，其他库也非常容易安装，你也可以很轻松地编译测试文件，然后对比它们的输出信息。如果你需要格式化的输出，那么确实只有 ArgLite 提供了良好的支持，argparse 有很简单的支持，其他库没有。
-
-# 其他特性
-
-不像绝大部分库，添加选项时还不能获取值，要等解析时才统一赋值，本库添加选项和获取值都由同一个函数完成，添加选项时就已经获取值。所以可以在拿到值后，将这个值作为参数传递给库的接口，控制库的行为。即可以在运行时调整解析行为。
-
-```cpp
-#include "ArgLite/Core.hpp"
-
-using namespace std;
-using ArgLite::Parser;
-
-int main(int argc, char **argv) {
-    Parser::setShortNonFlagOptsStr("iId");
-    Parser::preprocess(argc, argv);
-
-    auto indent    = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).setTypeName("num").get();
-    auto delimiter = Parser::get<char>("d,delimiter", "--include delimiter.").setDefault(':').get();
-    auto include   = Parser::get<string>("I,include", "Include directory.").setDefault("include").getVec(delimiter);
-
-    Parser::changeDescriptionIndent(indent);
-    Parser::runAllPostprocess();
-
-    cout << "Indent     : " << indent << '\n';
-    cout << "Delimiter  : '" << delimiter << "'\n";
-    cout << "Include:\n";
-    for (const auto &it : include) { cout << it << '\n'; }
-
-    return 0;
-}
-```
-
-这个例子可以用 `-i, --indent` 控制帮助信息的缩进。
-
-```pwsh
-> app -h
-Usage: app [OPTIONS]
-
-Options:
-  -i, --indent <num>      Option Description indent. [default: 26]
-  -d, --delimiter <char>  --include delimiter. [default: :]
-  -I, --include <string>  Include directory. [default: include]
-  -h, --help              Show this help message and exit
-
-
-> app -h -i20
-Usage: app [OPTIONS]
-
-Options:
-  -i, --indent <num>
-                    Option Description indent. [default: 26]
-  -d, --delimiter <char>
-                    --include delimiter. [default: :]
-  -I, --include <string>
-                    Include directory. [default: include]
-  -h, --help        Show this help message and exit
-```
-
-这个用法似乎什么实际意义，只是演示上述特性。接下来看一个比较实用的例子——改变多值选项的分隔符。
-
-```pwsh
-> app -I "path1:path2"
-Indent     : 26
-Delimiter  : ':'
-Include:
-path1
-path2
-
-> app -I "path1 path2"
-Indent     : 26
-Delimiter  : ':'
-Include:
-path1 path2
-
-> app -I "path1 path2" -d " "
-Indent     : 26
-Delimiter  : ' '
-Include:
-path1
-path2
-```
-
-如果传入的参数不能用一个固定的分隔符应对所有情况，可以利用这个特性，动态控制分隔符，选取适合当前参数的分隔符。
