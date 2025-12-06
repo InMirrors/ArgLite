@@ -145,7 +145,7 @@ class Parser::OptValHelper {
 #endif
         errorStr += ", but got '";
 #ifdef ARGLITE_ENABLE_FORMATTER
-        errorStr += Formatter::bold(valueStr);
+        errorStr += Formatter::yellow(valueStr);
 #else
         errorStr += valueStr;
 #endif

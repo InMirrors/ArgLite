@@ -24,6 +24,10 @@ public:
         return format(str, ANSI_RED, os);
     }
 
+    static std::string yellow(std::string_view str, const std::ostream &os = std::cerr) {
+        return format(str, ANSI_YELLOW, os);
+    }
+
     static std::string bold(std::string_view str, const std::ostream &os = std::cout) {
         return format(str, ANSI_BOLD, os);
     }
@@ -35,6 +39,7 @@ public:
 private:
     static constexpr std::string_view ANSI_RESET          = "\x1b[0m";
     static constexpr std::string_view ANSI_RED            = "\x1b[91m";
+    static constexpr std::string_view ANSI_YELLOW         = "\x1b[33m";
     static constexpr std::string_view ANSI_BOLD           = "\x1b[1m";
     static constexpr std::string_view ANSI_BOLD_UNDERLINE = "\x1b[1m\x1b[4m";
 
