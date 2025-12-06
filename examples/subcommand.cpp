@@ -30,9 +30,11 @@ int main(int argc, char **argv) {
     auto commitSquash   = commit.hasFlag("squash", "Squash all changes into one commit.");
     auto commitSignOff  = commit.hasMutualExFlag({
         "s,signoff",
-        "Add a Signed-off-by trailer by the committer at the end of the commit log message.",
+        "Add a Signed-off-by trailer by the committer at the\n"
+         "end of the commit log message.",
         "no-signoff",
-        "Do not add a Signed-off-by trailer by the committer at the end of the commit log message.",
+        "Do not add a Signed-off-by trailer by the committer\n"
+         "at the end of the commit log message.",
         false,
     });
     auto commitMsg      = commit.get<string>("m,message", "Use the given <msg> as the commit message.").required().get();
@@ -40,8 +42,15 @@ int main(int argc, char **argv) {
     auto commitDate     = commit.get<int>("date", "Override the author date used in the commit.").get();
     auto commitPathSpec = commit.getRemainingPositionals("pathspec", " When pathspec is given on the command line, ...", false);
 
-    auto grepPatterns = grep.get<string>("e,regexp", "The pattern to search for. Multiple patterns are combined by or.").setTypeName("pattern").getVec();
-    auto grepColor    = grep.get<string>("color", "Show colored matches. The value must be auto (the default), never, or always.").setDefault("auto").setTypeName("when").get();
+    auto grepPatterns = grep.get<string>("e,regexp", "The pattern to search for. Multiple patterns are\n"
+                                                     "combined by or.")
+                            .setTypeName("pattern")
+                            .getVec();
+    auto grepColor = grep.get<string>("color", "Show colored matches. The value must be auto (the default),\n"
+                                               "never, or always.")
+                         .setDefault("auto")
+                         .setTypeName("when")
+                         .get();
 
     auto mvSrc   = mv.getPositional("source", "The source file or directory.");
     auto mvDst   = mv.getPositional("destination", "The destination file or directory.");

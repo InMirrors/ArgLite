@@ -296,7 +296,7 @@ private:
     // This alias removes const, volatile qualifiers and references from a type T
     template <typename T>
     using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
-    // Other helper functions
+    // Pre/Post process functions
     static inline void preprocess_(int argc, const char *const *argv);
     static inline void tryToPrintVersion_(InternalData &data);
     static inline void tryToPrintHelp_(InternalData &data);
@@ -310,6 +310,7 @@ private:
     static inline void clearData(InternalData &data);
     static inline bool finalize_(InternalData &data, bool notExit = false);
     static inline bool runAllPostprocess_(InternalData &data, bool notExit = false);
+    static inline void printWithIndent(std::string_view sv, int indent, bool indentFirstLine = false);
     // Other functions
     static void insertOptHeader_(std::string header) {
         data_.hasCustumOptHeader = true;

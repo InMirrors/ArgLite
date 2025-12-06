@@ -331,17 +331,19 @@ inline void Parser::printHelpOptions(const InternalData &data) {
             descStr.append(" [default: ").append(o.defaultValue).append("]");
         }
         if (o.isMutualExDefault) { descStr.append(" (default)"); }
-        // the option string is too long, start a new line
-        // -2: two separeting spaces after the type name
+
         auto optPartLength = optStr.length();
 #ifdef ARGLITE_ENABLE_FORMATTER
         optPartLength -= ANSI_CODE_LENGTH;
 #endif
+        // the option string is too long, start a new line
+        // -2: two separeting spaces after the type name
         if (optPartLength > descriptionIndent_ - 2) {
-            std::cout << '\n'
-                      << std::left << std::setw(static_cast<int>(descriptionIndent_)) << "";
+            std::cout << '\n';
+            printWithIndent(descStr, static_cast<int>(descriptionIndent_), true);
+        } else {
+            printWithIndent(descStr, static_cast<int>(descriptionIndent_));
         }
-        std::cout << descStr << '\n';
     }
 }
 
@@ -386,6 +388,40 @@ inline bool Parser::runAllPostprocess_(InternalData &data, bool notExit) {
         std::exit(EXIT_FAILURE);
     }
     return hasInvalidOpts || hasError;
+}
+
+inline void Parser::printWithIndent(std::string_view sv, int indent, bool indentFirstLine) {
+    size_t nextNewlinePos = sv.find('\n');
+    size_t currentPos     = 0;
+
+    // Print the first line
+    std::string_view firstLine;
+    if (nextNewlinePos != std::string_view::npos) {
+        firstLine  = sv.substr(0, nextNewlinePos);
+        currentPos = nextNewlinePos + 1; // skip the newline character
+    } else {
+        firstLine  = sv;
+        currentPos = sv.size();
+    }
+
+    if (indentFirstLine) { std::cout << std::setw(indent) << ""; }
+    std::cout << firstLine << '\n';
+
+    // Print the rest of the lines
+    while (currentPos < sv.size()) {
+        nextNewlinePos = sv.find('\n', currentPos);
+
+        std::cout << std::setw(indent) << "";
+
+        // Print the remaining part
+        if (nextNewlinePos == std::string_view::npos) {
+            std::cout << sv.substr(currentPos) << '\n';
+            break;
+        }
+
+        std::cout << sv.substr(currentPos, nextNewlinePos - currentPos) << '\n';
+        currentPos = nextNewlinePos + 1;
+    }
 }
 
 } // namespace ArgLite

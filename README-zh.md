@@ -11,7 +11,7 @@
 所以我就写一个真正轻量、易用、功能足够丰富的库，并且帮助和错误信息更美观、更现代。关于它有多轻量，请查阅[跑分](#跑分)章节。关于易用，指按照一般的思路使用的话易于使用。具体体现为：
 
 1. 使用命名清晰的函数添加和获取参数，不是使用重载运算符。
-2. 一个语句就能获取一个参数。不需要先声明变量再绑定参数，或是先注册再取值，增删一个参数要修改多个位置的代码。
+2. 一个语句就能获取一个参数。不像大部分库那样需要先声明变量再绑定参数，或是先注册再取值，增删一个参数要修改多个位置的代码。
 
 如果你需要这些不常规的用法的话请选择其他库：多线程解析命令行参数、先解析位置参数再解析选项。
 
@@ -40,7 +40,7 @@
 - 设置带值选项和位置参数的默认值
 - 自动生成帮助 (`-h, --help`)
 - 在帮助信息中给选项分组
-- 格式化打印帮助和报错信息（例如彩色、加粗）
+- 格式化打印帮助和报错信息，使得输出更美观（例如添加彩色、加粗）
 
 完整版支持
 
@@ -393,6 +393,52 @@ void tryToPrintHelp();
 
 如果用户提供了 `-h` 或 `--help`，则打印帮助信息并退出程序。
 
+因为选项名要加前缀 `-` 并且有长短选项，所以选项的描述缩进会比位置参数或子命令的描述大不少。这导致选项描述比较容易过长，超过终端的宽度，在下一行显示。终端并不会缩进显示下一行，导致描述也在行首的部分，而这部分本应是选项的区域。最终形成描述和选项混在一起的问题，增加分辨难度，影响用户使用体验。例如[子命令示例](./examples/subcommand.cpp)中的
+
+```cpp
+    auto commitSignOff  = commit.hasMutualExFlag({
+        "s,signoff",
+        "Add a Signed-off-by trailer by the committer at the end of the commit log message.",
+        "no-signoff",
+        "Do not add a Signed-off-by trailer by the committer at the end of the commit log message.",
+        false,
+    });
+```
+
+在帮助中的输出为
+
+```
+  -s, --signoff           Add a Signed-off-by trailer by the committer at theend of the commit log message.
+      --no-signoff        Do not add a Signed-off-by trailer by the committerat the end of the commit log message. (default)
+```
+
+如果你在描述字符串中加上 `\n` 后，例如
+
+```cpp
+    auto commitSignOff  = commit.hasMutualExFlag({
+        "s,signoff",
+        "Add a Signed-off-by trailer by the committer at the\n"
+         "end of the commit log message.",
+        "no-signoff",
+        "Do not add a Signed-off-by trailer by the committer\n"
+         "at the end of the commit log message.",
+        false,
+    });
+```
+
+打印帮助时会给后面的行添加缩进，使得描述的内容总是在右边区域，得到下面这样的输出
+
+```
+  -s, --signoff           Add a Signed-off-by trailer by the committer at the
+                          end of the commit log message.
+      --no-signoff        Do not add a Signed-off-by trailer by the committer
+                          at the end of the commit log message. (default)
+```
+
+如果库能自动分割描述的话自然更好，但要足够智能地分割的话会引入很多代码，和轻量库的定位不符。更何况手动添加换行符并不复杂，还能让代码的显示效果更接近帮助输出的效果。所以本库采取这种不够智能的实现。
+
+---
+
 ```cpp
 bool tryToPrintInvalidOpts(bool notExit = false);
 ```
@@ -608,7 +654,7 @@ path2
 
 各个库都使用 2025-12-04 时的最新版，在 WSL 上进行测试。具体的结果会因为测试平台、测试环境、库的版本等因素的影响，数值可能和下面的结果有明显差异。但各个库之间的相对差异应该比较稳定，不会推翻结论。
 
-**编译耗时和二进制体积**
+## 编译耗时和二进制体积
 
 使用编译参数 `-s -DNDEBUG` 得到的结果如下。
 除了 "ArgLite Sub", 其他条目都是实现了“获取标志选项、获取整数、获取一个位置参数、获取剩余位置参数”的简单程序，用于横向比较。 "ArgLite Sub" 是使用了几乎所有的完整版接口的[示例](./examples/subcommand.cpp)的结果，是用复杂度高很多的程序，用于纵向对比。 "ArgLite Full" 是完整版的简单程序的测试结果，并非完整示例。
@@ -637,7 +683,7 @@ path2
 
 可见 ArgLite 确实是最轻量的，精简版的优势特别明显。即便是使用了各种接口的完整示例, ArgLite 的成绩仍可以和其他库的最简程序比较，甚至表现更好。 argparse 的表现也很好，只是稍差于 ArgLite 完整版，属于同一个水平。 CLI11 得益于链接了现成的库文件，编译时间较短（还是比不上 ArgLite），但二进制体积最大。 cxxopts, args 的表现一般般，只是比全能库 CLI11 轻而已，而且因为不能链接现成的库文件，编译时间垫底。
 
-**运行时内存消耗**
+## 运行时内存消耗
 
 因为实际应用中命令行参数不会传非常多的选项参数，程序也不会定义非常多的选项，有几十个选项的已经是很复杂的应用了。但解析几十个选项的工作量还是非常低，哪怕是 Python 这种低性能语言，都能在极短的时间内完成，内存消耗也很低。位置参数可能会传很多，因为很多程序会用剩余位置参数获取文件。不过即便传入上千个文件，依然是很轻量的任务。所以测试这种库的运行时性能并没有多大实际意义。只是为了更全面地对比，才有这个测试。在绝大多数情况下，你没必要根据这个测试结果判断哪个库更合适。哪怕是表现最差的，在实际应用中也无法感受到它的表现更差。
 
@@ -681,7 +727,7 @@ path2
 
 args 的表现也很好，虽然它在上一个环节的表现一般般。 CLI11 作为重型库，虽然编译时可以通过链接现成的库文件缩短编译时间，但运行时的资源消耗很符合重型库的特点。在上个环节表现优异的 argparse 在这个环节的表现一般，并且随着传入的参数增加，它消耗内存的速度更快，导致在传入 1002 个位置参数时变成了消耗内存最多的。 cxxopts 号称轻量库，但表现比 CLI11 还差。并且正如之前说的，它默认会引入 `<regex>` 这种重量库，一点都不轻量。而且不但在轻量性上表现不佳，它还是参与测试的库中唯一不支持子命令的。
 
-**总结**
+## 总结
 
 因为运行时的表现对实际应用来说没多大意义，所以这里主要根据编译时的表现总结。
 
