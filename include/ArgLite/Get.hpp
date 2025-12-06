@@ -486,7 +486,7 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
 
     if (remaining.empty()) {
         if (required) {
-            appendPosValErrorMsg(data, posName, "Missing required positional argument(s) '");
+            appendPosValErrorMsg(data, posName, "Missing required positional arguments '");
         } else {
             return defaultValue;
         }
@@ -497,14 +497,13 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
 inline void Parser::appendPosValErrorMsg(
     InternalData &data, std::string_view posName, std::string errorMsg) {
 
-    std::string msg(std::move(errorMsg));
 #ifdef ARGLITE_ENABLE_FORMATTER
-    msg.append(Formatter::bold(posName));
+    errorMsg.append(Formatter::bold(posName));
 #else
-    msg.append(posName);
+    errorMsg.append(posName);
 #endif
-    msg.append("'.");
-    data.errorMessages.push_back(std::move(msg));
+    errorMsg.append("'.");
+    data.errorMessages.push_back(std::move(errorMsg));
 }
 
 inline void Parser::fixPositionalArgsArray(
