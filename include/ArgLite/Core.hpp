@@ -150,13 +150,23 @@ public:
     }
 
     /**
-     * @brief Inserts a custom option header in the help message.
+     * @brief Inserts a custom option header to the help message.
      * @details See the README for details.
      * @param header The option header text.
      */
     static void insertOptHeader(std::string header) {
         if (!isMainCmdActive()) { return; }
         insertOptHeader_(std::move(header));
+    }
+
+    /**
+     * @brief Inserts an error message to the error message array.
+     * @details See the README for details.
+     * @param msg The error message text.
+     */
+    static void insertErrorMsg(std::string msg) {
+        if (!isMainCmdActive()) { return; }
+        data_.errorMessages.push_back(std::move(msg));
     }
 
     /**
@@ -445,13 +455,23 @@ public:
     }
 
     /**
-     * @brief Inserts a custom option header in the help message.
+     * @brief Inserts a custom option header to the help message.
      * @details See the README for details.
      * @param header The option header text.
      */
     void insertOptHeader(std::string header) {
         if (!isActive()) { return; }
         Parser::insertOptHeader_(std::move(header));
+    }
+
+    /**
+     * @brief Inserts an error message to the error message array.
+     * @details See the README for details.
+     * @param msg The error message text.
+     */
+    void insertErrorMsg(std::string msg) {
+        if (!isActive()) { return; }
+        Parser::data_.errorMessages.push_back(std::move(msg));
     }
 
 private:

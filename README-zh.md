@@ -4,7 +4,7 @@
 
 - [CLI11](https://github.com/CLIUtils/CLI11) 功能全面，接口易用，但太重了。
 - [cxxopts](https://github.com/jarro2783/cxxopts) 号称轻量但其实也挺重的，而且接口不好用。
-- [args](https://github.com/Taywee/args) 更轻量，但接口不好用。
+- [args](https://github.com/Taywee/args) 非常轻量，但接口不好用。
 - [argh](https://github.com/adishavit/argh) 足够轻量但太简陋了，连自动生成帮助都没有，所以也不好用。
 - [argparse](https://github.com/morrisfranken/argparse) 足够轻量，接口易用，实现的方式很巧妙，是我最满意的库。不过帮助的格式比较特殊，不支持一些语法，例如 `-n123`。
 
@@ -17,7 +17,7 @@
 
 本库有两个版本，一个是精简版，一个是完整版，分别 `#include "ArgLite/Minimal.hpp"`, `#include "ArgLite/Core.hpp"` 就能使用对应的版本。因为是头文件库，所以 include 后就能正常使用。
 
-因为一开始就不追求全能，所以采用受限但轻量的特殊思路: 预处理后在注册单个选项时就返回解析结果，而不是先注册全部选项然后再解析。后来发现这种思路其实能实现很多高级功能，只是要引入更复杂的设计。所以分成两个版本，精简版仍保持极致的轻量，支持基本功能；完整版支持许多高级功能，比精简版复杂，但仍比大部分库轻量。当然完整版的功能还是比不上 CLI11 这种全能库，定位还是轻量库，只是支持的功能更多。
+精简版仍保持极致的轻量，支持基本功能；完整版支持许多高级功能，比精简版复杂，但仍比大部分库轻量。当然完整版的功能还是比不上 CLI11 这种全能库，定位还是轻量库，只是支持的功能更多。本库在一定程度上符合 C++ 的 "You don't pay for what you don't use" 理念。精简版以很低的开销实现基础功能和易用的接口，适合只需要基本的命令行参数解析的人；完整版以很低的开销扩展了核心的高级功能，适合需要构建具有一定复杂度的程序的人。
 
 精简版支持以下功能
 
@@ -211,7 +211,7 @@ Parser::runAllPostprocess(); // 有更精细的控制需求的话，可以按照
 
 所有接口都在 `ArgLite::Parser` 类中以静态函数的形式提供。完整版还提供了 `ArgLite::SubParser` 类用于子命令。某个版本才有的接口会有提示，没有提示的话表明是两个版本都有的接口，并且用法一样，只是内部实现可能不同。
 
-所有 `optName` 都是短选项名或长选项名（不需要加上 `-` 或 `--`），也可以是两个都有（短选项名在前，长选项名在后，用 `,` 分隔），例如 `o`, `--output`, `o,output`. `description` 都是用于在帮助中显示。
+所有 `optName` 都是短选项名或长选项名（不需要加上 `-` 或 `--`），也可以是两个都有（短选项名在前，长选项名在后，用 `,` 分隔），例如 `o`, `output`, `o,output`. `description` 都是用于在帮助中显示。
 
 ### 程序信息
 
@@ -319,7 +319,7 @@ OptValBuilder<T> get(std::string_view optName, std::string description);
 
 精简版直接返回指定类型的值，整数和浮点数都只返回一种，需要其他类型的话，需要手动转换类型。例如需要 `unsigned` 的话需要自己从返回的 `long long` 转换。如果需要的类型会溢出的话，例如需要 `unsigned long long`，需要改用完整版，或者用 `getString()` 获取字符串后自己解析。
 
-完整版返回一个 `OptValBuilder<T>` 对象，支持几乎全部的内置类型，可以通过链式调用配置更多功能，最后调用 `get()` 或 `getVec()` 获取值。具体支持的类型请查阅源代码中的 [`convertType()`](./include/ArgLite/GetTemplate.hpp#L9-L44)。除了基本类型，还支持 `std::optional`, 你可以用它包装其他支持的类型，以区分有没有通过命令行参数提供选项的值。因为用户没有传值或传了默认值时，获取普通类型会得到默认值。如果你需要区分有没有传值，这正是你需要的。
+完整版返回一个 `OptValBuilder<T>` 对象，支持几乎全部的内置类型，可以通过链式调用配置更多功能，最后调用 `get()` 或 `getVec()` 获取值。具体支持的类型请查阅源代码中的 [`convertType()`](./include/ArgLite/GetTemplate.hpp#L9-L44)。除了基本类型，还支持 `std::optional`, 你可以用它包装其他支持的类型，以区分有没有通过命令行参数提供选项的值。因为用户没有传值或传了默认值时，获取普通类型会得到默认值。如果你想区分有没有传值，这正是你需要的。
 
 不管哪个版本，获取 `bool` 类型时，都是不区分大小写，除以下参数外的参数都是错误参数。
 
@@ -345,6 +345,93 @@ OptValBuilder<T> get(std::string_view optName, std::string description);
   直接调用的话，`-f file1 -f file2` 得到 `[file1, file2]`
 
   如果提供了分隔符，每个值都会根据分隔符进一步分割成多个值。`getVec(',')` 后传入 `-f file1 -f file2,file3` 会得到 `[file1, file2, file3]`
+
+#### 解析自定义类型
+
+本库**不**提供对自定义类型的完整支持，只提供非常有限的支持。如果你需要完善的支持，请选择其他库。本库的核心理念是轻量，高级功能如果能以轻量的方式实现的话，本库乐于支持，否则不会支持。支持自定义类型不仅要处理解析和验证，还要能生成合适的帮助和错误信息，会明显增加库的重量，所以不会支持。
+
+本节说明如何利用有限的支持处理自定义类型。支持主要是指提供帮助和错误信息。**仅限完整版**。
+
+**设置错误信息**
+
+`get<T>()` 对于未知类型，会尝试使用解析到的字符串去初始化它。如果你的自定义类型可以用字符串初始化，那么理论上可以直接用它获取解析结果。但它无法提供校验，帮助和错误信息中不能提供相关信息。所以更推荐下面这种用 `get<std::string>()` 的方法。
+
+先获取参数的原始字符串，然后写你的解析和校验逻辑。参数错误时，调用这个接口插入错误信息。
+
+```cpp
+void insertErrorMsg(std::string msg);
+```
+
+它会往内部的存储错误信息的数组中插入你提供的字符串，在后处理阶段使用。例如[子命令示例](./examples/subcommand.cpp)中的 `grep` 子命令的 `--option` 选项接受 "auto, always, never", 这段代码校验这个选项的值：
+
+```cpp
+auto grepColor = grep.get<string>(...).get();
+// Validate grep color option value.
+if (grepColor != "auto" && grepColor != "always" && grepColor != "never") {
+    string errorMsg("Invalid value for option '--color'. Expected 'auto', always' or 'never', but got '");
+    errorMsg += grepColor;
+    errorMsg += "'.";
+    grep.insertErrorMsg(errorMsg);
+}
+```
+
+传入错误的参数时会打印
+
+```
+>./subcommand grep --color blue
+Errors occurred while parsing command-line arguments.
+The following is a list of error messages:
+Error: Invalid value for option '--color'. Expected 'auto', always' or 'never', but got 'blue'.
+```
+
+如果你需要像库的输出那样提供精细的格式化文本，你可以调用 `ArgLite::Formatter` 下的接口。总共有 `red()`, `yellow()`, `bold()`, `boldUnderline()` 这几个函数，它们的签名中只是函数名部分不一样。
+
+```cpp
+std::string red(std::string_view str, const std::ostream &os = std::cerr);
+```
+
+它们会返回一个格式化后的字符串，也是输出到文件或管道时不添加 ANSI 序列。第二个参数是用于检测的输出流，函数会根据提供的流判断它是否输出到终端。 `bold()`, `boldUnderline()` 的第二个参数的默认值是 `std::cout`, 但错误信息输出到 `std::cerr`, 所以在这里使用它们时需要给第二个参数传入 `std::cerr`. 你也可以统一给第二个参数传入 `std::cerr`, 这样就不需要记它们的默认值。
+
+像[子命令示例](./examples/subcommand.cpp)那样写的话可以得到这样的输出：
+
+![](https://raw.githubusercontent.com/InMirrors/images/main/ArgLite/formatter-custom-types.png)
+
+你只要在后处理前调用 `insertErrorMsg` 就能在用户输入错误参数时打印错误信息。但如果你对错误信息的顺序有要求，需要在下一次调用获取命令行参数的接口前就调用，不然下一次调用的错误信息会排在前面。
+
+---
+
+**设置帮助信息**
+
+因为库不识别自定义类型，所以如果你要在帮助信息中说明选项接受怎样的值的话，需要手动调整帮助信息。上述示例中的这段代码
+
+```cpp
+auto grepColor = grep.get<string>("color", "When to use colors. [possible values: auto, always,\n"
+                                           "never].")
+                     .setDefault("auto")
+                     .setTypeName("when")
+                     .get();
+```
+
+可以得到
+
+```
+      --color <when>      When to use colors. [possible values: auto, always,
+                          never]. [default: auto]
+```
+
+或者在值的类型名中提示有效参数，描述中不提示：
+
+```cpp
+auto grepColor = grep.get<string>("color", "When to use colors.")
+                     .setDefault("auto")
+                     .setTypeName("auto|always|never")
+                     .get();
+```
+
+```
+      --color <auto|always|never>
+                          When to use colors. [default: auto]
+```
 
 ### 获取位置参数
 

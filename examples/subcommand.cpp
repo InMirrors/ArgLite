@@ -1,5 +1,6 @@
-#define ARGLITE_ENABLE_FORMATTER
+#include "ArgLite/Formatter.hpp"
 #include "ArgLite/Core.hpp"
+#define ARGLITE_ENABLE_FORMATTER
 
 using namespace std;
 using ArgLite::Parser;
@@ -46,11 +47,20 @@ int main(int argc, char **argv) {
                                                      "combined by or.")
                             .setTypeName("pattern")
                             .getVec();
-    auto grepColor = grep.get<string>("color", "Show colored matches. The value must be auto (the default),\n"
-                                               "never, or always.")
+    auto grepColor = grep.get<string>("color", "When to use colors. [possible values: auto, always,\n"
+                                               "never].")
                          .setDefault("auto")
                          .setTypeName("when")
                          .get();
+    // Validate grep color option value.
+    if (grepColor != "auto" && grepColor != "always" && grepColor != "never") {
+        string errorMsg("Invalid value for option '");
+        errorMsg += ArgLite::Formatter::bold("--color", cerr);
+        errorMsg += "'. Expected 'auto', always' or 'never', but got '";
+        errorMsg += ArgLite::Formatter::yellow(grepColor, cerr);
+        errorMsg += "'.";
+        grep.insertErrorMsg(errorMsg);
+    }
 
     auto mvSrc   = mv.getPositional("source", "The source file or directory.");
     auto mvDst   = mv.getPositional("destination", "The destination file or directory.");
