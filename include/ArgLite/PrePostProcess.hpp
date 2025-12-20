@@ -41,8 +41,11 @@ inline void Parser::preprocess_(int argc, const char *const *argv) { // NOLINT(r
     int subCmdOffset = 0;
     if (argc > 1) {
         std::string argv1 = argv[1];
-        auto        it    = std::find_if(
-            subCmdPtrs_.begin(), subCmdPtrs_.end(), [argv1](const SubParser *p) { return p->subCommandName_ == argv1; });
+
+        auto it = std::find_if(
+            subCmdPtrs_.begin(), subCmdPtrs_.end(),
+            [argv1](const SubParser *p) { return p->subCommandName_ == argv1; });
+
         if (it != subCmdPtrs_.end()) {
             activeSubCmd_ = *it;
             data.cmdName.append(" ").append(argv[1]); // cmdName is now "program subcommand"
@@ -183,6 +186,11 @@ inline void Parser::printHelp(const InternalData &data) {
     printHelpSubCmd(subCmdPtrs_);
     printHelpPositional(data);
     printHelpOptions(data);
+
+    if (!data.helpFooter.empty()) {
+        std::cout << '\n'
+                  << data.helpFooter << '\n';
+    }
 }
 
 inline void Parser::printHelpDescription(std::string_view description) {

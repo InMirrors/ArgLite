@@ -392,7 +392,7 @@ std::string red(std::string_view str, const std::ostream &os = std::cerr);
 
 它们会返回一个格式化后的字符串，也是输出到文件或管道时不添加 ANSI 序列。第二个参数是用于检测的输出流，函数会根据提供的流判断它是否输出到终端。 `bold()`, `boldUnderline()` 的第二个参数的默认值是 `std::cout`, 但错误信息输出到 `std::cerr`, 所以在这里使用它们时需要给第二个参数传入 `std::cerr`. 你也可以统一给第二个参数传入 `std::cerr`, 这样就不需要记它们的默认值。
 
-像[子命令示例](./examples/subcommand.cpp)那样写的话可以得到这样的输出：
+像[子命令示例](./examples/subcommand.cpp#L62-L70)那样写的话可以得到这样的输出：
 
 ![](https://raw.githubusercontent.com/InMirrors/images/main/ArgLite/formatter-custom-types.png)
 
@@ -462,6 +462,8 @@ command output input1 input2...
 
 ### 后处理
 
+#### 打印帮助
+
 ```cpp
 void changeDescriptionIndent(size_t indent);
 ```
@@ -470,7 +472,46 @@ void changeDescriptionIndent(size_t indent);
 
 例如程序的选项名部分很多都是刚好超长了一点，超长的选项的描述会在下一行显示，用这个函数把缩进调大点，就能让这些选项的描述在同一行显示，更加美观。其实[用法](#用法)中的简单示例就属于这种情况，调成 27 后就能全部在同一行显示
 
-和下面的后处理接口不同，这个其实不一定要在后处理阶段调用，在 `tryToPrintHelp()` 前调用就行，你甚至可以在一开始就调用。只是在这里调用的话更容易理解使用流程。
+---
+
+```cpp
+void setHelpFooter(std::string_view footer);
+```
+
+用于添加额外的帮助信息，会在自动生成的帮助信息的后面打印传入的字符串。你可以使用这个接口添加使用示例、联系方式等信息。如果你需要像库自动生成的帮助那样提供精细的格式化文本，你可以调用 `ArgLite::Formatter` 下的接口。用法参考[解析自定义类型](#解析自定义类型)章节的说明。
+
+例如[子命令示例](./examples/subcommand.cpp#L77-L83)中有这些代码：
+
+```cpp
+// Set the help footer
+string footer;
+footer += ArgLite::Formatter::boldUnderline("Examples:\n");
+footer += "  subcommand -v out.txt in1.txt in2.txt\n";
+footer += "  subcommand status\n";
+footer += "  subcommand commit -m \"An awesome commit\"";
+Parser::setHelpFooter(footer);
+```
+
+可以得到这样的输出：
+
+```
+...
+  -V, --version           Show version information and exit
+  -h, --help              Show this help message and exit
+
+Examples:
+  subcommand -v out.txt in1.txt in2.txt
+  subcommand status
+  subcommand commit -m "An awesome commit"
+```
+
+<details><summary>点击查看完整帮助信息截图</summary>
+
+![](https://raw.githubusercontent.com/InMirrors/images/main/ArgLite/formatter-footer.png)
+
+</details>
+
+和下一小节的错误处理接口不同，`changeDescriptionIndent()` 和 `setHelpFooter()` 其实不一定要在后处理阶段调用，在 `tryToPrintHelp()` 前调用就行，你甚至可以在一开始就调用。只是在这里调用的话更容易理解使用流程。
 
 ---
 
@@ -524,7 +565,7 @@ void tryToPrintHelp();
 
 如果库能自动分割描述的话自然更好，但要足够智能地分割的话会引入很多代码，和轻量库的定位不符。更何况手动添加换行符并不复杂，还能让代码的显示效果更接近帮助输出的效果。所以本库采取这种不够智能的实现。
 
----
+#### 处理错误
 
 ```cpp
 bool tryToPrintInvalidOpts(bool notExit = false);
@@ -546,7 +587,7 @@ bool runAllPostprocess(bool notExit = false);
 
 一般情况下直接运行 `runAllPostprocess()` 就行。后面几个函数都会在出错时直接退出程序。如果你不想直接退出程序的话，传入 `true`，函数会在发生错误时返回 `true`。如果你需要更精细的控制，例如有未知选项时不退出，但解析错误时退出，可以依次运行 `tryToPrintHelp(); auto hasInvalidOpts = tryToPrintInvalidOpts(true); finalize();`。
 
-可见本库不会抛出异常，用返回值判断是否出现错误。因为这种轻量库会出现错误的地方基本只有传入错误的命令行参数，需要退出程序让用户重新输入。这种场景下返回值已经足够，并且契合轻量的定位。
+本库不会抛出异常，用返回值判断是否出现错误。因为这种轻量库会出现错误的地方基本只有传入错误的命令行参数，需要退出程序让用户重新输入。这种场景下返回值已经足够，并且契合轻量的定位。
 
 ### 选项分组
 

@@ -170,6 +170,16 @@ public:
     }
 
     /**
+     * @brief Set the help footer text.
+     * @details See the README for details.
+     * @param footer The help footer text.
+     */
+    static void setHelpFooter(std::string_view footer) {
+        if (!isMainCmdActive()) { return; }
+        data_.helpFooter = footer;
+    }
+
+    /**
      * @brief Changes the description indent of option descriptions in the help message. Default is 25.
      * @details This function should be called before tryToPrintHelp.
      * @param indent The new description indent.
@@ -258,9 +268,10 @@ private:
     using OptMap = std::unordered_map<std::string, std::vector<OptionInfo>>;
 
     struct InternalData {
-        std::string cmdName;
-        size_t      positionalIdx;
-        bool        hasCustumOptHeader;
+        std::string      cmdName;
+        std::string_view helpFooter;
+        size_t           positionalIdx;
+        bool             hasCustumOptHeader;
         // Containers
         OptMap                          options;
         std::vector<OptionHelpInfo>     optionHelpEntries;
@@ -472,6 +483,16 @@ public:
     void pushBackErrorMsg(std::string msg) {
         if (!isActive()) { return; }
         Parser::data_.errorMessages.push_back(std::move(msg));
+    }
+
+    /**
+     * @brief Set the help footer text.
+     * @details See the README for details.
+     * @param footer The help footer text.
+     */
+    void setHelpFooter(std::string_view footer) {
+        if (!isActive()) { return; }
+        Parser::data_.helpFooter = footer;
     }
 
 private:

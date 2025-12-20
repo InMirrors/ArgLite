@@ -21,9 +21,14 @@ int main(int argc, char **argv) {
     auto indent     = Parser::getInt("i,indent", "Option Description indent.", 26);
     auto number     = Parser::getInt("number", "Number of iterations."); // long option only
     auto rate       = Parser::getDouble("r", "Speed rate.", 123.0);      // short option only, with default value
-    auto outputPath = Parser::getString("o,out-path", "Output file Path.", "output.txt");
+    auto outputPath = Parser::getString("o,out-path", "Output file Path.", ".");
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
+
+    string footer;
+    footer += ArgLite::Formatter::boldUnderline("Examples:\n");
+    footer += "minimal_example -i 27 out.txt in1.txt in2.txt";
+    Parser::setHelpFooter(footer);
 
     Parser::changeDescriptionIndent(indent);
     Parser::runAllPostprocess();

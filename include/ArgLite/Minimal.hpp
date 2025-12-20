@@ -162,6 +162,15 @@ public:
     static void insertOptHeader(std::string header) { insertOptHeader_(std::move(header)); }
 
     /**
+     * @brief Set the help footer text.
+     * @details See the README for details.
+     * @param footer The help footer text.
+     */
+    static void setHelpFooter(std::string_view footer) {
+        data_.helpFooter = footer;
+    }
+
+    /**
      * @brief Changes the description indent of option descriptions in the help message. Default is 25.
      * @details This function should be called before tryToPrintHelp.
      * @param indent The new description indent.
@@ -234,11 +243,12 @@ private:
     using OptMap = std::unordered_map<std::string, OptionInfo>;
 
     struct InternalData {
-        std::string programName;
-        std::string programDescription;
-        std::string shortNonFlagOptsStr;
-        size_t      positionalIdx;
-        bool        hasCustumOptHeader;
+        std::string      programName;
+        std::string      programDescription;
+        std::string      shortNonFlagOptsStr;
+        std::string_view helpFooter;
+        size_t           positionalIdx;
+        bool             hasCustumOptHeader;
         // Containers
         OptMap                          options;
         std::vector<OptionHelpInfo>     optionHelpEntries;
@@ -467,6 +477,11 @@ inline void Parser::printHelp(const InternalData &data) {
     printHelpUsage(data, data_.programName);
     printHelpPositional(data);
     printHelpOptions(data);
+
+    if (!data.helpFooter.empty()) {
+        std::cout << '\n'
+                  << data.helpFooter << '\n';
+    }
 }
 
 inline void Parser::printHelpDescription(std::string_view description) {
