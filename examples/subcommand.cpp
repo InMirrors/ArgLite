@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
         errorMsg += "'. Expected 'auto', always' or 'never', but got '";
         errorMsg += ArgLite::Formatter::yellow(grepColor, cerr);
         errorMsg += "'.";
-        grep.insertErrorMsg(errorMsg);
+        grep.pushBackErrorMsg(errorMsg);
     }
 
     auto mvSrc   = mv.getPositional("source", "The source file or directory.");

@@ -359,7 +359,7 @@ OptValBuilder<T> get(std::string_view optName, std::string description);
 先获取参数的原始字符串，然后写你的解析和校验逻辑。参数错误时，调用这个接口插入错误信息。
 
 ```cpp
-void insertErrorMsg(std::string msg);
+void pushBackErrorMsg(std::string msg);
 ```
 
 它会往内部的存储错误信息的数组中插入你提供的字符串，在后处理阶段使用。例如[子命令示例](./examples/subcommand.cpp)中的 `grep` 子命令的 `--option` 选项接受 "auto, always, never", 这段代码校验这个选项的值：
@@ -371,7 +371,7 @@ if (grepColor != "auto" && grepColor != "always" && grepColor != "never") {
     string errorMsg("Invalid value for option '--color'. Expected 'auto', always' or 'never', but got '");
     errorMsg += grepColor;
     errorMsg += "'.";
-    grep.insertErrorMsg(errorMsg);
+    grep.pushBackErrorMsg(errorMsg);
 }
 ```
 
@@ -396,7 +396,7 @@ std::string red(std::string_view str, const std::ostream &os = std::cerr);
 
 ![](https://raw.githubusercontent.com/InMirrors/images/main/ArgLite/formatter-custom-types.png)
 
-你只要在后处理前调用 `insertErrorMsg` 就能在用户输入错误参数时打印错误信息。但如果你对错误信息的顺序有要求，需要在下一次调用获取命令行参数的接口前就调用，不然下一次调用的错误信息会排在前面。
+你只要在后处理前调用 `pushBackErrorMsg` 就能在用户输入错误参数时打印错误信息。但如果你对错误信息的顺序有要求，需要在下一次调用获取命令行参数的接口前就调用，不然下一次调用的错误信息会排在前面。
 
 ---
 

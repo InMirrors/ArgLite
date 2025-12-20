@@ -164,7 +164,7 @@ public:
      * @details See the README for details.
      * @param msg The error message text.
      */
-    static void insertErrorMsg(std::string msg) {
+    static void pushBackErrorMsg(std::string msg) {
         if (!isMainCmdActive()) { return; }
         data_.errorMessages.push_back(std::move(msg));
     }
@@ -469,7 +469,7 @@ public:
      * @details See the README for details.
      * @param msg The error message text.
      */
-    void insertErrorMsg(std::string msg) {
+    void pushBackErrorMsg(std::string msg) {
         if (!isActive()) { return; }
         Parser::data_.errorMessages.push_back(std::move(msg));
     }
