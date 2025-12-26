@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
     auto indent     = Parser::get<int>("i,indent", "Option Description indent.").setDefault(26).get();
     auto number     = Parser::get<int>("number", "Number of iterations.").get();       // long option only
     auto rate       = Parser::get<double>("r", "Speed rate.").setDefault(123.0).get(); // short option only
-    auto outputPath = Parser::get<string>("o,out-path", "Output file Path.").setDefault("output.txt").get();
+    auto outputPath = Parser::get<string>("o,out-path", "Output file Path.").setDefault(".").get();
     auto outputFile = Parser::getPositional("output-file", "The output file name.");
     auto inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 

@@ -23,7 +23,7 @@ def main():
             "Number     : 0",
             "Rate       : 123", # Default value
             "Output file: my_output.txt",
-            "Output Path: output.txt", # Default value
+            "Output Path: .", # Default value
             "Input files:",
             "input1.txt"
         ]

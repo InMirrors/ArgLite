@@ -235,6 +235,14 @@ class Parser::OptValHelper {
         size_t longIdx  = 0;
         size_t shortIdx = 0;
 
+        auto appendValStrFromOptInfo = [&valueStrVec](OptionInfo *optInfo) {
+            if (!optInfo->valueStr.empty()) {
+                valueStrVec.push_back(std::move(optInfo->valueStr));
+            } else {
+                valueStrVec.emplace_back(argv_[optInfo->argvIndex]);
+            }
+        };
+
         while (longIdx < longOptInfoArr.size() && shortIdx < shortOptInfoArr.size()) {
             OptionInfo *currentOptInfo = nullptr;
             if (longOptInfoArr[longIdx].argvIndex < shortOptInfoArr[shortIdx].argvIndex) {
@@ -243,28 +251,16 @@ class Parser::OptValHelper {
                 currentOptInfo = &shortOptInfoArr[shortIdx++];
             }
 
-            if (!currentOptInfo->valueStr.empty()) {
-                valueStrVec.push_back(std::move(currentOptInfo->valueStr));
-            } else {
-                valueStrVec.emplace_back(argv_[currentOptInfo->argvIndex]);
-            }
+            appendValStrFromOptInfo(currentOptInfo);
         }
 
         while (longIdx < longOptInfoArr.size()) {
-            if (!longOptInfoArr[longIdx].valueStr.empty()) {
-                valueStrVec.push_back(std::move(longOptInfoArr[longIdx].valueStr));
-            } else {
-                valueStrVec.emplace_back(argv_[longOptInfoArr[longIdx].argvIndex]);
-            }
+            appendValStrFromOptInfo(&longOptInfoArr[longIdx]);
             longIdx++;
         }
 
         while (shortIdx < shortOptInfoArr.size()) {
-            if (!shortOptInfoArr[shortIdx].valueStr.empty()) {
-                valueStrVec.push_back(std::move(shortOptInfoArr[shortIdx].valueStr));
-            } else {
-                valueStrVec.emplace_back(argv_[shortOptInfoArr[shortIdx].argvIndex]);
-            }
+            appendValStrFromOptInfo(&shortOptInfoArr[shortIdx]);
             shortIdx++;
         }
 
