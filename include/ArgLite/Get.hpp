@@ -24,46 +24,37 @@ inline unsigned Parser::countFlag_(
     auto [shortOpt, longOpt] = parseOptNameAsPair(optName);
     data.optionHelpEntries.push_back({shortOpt, longOpt, std::move(description), ""});
 
-    auto longNode  = data.options.extract(longOpt);
-    auto shortNode = data.options.extract(shortOpt);
+    auto getOptInfoArr = [&data](const std::string &optName) {
+        auto node       = data.options.extract(optName);
+        auto optInfoArr = node.empty() ? std::vector<OptionInfo>() : std::move(node.mapped());
+        restorePosArgsInFlags(optInfoArr, data.positionalArgsIndices);
+        return optInfoArr;
+    };
 
-    auto emptyArr        = std::vector<OptionInfo>();
-    auto longOptInfoArr  = longNode.empty() ? emptyArr : std::move(longNode.mapped());
-    auto shortOptInfoArr = shortNode.empty() ? emptyArr : std::move(shortNode.mapped());
-
-    restorePosArgsInFlags(shortOptInfoArr, data.positionalArgsIndices);
-    restorePosArgsInFlags(longOptInfoArr, data.positionalArgsIndices);
+    auto longOptInfoArr  = getOptInfoArr(longOpt);
+    auto shortOptInfoArr = getOptInfoArr(shortOpt);
 
     return longOptInfoArr.size() + shortOptInfoArr.size();
 }
 
 bool Parser::hasMutualExFlag_(HasMutualExArgs args, InternalData &data) {
-    auto [shortTrueOpt, longTrueOpt]   = parseOptNameAsPair(args.trueOptName);
-    auto [shortFalseOpt, longFalseOpt] = parseOptNameAsPair(args.falseOptName);
+    auto [trueShortOpt, trueLongOpt]   = parseOptNameAsPair(args.trueOptName);
+    auto [falseShortOpt, falseLongOpt] = parseOptNameAsPair(args.falseOptName);
 
-    data.optionHelpEntries.push_back({shortTrueOpt, longTrueOpt, std::move(args.trueDescription), "", "", false, args.defaultValue});
-    data.optionHelpEntries.push_back({shortFalseOpt, longFalseOpt, std::move(args.falseDescription), "", "", false, !args.defaultValue});
+    data.optionHelpEntries.push_back({trueShortOpt, trueLongOpt, std::move(args.trueDescription), "", "", false, args.defaultValue});
+    data.optionHelpEntries.push_back({falseShortOpt, falseLongOpt, std::move(args.falseDescription), "", "", false, !args.defaultValue});
 
-    auto trueLongNode   = data.options.extract(longTrueOpt);
-    auto trueShortNode  = data.options.extract(shortTrueOpt);
-    auto falseLongNode  = data.options.extract(longFalseOpt);
-    auto falseShortNode = data.options.extract(shortFalseOpt);
+    auto getOptIndex = [&data](const std::string &optName) {
+        auto node       = data.options.extract(optName);
+        auto optInfoArr = node.empty() ? std::vector<OptionInfo>() : std::move(node.mapped());
+        restorePosArgsInFlags(optInfoArr, data.positionalArgsIndices);
+        return optInfoArr.empty() ? 0 : optInfoArr.back().argvIndex;
+    };
 
-    auto emptyArr             = std::vector<OptionInfo>();
-    auto trueLongOptInfoArr   = trueLongNode.empty() ? emptyArr : std::move(trueLongNode.mapped());
-    auto trueShortOptInfoArr  = trueShortNode.empty() ? emptyArr : std::move(trueShortNode.mapped());
-    auto falseLongOptInfoArr  = falseLongNode.empty() ? emptyArr : std::move(falseLongNode.mapped());
-    auto falseShortOptInfoArr = falseShortNode.empty() ? emptyArr : std::move(falseShortNode.mapped());
-
-    restorePosArgsInFlags(trueLongOptInfoArr, data.positionalArgsIndices);
-    restorePosArgsInFlags(trueShortOptInfoArr, data.positionalArgsIndices);
-    restorePosArgsInFlags(falseLongOptInfoArr, data.positionalArgsIndices);
-    restorePosArgsInFlags(falseShortOptInfoArr, data.positionalArgsIndices);
-
-    auto trueLongIndex   = trueLongOptInfoArr.empty() ? 0 : trueLongOptInfoArr.back().argvIndex;
-    auto trueShortIndex  = trueShortOptInfoArr.empty() ? 0 : trueShortOptInfoArr.back().argvIndex;
-    auto falseLongIndex  = falseLongOptInfoArr.empty() ? 0 : falseLongOptInfoArr.back().argvIndex;
-    auto falseShortIndex = falseShortOptInfoArr.empty() ? 0 : falseShortOptInfoArr.back().argvIndex;
+    auto trueLongIndex   = getOptIndex(trueLongOpt);
+    auto trueShortIndex  = getOptIndex(trueShortOpt);
+    auto falseLongIndex  = getOptIndex(falseLongOpt);
+    auto falseShortIndex = getOptIndex(falseShortOpt);
 
     auto trueIndex  = std::min(trueShortIndex, trueLongIndex);
     auto falseIndex = std::min(falseShortIndex, falseLongIndex);
@@ -413,7 +404,7 @@ public:
         // Convert each string to T
         std::vector<T> resultVec;
         resultVec.reserve(splittedStrVec.size());
-        for (auto &valueStr : splittedStrVec) {
+        for (const auto &valueStr : splittedStrVec) {
             try {
                 resultVec.push_back(convertType<T>(valueStr));
             } catch (...) {
