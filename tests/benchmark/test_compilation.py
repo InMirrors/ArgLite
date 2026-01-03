@@ -52,7 +52,7 @@ def perform_compilation_test(source_path: str, compile_args: List[str], iteratio
     binary_size = 0
 
     for i in range(iterations):
-        _, size, time = compile_cpp(source_path, compile_args)
+        _, size, time = compile_cpp(source_path, compile_args=compile_args)
         total_time += time
         if i == iterations - 1: # On the last iteration, store path and size
             binary_size = size

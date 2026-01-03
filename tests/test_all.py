@@ -37,9 +37,9 @@ def compile_files(test_targets: List[TestTarget], common_compile_args: List[str]
         bin_path = os.path.join(BIN_DIR, bin_name)
         target.bin_path = bin_path
 
-        compile_args = common_compile_args + target.extra_compile_args + ["-o", bin_path]
+        compile_args = common_compile_args + target.extra_compile_args
         # compile_cpp will exit on failure.
-        compile_cpp(source_path, compile_args)
+        compile_cpp(source_path, bin_name, compile_args)
 
 
 def run_test_script(script_path, *args) -> int:

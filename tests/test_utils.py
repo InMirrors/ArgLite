@@ -40,7 +40,7 @@ BIN_DIR = os.path.abspath(os.path.join(REPO_DIR, 'bin'))
 BINARY_PATH = None
 test_counter = 0
 
-def compile_cpp(source_path: str, compile_args: Optional[list] = None) -> tuple[str, int, float]:
+def compile_cpp(source_path: str, bin_name: Optional[str] = None, compile_args: Optional[list] = None) -> tuple[str, int, float]:
     """
     Compiles a C++ source file using g++ and returns information about the compilation.
 
@@ -59,7 +59,10 @@ def compile_cpp(source_path: str, compile_args: Optional[list] = None) -> tuple[
 
     source_filename = os.path.basename(source_path)
     base_name, _ = os.path.splitext(source_filename)
-    output_name = f"{base_name}.exe" if sys.platform == "win32" else base_name
+    if bin_name:
+        output_name = bin_name
+    else:
+        output_name = f"{base_name}.exe" if sys.platform == "win32" else base_name
     output_path = os.path.join(BIN_DIR, output_name)
 
     command = ['g++', source_path, '-o', output_path]
@@ -97,8 +100,9 @@ def compile_cpp(source_path: str, compile_args: Optional[list] = None) -> tuple[
         colored_print("STDERR:", color="red", file=sys.stderr)
         print(e.stderr, file=sys.stderr)
         sys.exit(1)
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         colored_print("Error: g++ not found. Please ensure it is installed and in your PATH.", color="red", file=sys.stderr)
+        colored_print(e, file=sys.stderr)
         sys.exit(1)
     except Exception as e:
         colored_print(f"An unexpected error occurred during compilation: {e}", color="red", file=sys.stderr)

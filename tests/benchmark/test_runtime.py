@@ -175,7 +175,7 @@ def main():
     if not args.no_baseline:
         # Compile and run the baseline hello_world
         hello_world_src = os.path.join(SCRIPT_DIR, 'hello_world.cpp')
-        hello_world_bin, _, _ = compile_cpp(hello_world_src, ["-s", "-O2"])
+        hello_world_bin, _, _ = compile_cpp(hello_world_src, compile_args= ["-s", "-O2"])
         baseline.allocs, baseline.allocated_bytes = run_valgrind_memcheck(hello_world_bin, [])
         baseline.peak_heap_usage = run_valgrind_massif(hello_world_bin, [], baseline.binary_name)
         colored_print(f"hello_world baseline: allocs={baseline.allocs}, allocated_bytes={baseline.allocated_bytes}, peak_heap={baseline.peak_heap_usage}KB", color="green")
