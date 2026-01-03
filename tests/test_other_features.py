@@ -17,7 +17,7 @@ def main():
             "Verbose    : 1",
             "Delimiter  : ','",
             "Include:",
-            "123\na\nbc\n45\n6\ndef",
+            "123\n  a\n  bc\n  45\n  6\n  def",
         ]
     )
 
@@ -29,7 +29,7 @@ def main():
             "Indent     : 30",
             "Delimiter  : ' '",
             "Include:",
-            "123\na,bc\n45,6\ndef",
+            "123\n  a,bc\n  45,6\n  def",
         ]
     )
 
@@ -40,7 +40,7 @@ def main():
             "Verbose    : 3",
             "Delimiter  : ' '",
             "Include:",
-            "123\na,bc",
+            "123\n  a,bc",
         ]
     )
 

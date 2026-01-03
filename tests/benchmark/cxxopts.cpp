@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
     cout << "Output file: " << outputFile << '\n';
     cout << "Input files:\n";
     for (const auto &it : inputFiles) {
-        cout << it << '\n';
+        cout << "  " << it << '\n';
     }
 
     return 0;

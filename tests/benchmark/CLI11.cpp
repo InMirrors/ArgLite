@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     cout << "Counter    : " << count << '\n';
     cout << "Output file: " << outputFile << '\n';
     cout << "Input files:" << '\n';
-    for (const auto &it : inputFiles) { cout << it << '\n'; }
+    for (const auto &it : inputFiles) { cout << "  " << it << '\n'; }
 
     return 0;
 }

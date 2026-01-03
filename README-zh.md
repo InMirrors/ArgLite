@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
     cout << "Output Path: " << outputPath << '\n';
     cout << "Output file: " << outputFile << '\n';
     cout << "Input files:" << '\n';
-    for (const auto &it : inputFiles) { cout << it << '\n'; }
+    for (const auto &it : inputFiles) { cout << "  " << it << '\n'; }
 
     return 0;
 }
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
 
 ```
 > ./app --help
-Usage: app [OPTIONS] output-file input-files
+Usage: app [OPTIONS] output-file input-files...
 
 Positional Arguments:
   output-file  The output file name.
@@ -151,8 +151,8 @@ Rate       : 2.333
 Output Path: ./results
 Output file: out.txt
 Input files:
-in1.txt
-in2.txt
+  in1.txt
+  in2.txt
 ```
 
 可见接口的命名已经足够清晰，使用方法也不难理解：先设置程序的描述和预处理，然后调用对应接口获取值，用变量保存返回值，最后后处理即可。这时你已经用变量获取到了所需的值，之后使用你自己定义的变量即可。
@@ -766,7 +766,7 @@ int main(int argc, char **argv) {
     cout << "Indent     : " << indent << '\n';
     cout << "Delimiter  : '" << delimiter << "'\n";
     cout << "Include:\n";
-    for (const auto &it : include) { cout << it << '\n'; }
+    for (const auto &it : include) { cout << "  " << it << '\n'; }
 
     return 0;
 }
@@ -805,21 +805,21 @@ Options:
 Indent     : 26
 Delimiter  : ':'
 Include:
-path1
-path2
+  path1
+  path2
 
 > app -I "path1 path2"
 Indent     : 26
 Delimiter  : ':'
 Include:
-path1 path2
+  path1 path2
 
 > app -I "path1 path2" -d " "
 Indent     : 26
 Delimiter  : ' '
 Include:
-path1
-path2
+  path1
+  path2
 ```
 
 如果传入的参数不能用一个固定的分隔符应对所有情况，可以利用这个特性，动态控制分隔符，选取适合当前参数的分隔符。

@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
     cout << "Output Path: " << outputPath << '\n';
     cout << "Output file: " << outputFile << '\n';
     cout << "Input files:" << '\n';
-    for (const auto &it : inputFiles) { cout << it << '\n'; }
+    for (const auto &it : inputFiles) { cout << "  " << it << '\n'; }
 
     return 0;
 }
@@ -132,7 +132,7 @@ Program output:
 
 ```
 > ./app --help
-Usage: app [OPTIONS] output-file input-files
+Usage: app [OPTIONS] output-file input-files...
 
 Positional Arguments:
   output-file  The output file name.
@@ -154,8 +154,8 @@ Rate       : 2.333
 Output Path: ./results
 Output file: out.txt
 Input files:
-in1.txt
-in2.txt
+  in1.txt
+  in2.txt
 ```
 
 The API is designed to be self-explanatory. You set program info, preprocess, retrieve values into variables, and then post-process. After post-processing, you have all the values you need, so use them as you like.
@@ -751,7 +751,7 @@ int main(int argc, char **argv) {
     cout << "Indent     : " << indent << '\n';
     cout << "Delimiter  : '" << delimiter << "'\n";
     cout << "Include:\n";
-    for (const auto &it : include) { cout << it << '\n'; }
+    for (const auto &it : include) { cout << "  " << it << '\n'; }
 
     return 0;
 }
@@ -790,21 +790,21 @@ While this specific use case might seem trivial, it demonstrates the feature. No
 Indent     : 26
 Delimiter  : ':'
 Include:
-path1
-path2
+  path1
+  path2
 
 > app -I "path1 path2"
 Indent     : 26
 Delimiter  : ':'
 Include:
-path1 path2
+  path1 path2
 
 > app -I "path1 path2" -d " "
 Indent     : 26
 Delimiter  : ' '
 Include:
-path1
-path2
+  path1
+  path2
 ```
 
 If the arguments cannot be handled by a single fixed delimiter, you can use this feature to dynamically control the delimiter and select one that is appropriate for the current arguments.

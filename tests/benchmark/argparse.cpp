@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     cout << "Counter    : " << args.counter << '\n';
     cout << "Output file: " << args.outputFile << '\n';
     cout << "Input files:" << '\n';
-    for (const auto &it : args.inputFiles) { cout << it << '\n'; }
+    for (const auto &it : args.inputFiles) { cout << "  " << it << '\n'; }
 
     return 0;
 }

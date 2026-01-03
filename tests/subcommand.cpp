@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
         cout << "Indent     : " << indent << '\n';
         cout << "Output file: " << outputFile << '\n';
         cout << "Input files:" << '\n';
-        for (const auto &it : inputFiles) { cout << it << '\n'; }
+        for (const auto &it : inputFiles) { cout << "  " << it << '\n'; }
     }
 
     if (status.isActive()) {
@@ -79,14 +79,14 @@ int main(int argc, char **argv) {
         cout << "file    : " << commitFile << '\n';
         cout << "date    : " << commitDate << '\n';
         cout << "pathspec:" << '\n';
-        for (const auto &it : commitPathSpec) { cout << it << '\n'; }
+        for (const auto &it : commitPathSpec) { cout << "  " << it << '\n'; }
     }
 
     if (grep.isActive()) {
         cout << ArgLite::Formatter::bold("Grep") << " command is active." << '\n';
         cout << "color: " << grepColor << '\n';
         cout << "patterns:" << '\n';
-        for (const auto &it : grepPatterns) { cout << it << '\n'; }
+        for (const auto &it : grepPatterns) { cout << "  " << it << '\n'; }
     }
 
     if (mv.isActive()) {

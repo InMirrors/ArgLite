@@ -70,7 +70,7 @@ def main():
         expected_output_substrings=[
             "Grep command is active.",
             "patterns:",
-            "abc\n123",
+            "abc\n  123",
         ]
     )
 

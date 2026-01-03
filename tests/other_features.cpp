@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
     else
         cout << "Optional   : (not set)\n";
     cout << "Include:\n";
-    for (const auto &it : include) { cout << it << '\n'; }
+    for (const auto &it : include) { cout << "  " << it << '\n'; }
 
     return 0;
 }
