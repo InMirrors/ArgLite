@@ -827,27 +827,27 @@ Except for "ArgLite Sub", all other entries are simple programs that implement "
 
 The following results were obtained with the compilation flags `-s -DNDEBUG`.
 
-| Name          | Time (s) | Size (KB) |
-| ------------- | -------: | --------: |
-| ArgLite Mini  |     0.94 |     110.2 |
-| ArgLite Full  |     1.08 |     134.2 |
-| *ArgLite Sub* |     1.21 |     162.3 |
-| CLI11         |     1.46 |     550.3 |
-| cxxopts       |     1.98 |     278.3 |
-| args          |     1.65 |     278.3 |
-| argparse      |     1.28 |     130.3 |
+| Name          | Time (s) | Size (KB) | Time (%) | Size (%) |
+| ------------- | -------: | --------: | -------: | -------: |
+| ArgLite Mini  |     0.94 |     110.2 |   100.0% |   100.0% |
+| ArgLite Full  |     1.08 |     134.2 |   114.9% |   121.8% |
+| *ArgLite Sub* |     1.21 |     162.3 |   128.7% |   147.3% |
+| CLI11         |     1.46 |     550.3 |   155.3% |   499.4% |
+| cxxopts       |     1.98 |     278.3 |   210.6% |   252.5% |
+| args          |     1.65 |     278.3 |   175.5% |   252.5% |
+| argparse      |     1.28 |     130.3 |   136.2% |   118.2% |
 
 The following results were obtained with the compilation flags `-s -DNDEBUG -O2`.
 
-| Name          | Time (s) | Size (KB) |
-| ------------- | -------: | --------: |
-| ArgLite Mini  |     1.36 |      54.3 |
-| ArgLite Full  |     1.56 |      62.3 |
-| *ArgLite Sub* |     2.11 |      90.3 |
-| CLI11         |     1.75 |     498.3 |
-| cxxopts       |     2.67 |     118.3 |
-| args          |     2.91 |     150.3 |
-| argparse      |     1.77 |      74.3 |
+| Name          | Time (s) | Size (KB) | Time (%) | Size (%) |
+| ------------- | -------: | --------: | -------: | -------: |
+| ArgLite Mini  |     1.36 |      54.3 |   100.0% |   100.0% |
+| ArgLite Full  |     1.56 |      62.3 |   114.7% |   114.7% |
+| *ArgLite Sub* |     2.11 |      90.3 |   155.1% |   166.3% |
+| CLI11         |     1.75 |     498.3 |   128.7% |   917.7% |
+| cxxopts       |     2.67 |     118.3 |   196.3% |   217.9% |
+| args          |     2.91 |     150.3 |   214.0% |   276.8% |
+| argparse      |     1.77 |      74.3 |   130.1% |   136.8% |
 
 As you can see, ArgLite is indeed the most lightweight, with the Minimal version having a particularly noticeable advantage. Even the full example using various interfaces, ArgLite's performance can still be compared with the simplest programs of other libraries, and even perform better. `argparse` also performs well, just slightly behind ArgLite Full, placing it in the same tier. CLI11 benefits from linking a pre-built library file, resulting in a shorter compilation time (still not as fast as ArgLite), but it has the largest binary size. `cxxopts` and `args` perform moderately, being only lighter than the all-in-one library CLI11, and because they cannot link pre-built library files, their compilation times are the longest.
 

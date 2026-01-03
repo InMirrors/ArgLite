@@ -68,12 +68,30 @@ def perform_compilation_test(source_path: str, compile_args: List[str], iteratio
 def print_results(targets: List[BenchmarkTarget]):
     """Prints the benchmark results in a Markdown table."""
     magenta("=== Results ===")
-    print("| Name         | Time (s) | Size (KB) |")
-    print("| ------------ | -------: | --------: |")
+    print("| Name         | Time (s) | Size (KB) | Time (%) | Size (%) |")
+    print("| ------------ | -------: | --------: | -------: | -------: |")
+
+    if not targets:
+        return
+
+    base_time = targets[0].compile_time
+    base_size = targets[0].binary_size
+
     for target in targets:
         time_str = f"{target.compile_time:.2f}"
         size_str = f"{target.binary_size / 1024:.1f}"
-        print(f"| {target.name:<12} | {time_str:>8} | {size_str:>9} |")
+
+        if base_time > 0:
+            time_perc = f"{target.compile_time / base_time * 100:.1f}"
+        else:
+            time_perc = "N/A"
+
+        if base_size > 0:
+            size_perc = f"{target.binary_size / base_size * 100:.1f}"
+        else:
+            size_perc = "N/A"
+
+        print(f"| {target.name:<12} | {time_str:>8} | {size_str:>9} | {time_perc:>8} | {size_perc:>8} |")
 
 
 def main():
