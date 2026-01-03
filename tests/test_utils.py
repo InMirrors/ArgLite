@@ -31,6 +31,18 @@ def colored_print(text, color=None, end='\n', file=sys.stdout):
     else:
         print(text, end=end, file=file)
 
+def error(text, end='\n', file=sys.stderr):
+    colored_print(text, color="red", end=end, file=file)
+
+def warn(text, end='\n', file=sys.stderr):
+    colored_print(text, color="yellow", end=end, file=sys.stderr)
+
+def success(text, end='\n', file=sys.stdout):
+    colored_print(text, color="green", end=end, file=file)
+
+def blue(text, end='\n', file=sys.stdout):
+    colored_print(text, color="blue", end=end, file=file)
+
 # --- End Color Output Configuration ---
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -69,7 +81,7 @@ def compile_cpp(source_path: str, bin_name: Optional[str] = None, compile_args: 
     if compile_args:
         command.extend(compile_args)
 
-    colored_print(f"Compiling: {' '.join(command)}", color="blue")
+    blue(f"Compiling: {' '.join(command)}")
 
     start_time = time.time()
 
@@ -80,32 +92,32 @@ def compile_cpp(source_path: str, bin_name: Optional[str] = None, compile_args: 
         compile_time = end_time - start_time
 
         if result.stdout:
-            colored_print("Compiler STDOUT:", color="blue")
+            blue("Compiler STDOUT:")
             print(result.stdout)
         if result.stderr:
-            colored_print("Compiler STDERR:", color="blue")
+            blue("Compiler STDERR:")
             print(result.stderr)
 
         binary_size = os.path.getsize(output_path)
-        colored_print(f"Successfully compiled {source_path} to {output_path}", color="green")
-        colored_print(f"Binary size: {binary_size} bytes, Time: {compile_time:.2f}s", color="green")
+        success(f"Successfully compiled {source_path} to {output_path}")
+        success(f"Binary size: {binary_size} bytes, Time: {compile_time:.2f}s")
 
         return output_path, binary_size, compile_time
 
     except subprocess.CalledProcessError as e:
-        colored_print(f"Compilation failed for {source_path}.", color="red", file=sys.stderr)
-        colored_print(f"Return Code: {e.returncode}", color="red", file=sys.stderr)
-        colored_print("STDOUT:", color="red", file=sys.stderr)
+        error(f"Compilation failed for {source_path}.", file=sys.stderr)
+        error(f"Return Code: {e.returncode}", file=sys.stderr)
+        error("STDOUT:", file=sys.stderr)
         print(e.stdout, file=sys.stderr)
-        colored_print("STDERR:", color="red", file=sys.stderr)
+        error("STDERR:", file=sys.stderr)
         print(e.stderr, file=sys.stderr)
         sys.exit(1)
     except FileNotFoundError as e:
-        colored_print("Error: g++ not found. Please ensure it is installed and in your PATH.", color="red", file=sys.stderr)
-        colored_print(e, file=sys.stderr)
+        error("Error: g++ not found. Please ensure it is installed and in your PATH.", file=sys.stderr)
+        print(e, file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        colored_print(f"An unexpected error occurred during compilation: {e}", color="red", file=sys.stderr)
+        error(f"An unexpected error occurred during compilation: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -116,19 +128,19 @@ def run_binary(args: list, binary_path: Optional[str] = None) -> tuple[str, str,
     """
     path_to_binary = binary_path if binary_path else BINARY_PATH
     if not path_to_binary:
-        colored_print("Error: Binary path not set. Please set BINARY_PATH globally or pass it to run_binary.", color="red", file=sys.stderr)
+        error("Error: Binary path not set. Please set BINARY_PATH globally or pass it to run_binary.", file=sys.stderr)
         sys.exit(1)
 
     command = [path_to_binary] + args
-    colored_print(f"Executing: {' '.join(command)}", color="blue")
+    blue(f"Executing: {' '.join(command)}")
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=False, encoding='utf-8')
         return result.stdout, result.stderr, result.returncode
     except FileNotFoundError:
-        colored_print(f"Error: Binary not found at {path_to_binary}. Please ensure it is compiled and placed there.", color="red", file=sys.stderr)
+        error(f"Error: Binary not found at {path_to_binary}. Please ensure it is compiled and placed there.", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        colored_print(f"An error occurred: {e}", color="red", file=sys.stderr)
+        error(f"An error occurred: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -156,50 +168,50 @@ def test_case(name: str, args: list,
     colored_print(f"\n--- [{test_counter}] {name} ---", color="cyan", end='\n')
     stdout, stderr, returncode = run_binary(args, binary_path)
 
-    colored_print("STDOUT:", color="blue")
+    blue("STDOUT:")
     print(stdout)
-    colored_print("STDERR:", color="blue")
+    blue("STDERR:")
     print(stderr)
-    colored_print(f"Return Code: {returncode}", color="blue")
+    blue(f"Return Code: {returncode}")
 
-    success = True
+    is_success = True
 
     # Check if all expected output substrings are present in stdout
     if expected_output_substrings:
         for sub in expected_output_substrings:
             if sub not in stdout:
-                colored_print(f"FAIL: Expected output substring '{sub}' not found in STDOUT.", color="red", file=sys.stderr)
-                success = False
+                error(f"FAIL: Expected output substring '{sub}' not found in STDOUT.", file=sys.stderr)
+                is_success = False
             else:
-                colored_print(f"PASS: Expected output substring '{sub}' found in STDOUT.", color="green")
+                success(f"PASS: Expected output substring '{sub}' found in STDOUT.")
 
     # Check if all expected error keywords are present in stderr
     if expected_error_keywords:
         for keyword in expected_error_keywords:
             if keyword.lower() not in stderr.lower():
-                colored_print(f"FAIL: Expected error keyword '{keyword}' not found in STDERR.", color="red", file=sys.stderr)
-                success = False
+                error(f"FAIL: Expected error keyword '{keyword}' not found in STDERR.", file=sys.stderr)
+                is_success = False
             else:
-                colored_print(f"PASS: Expected error keyword '{keyword}' found in STDERR.", color="green")
+                success(f"PASS: Expected error keyword '{keyword}' found in STDERR.")
     # If no errors are expected but stderr is not empty, consider it a failure
     elif stderr:
-        colored_print(f"FAIL: Unexpected content in STDERR: {stderr}", color="red", file=sys.stderr)
-        success = False
+        error(f"FAIL: Unexpected content in STDERR: {stderr}", file=sys.stderr)
+        is_success = False
 
     # Check if the return code matches the expected return code
     if returncode != expected_return_code:
-        colored_print(f"FAIL: Expected return code {expected_return_code}, got {returncode}.", color="red", file=sys.stderr)
-        success = False
+        error(f"FAIL: Expected return code {expected_return_code}, got {returncode}.", file=sys.stderr)
+        is_success = False
     else:
-        colored_print(f"PASS: Return code is {returncode}.", color="green")
+        success(f"PASS: Return code is {returncode}.")
 
     # Print the final result of the test case
     if success:
-        colored_print(f"--- Test Case {test_counter} '{name}' PASSED ---\n", color="green")
+        success(f"--- Test Case {test_counter} '{name}' PASSED ---\n")
     else:
-        colored_print(f"--- Test Case {test_counter} '{name}' FAILED ---\n", color="red", file=sys.stderr)
+        error(f"--- Test Case {test_counter} '{name}' FAILED ---\n", file=sys.stderr)
 
-    return success
+    return is_success
 
 
 def reset_test_counter():

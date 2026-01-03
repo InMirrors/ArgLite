@@ -5,7 +5,7 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from test_utils import colored_print, compile_cpp, run_binary
+from test_utils import colored_print, compile_cpp, run_binary, error, success
 
 # Make all paths absolute to run the script from anywhere
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +28,10 @@ class TestTarget:
     extra_compile_args: List[str] = field(default_factory=list)
 
 
+def magenta(text, end='\n', file=sys.stdout):
+    colored_print(text, end=end, file=file)
+
+
 def compile_files(test_targets: List[TestTarget], common_compile_args: List[str]):
     for target in test_targets:
         source_path = os.path.join(SCRIPT_DIR, target.source)
@@ -45,15 +49,15 @@ def compile_files(test_targets: List[TestTarget], common_compile_args: List[str]
 def run_test_script(script_path, *args) -> int:
     """Runs a Python test script and returns its exit code."""
     command = [sys.executable, script_path, *args]
-    colored_print(f"Running test script: {' '.join(command)}", color="magenta")
+    magenta(f"Running test script: {' '.join(command)}")
     try:
         # Use check=False to capture failures without raising an exception immediately
         process = subprocess.run(command, check=False)
         if process.returncode != 0:
-            colored_print(f"Test script {script_path} {' '.join(args)} FAILED with exit code {process.returncode}", color="red", file=sys.stderr)
+            error(f"Test script {script_path} {' '.join(args)} FAILED with exit code {process.returncode}", file=sys.stderr)
         return process.returncode
     except FileNotFoundError:
-        colored_print(f"Error: Test script not found at {script_path}", color="red", file=sys.stderr)
+        error(f"Error: Test script not found at {script_path}", file=sys.stderr)
         exit(1)
 
 
@@ -65,10 +69,10 @@ def run_test_binary(target: TestTarget) -> int:
         print(stderr, file=sys.stderr) # Print stderr for debugging
 
     if returncode != 0:
-        colored_print(f"Test '{target.source}' FAILED with return code {returncode}", color="red", file=sys.stderr)
+        error(f"Test '{target.source}' FAILED with return code {returncode}", file=sys.stderr)
         return 1
     else:
-        colored_print(f"Test '{target.source}' PASSED", color="green")
+        success(f"Test '{target.source}' PASSED")
         return 0
 
 
@@ -93,17 +97,17 @@ def main():
     ]
 
     # --- Compilation Phase ---
-    colored_print("--- Starting Compilation Phase ---", color="magenta")
+    magenta("--- Starting Compilation Phase ---")
     compile_files(test_targets, COMMON_COMPILE_ARGS)
-    colored_print("\n--- All sources compiled successfully. Starting Test Phase ---", color="green")
+    success("\n--- All sources compiled successfully. Starting Test Phase ---")
 
     # --- Test Execution Phase ---
     total_failures = 0
     for i, target in enumerate(test_targets):
         horizontal_line = '=' * 80
-        colored_print(f"\n{horizontal_line}", color="magenta")
-        colored_print(f"Running Test {i+1}/{len(test_targets)}: {target.description}", color="magenta")
-        colored_print(f"{horizontal_line}\n", color="magenta")
+        magenta(f"\n{horizontal_line}")
+        magenta(f"Running Test {i+1}/{len(test_targets)}: {target.description}")
+        magenta(f"{horizontal_line}\n")
 
         # Run associated Python test script
         if target.test_script:
@@ -117,10 +121,10 @@ def main():
 
     # --- Final Summary ---
     if total_failures == 0:
-        colored_print("\n--- ALL TESTS PASSED! ---", color="green")
+        success("\n--- ALL TESTS PASSED! ---")
         sys.exit(0)
     else:
-        colored_print(f"\n--- {total_failures} TEST(S) FAILED! ---", color="red", file=sys.stderr)
+        error(f"\n--- {total_failures} TEST(S) FAILED! ---", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":

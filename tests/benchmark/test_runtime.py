@@ -10,7 +10,7 @@ from typing import List, Tuple
 
 # Adjust the path to import from the parent directory
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from test_utils import colored_print, compile_cpp
+from test_utils import colored_print, compile_cpp, error, warn, success, blue
 
 # Make all paths absolute to run the script from anywhere
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +33,7 @@ def run_valgrind_massif(binary_path: str, run_args: List[str], name: str) -> flo
     Returns the peak heap usage in KB.
     """
     massif_command = ['valgrind', '--tool=massif', binary_path] + run_args
-    colored_print(f"Executing Massif: {' '.join(massif_command)[:100]}", color="blue")
+    blue(f"Executing Massif: {' '.join(massif_command)[:100]}")
 
     try:
         # Run massif
@@ -42,7 +42,7 @@ def run_valgrind_massif(binary_path: str, run_args: List[str], name: str) -> flo
         # Find the massif output file
         massif_files = glob.glob('massif.out.*')
         if not massif_files:
-            colored_print("WARN: Massif output file not found.", color="yellow", file=sys.stderr)
+            warn("WARN: Massif output file not found.", file=sys.stderr)
             return 0.0
 
         latest_massif_file = max(massif_files, key=os.path.getctime)
@@ -67,16 +67,16 @@ def run_valgrind_massif(binary_path: str, run_args: List[str], name: str) -> flo
             return peak_mb * 1024
         else:
             os.rename(latest_massif_file, f"{name}.massif")
-            colored_print("WARN: Could not parse peak heap usage from ms_print output.", color="yellow", file=sys.stderr)
-            colored_print("ms_print STDOUT (first 500 chars):", "yellow", file=sys.stderr)
+            warn("WARN: Could not parse peak heap usage from ms_print output.", file=sys.stderr)
+            warn("ms_print STDOUT (first 500 chars):", file=sys.stderr)
             print(ms_print_output[:500], file=sys.stderr)
             return 0.0
 
     except FileNotFoundError as e:
-        colored_print(f"Error: Command '{e.filename}' not found. Please ensure it is installed and in your PATH.", color="red", file=sys.stderr)
+        error(f"Error: Command '{e.filename}' not found. Please ensure it is installed and in your PATH.", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        colored_print(f"An unexpected error occurred during massif execution: {e}", color="red", file=sys.stderr)
+        error(f"An unexpected error occurred during massif execution: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -86,7 +86,7 @@ def run_valgrind_memcheck(binary_path: str, run_args: List[str]) -> Tuple[int, i
     Returns allocs, allocated_bytes.
     """
     command = ['valgrind', binary_path] + run_args
-    colored_print(f"Executing Valgrind: {' '.join(command)[:100]}", color="blue")
+    blue(f"Executing Valgrind: {' '.join(command)[:100]}")
 
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=False, encoding='utf-8')
@@ -99,16 +99,16 @@ def run_valgrind_memcheck(binary_path: str, run_args: List[str]) -> Tuple[int, i
             allocated_bytes = int(match.group(2).replace(',', ''))
             return allocs, allocated_bytes
         else:
-            colored_print("WARN: Valgrind heap usage line not found in stderr.", color="yellow", file=sys.stderr)
-            colored_print("Valgrind STDERR (first 500 chars):", color="yellow", file=sys.stderr)
+            warn("WARN: Valgrind heap usage line not found in stderr.", file=sys.stderr)
+            warn("Valgrind STDERR (first 500 chars):", file=sys.stderr)
             print(valgrind_stderr[:500], file=sys.stderr)
             return 0, 0
 
     except FileNotFoundError:
-        colored_print("Error: valgrind not found. Please ensure it is installed and in your PATH.", color="red", file=sys.stderr)
+        error("Error: valgrind not found. Please ensure it is installed and in your PATH.", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        colored_print(f"An unexpected error occurred during valgrind execution: {e}", color="red", file=sys.stderr)
+        error(f"An unexpected error occurred during valgrind execution: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -120,7 +120,7 @@ def run_benchmarks(targets: List[BenchmarkTarget], run_args: List[str]):
         binary_path = os.path.join(BIN_DIR, target.binary_name)
 
         if not os.path.exists(binary_path):
-            colored_print(f"Error: Binary not found for {target.name} at {binary_path}. Please compile it first.", color="red", file=sys.stderr)
+            error(f"Error: Binary not found for {target.name} at {binary_path}. Please compile it first.", file=sys.stderr)
             exit(1)
 
         target.allocs, target.allocated_bytes = run_valgrind_memcheck(binary_path, run_args)
@@ -178,7 +178,7 @@ def main():
         hello_world_bin, _, _ = compile_cpp(hello_world_src, compile_args= ["-s", "-O2"])
         baseline.allocs, baseline.allocated_bytes = run_valgrind_memcheck(hello_world_bin, [])
         baseline.peak_heap_usage = run_valgrind_massif(hello_world_bin, [], baseline.binary_name)
-        colored_print(f"hello_world baseline: allocs={baseline.allocs}, allocated_bytes={baseline.allocated_bytes}, peak_heap={baseline.peak_heap_usage}KB", color="green")
+        success(f"hello_world baseline: allocs={baseline.allocs}, allocated_bytes={baseline.allocated_bytes}, peak_heap={baseline.peak_heap_usage}KB")
 
     benchmark_targets = [
         BenchmarkTarget(name="ArgLite Mini", binary_name="minimal"),

@@ -25,6 +25,10 @@ class BenchmarkTarget:
     extra_compile_args: List[str] = field(default_factory=list)
 
 
+def magenta(text, end='\n', file=sys.stdout):
+    colored_print(text, end=end, file=file)
+
+
 def test_single_file(source_path: str, compile_args: List[str], iterations: int):
         """ Benchmark a single specified file """
         compile_time, binary_size = perform_compilation_test(
@@ -37,13 +41,13 @@ def test_single_file(source_path: str, compile_args: List[str], iterations: int)
 def run_benchmarks(targets: List[BenchmarkTarget], common_compile_args: List[str], iterations: int):
     """Compiles each target n times, records average time and final size."""
     for target in targets:
-        colored_print(f"=== Benchmarking {target.name} ({iterations} iterations) ===", color="magenta")
+        magenta(f"=== Benchmarking {target.name} ({iterations} iterations) ===")
         source_path = os.path.join(SCRIPT_DIR, target.source)
         compile_args = common_compile_args + target.extra_compile_args
         target.compile_time, target.binary_size = perform_compilation_test(
             source_path, compile_args, iterations
         )
-        colored_print(f"Average time for {target.name}: {target.compile_time:.4f}s\n", color="magenta")
+        magenta(f"Average time for {target.name}: {target.compile_time:.4f}s\n")
 
 
 def perform_compilation_test(source_path: str, compile_args: List[str], iterations: int):
@@ -63,7 +67,7 @@ def perform_compilation_test(source_path: str, compile_args: List[str], iteratio
 
 def print_results(targets: List[BenchmarkTarget]):
     """Prints the benchmark results in a Markdown table."""
-    colored_print("=== Results ===", color="magenta")
+    magenta("=== Results ===")
     print("| Name         | Time (s) | Size (KB) |")
     print("| ------------ | -------: | --------: |")
     for target in targets:
