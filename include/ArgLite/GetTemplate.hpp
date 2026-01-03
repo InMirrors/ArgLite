@@ -15,18 +15,23 @@ template <> inline unsigned long      Parser::convertType(const std::string &val
 template <> inline unsigned long long Parser::convertType(const std::string &valueStr) { return std::stoull(valueStr); }
 template <> inline float              Parser::convertType(const std::string &valueStr) { return std::stof(valueStr); }
 template <> inline double             Parser::convertType(const std::string &valueStr) { return std::stod(valueStr); }
-template <> inline bool               Parser::convertType(const std::string &valueStr) {
+
+template <> inline bool Parser::convertType(const std::string &valueStr) {
     auto valStrCopy = valueStr;
-    std::transform(valStrCopy.begin(), valStrCopy.end(), valStrCopy.begin(), ::tolower);
+    std::transform(valStrCopy.begin(), valStrCopy.end(), valStrCopy.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+
     if (valStrCopy == "true" || valStrCopy == "1" || valStrCopy == "yes" || valStrCopy == "on") {
         return true;
     }
     if (valStrCopy == "false" || valStrCopy == "0" || valStrCopy == "no" || valStrCopy == "off") {
         return false;
     }
+
     throw std::invalid_argument("Invalid boolean value: " + valueStr);
     return false; // Should not reach here
 }
+
 template <> inline char Parser::convertType(const std::string &valueStr) {
     if (valueStr.empty()) { throw std::invalid_argument("Empty string"); }
     if (valueStr.size() == 1) { return valueStr[0]; }
@@ -42,6 +47,7 @@ template <typename T> inline T Parser::convertType(const std::string &valueStr) 
         return T(valueStr); // remaining types
     }
 }
+// End of convertType<T>
 
 template <typename T>
 inline std::string Parser::toString(const T &val) {

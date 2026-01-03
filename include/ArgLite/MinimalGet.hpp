@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Minimal.hpp"
+#include <cctype>
 #include <sstream>
 #include <string_view>
 #include <type_traits>
@@ -103,11 +104,13 @@ inline bool Parser::getBool_(
         return defaultValue;
     }
 
-    std::transform(valueStr.begin(), valueStr.end(), valueStr.begin(), ::tolower);
-    if (valueStr == "true" || valueStr == "1" || valueStr == "yes" || valueStr == "on") {
+    auto valStrCopy = valueStr;
+    std::transform(valStrCopy.begin(), valStrCopy.end(), valStrCopy.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    if (valStrCopy == "true" || valStrCopy == "1" || valStrCopy == "yes" || valStrCopy == "on") {
         return true;
     }
-    if (valueStr == "false" || valueStr == "0" || valueStr == "no" || valueStr == "off") {
+    if (valStrCopy == "false" || valStrCopy == "0" || valStrCopy == "no" || valStrCopy == "off") {
         return false;
     }
 

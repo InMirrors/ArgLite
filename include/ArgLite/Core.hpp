@@ -190,7 +190,7 @@ public:
      * @brief If the user provides -h or --help, prints the help message and exits the program normally.
      * @details Recommended to be called after all get/hasFlag calls, and before tryToPrintInvalidOpts.
      */
-    static void tryToPrintHelp() { tryToPrintHelp(); }
+    static void tryToPrintHelp() { tryToPrintHelp_(data_); }
 
     /**
      * @brief Checks and reports all unknown options that were not processed by get/hasFlag.

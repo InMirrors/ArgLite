@@ -34,7 +34,7 @@ inline unsigned Parser::countFlag_(
     auto longOptInfoArr  = getOptInfoArr(longOpt);
     auto shortOptInfoArr = getOptInfoArr(shortOpt);
 
-    return longOptInfoArr.size() + shortOptInfoArr.size();
+    return static_cast<unsigned>(longOptInfoArr.size() + shortOptInfoArr.size());
 }
 
 bool Parser::hasMutualExFlag_(HasMutualExArgs args, InternalData &data) {
