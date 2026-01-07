@@ -77,7 +77,8 @@ def compile_cpp(source_path: str, bin_name: Optional[str] = None, compile_args: 
         output_name = f"{base_name}.exe" if sys.platform == "win32" else base_name
     output_path = os.path.join(BIN_DIR, output_name)
 
-    command = ['g++', source_path, '-o', output_path]
+    command = ['g++', source_path, '-o', output_path, f'-I{INCLUDE_PATH}'
+               '-std=c++17', '-Werror', '-Wall', '-Wextra', '-Wpedantic', '-Wno-missing-field-initializers']
     if compile_args:
         command.extend(compile_args)
 
