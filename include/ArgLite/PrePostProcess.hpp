@@ -227,8 +227,8 @@ inline void Parser::printHelpSubCmd(const std::vector<SubParser *> &subCmdPtrs) 
 
     for (const auto &p : subCmdPtrs) {
         std::cout << "  " << std::left
-                  << std::setw(static_cast<int>(maxSubCmdNameWidth) + 3)
-                  << p->subCommandName_ << p->subCmdDescription_ << '\n';
+                  << std::setw(static_cast<int>(maxSubCmdNameWidth) + 3 + ANSI_CODE_LENGTH)
+                  << Formatter::bold(p->subCommandName_) << p->subCmdDescription_ << '\n';
     }
 }
 
