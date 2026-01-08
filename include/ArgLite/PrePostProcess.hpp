@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core.hpp"
+#include "Formatter.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <cstdlib>
@@ -11,10 +12,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#ifdef ARGLITE_ENABLE_FORMATTER
-#include "Formatter.hpp"
-#endif
 
 namespace ArgLite {
 
@@ -154,11 +151,7 @@ inline bool Parser::tryToPrintInvalidOpts_(InternalData &data, bool notExit) {
     if (!data.options.empty()) {
         for (const auto &pair : data.options) {
             std::cerr << ERROR_STR << "Unrecognized option '";
-#ifdef ARGLITE_ENABLE_FORMATTER
-            std::cerr << Formatter::bold(pair.first);
-#else
-            std::cerr << pair.first;
-#endif
+            std::cerr << Formatter::bold(pair.first, std::cerr);
             std::cerr << "'\n";
         }
         if (!notExit) { std::exit(EXIT_FAILURE); }
@@ -202,11 +195,7 @@ inline void Parser::printHelpDescription(std::string_view description) {
 
 inline void Parser::printHelpUsage(const InternalData &data, std::string_view cmdName) {
     std::cout << "Usage: ";
-#ifdef ARGLITE_ENABLE_FORMATTER
     std::cout << Formatter::bold(cmdName);
-#else
-    std::cout << cmdName;
-#endif
     if (!subCmdPtrs_.empty() && isMainCmdActive()) { std::cout << " [SUBCOMMAND]"; }
     if (!data.optionHelpEntries.empty()) { std::cout << " [OPTIONS]"; }
 
@@ -228,12 +217,8 @@ inline void Parser::printHelpUsage(const InternalData &data, std::string_view cm
 inline void Parser::printHelpSubCmd(const std::vector<SubParser *> &subCmdPtrs) {
     if (subCmdPtrs.empty() || !isMainCmdActive()) { return; }
 
-#ifdef ARGLITE_ENABLE_FORMATTER
     std::cout << '\n'
               << Formatter::boldUnderline("Subcommands:") << '\n';
-#else
-    std::cout << "\nSubcommands:\n";
-#endif
 
     size_t maxSubCmdNameWidth = 0;
     for (const auto &p : subCmdPtrs) {
@@ -251,12 +236,8 @@ inline void Parser::printHelpPositional(const InternalData &data) {
     if (data.positionalHelpEntries.empty()) { return; }
 
     // Print header
-#ifdef ARGLITE_ENABLE_FORMATTER
     std::cout << '\n'
               << Formatter::boldUnderline("Positional Arguments:") << '\n';
-#else
-    std::cout << "\nPositional Arguments:\n";
-#endif
 
     size_t maxNameWidth = 0;
     for (const auto &p : data.positionalHelpEntries) {
@@ -266,13 +247,8 @@ inline void Parser::printHelpPositional(const InternalData &data) {
     for (const auto &p : data.positionalHelpEntries) {
         // Print name
         std::cout << "  " << std::left;
-#ifdef ARGLITE_ENABLE_FORMATTER
-        constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
         std::cout << std::setw(static_cast<int>(maxNameWidth) + 2 + ANSI_CODE_LENGTH)
                   << Formatter::bold(p.name);
-#else
-        std::cout << std::setw(static_cast<int>(maxNameWidth) + 2) << p.name;
-#endif
 
         // Print description
         std::string descStr = p.description;
@@ -288,12 +264,8 @@ inline void Parser::printHelpOptions(const InternalData &data) {
 
     // Print header
     if (!data.hasCustumOptHeader) {
-#ifdef ARGLITE_ENABLE_FORMATTER
         std::cout << '\n'
                   << Formatter::boldUnderline("Options:") << '\n';
-#else
-        std::cout << "\nOptions:\n";
-#endif
     }
 
     // Print each option
@@ -301,11 +273,7 @@ inline void Parser::printHelpOptions(const InternalData &data) {
         // It is a option header
         if (o.isOptHeader) {
             std::cout << '\n';
-#ifdef ARGLITE_ENABLE_FORMATTER
             std::cout << Formatter::boldUnderline(o.shortOpt + ":\n");
-#else
-            std::cout << o.shortOpt + ":\n";
-#endif
             continue;
         }
 
@@ -320,13 +288,8 @@ inline void Parser::printHelpOptions(const InternalData &data) {
         optStr += o.longOpt;
 
         std::cout << std::left;
-#ifdef ARGLITE_ENABLE_FORMATTER
-        constexpr int ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
         std::cout << std::setw(static_cast<int>(descriptionIndent_) + ANSI_CODE_LENGTH);
         optStr = Formatter::bold(optStr);
-#else
-        std::cout << std::setw(static_cast<int>(descriptionIndent_));
-#endif
 
         if (!o.typeName.empty()) {
             optStr.append(" <").append(o.typeName).append(">");
@@ -341,9 +304,7 @@ inline void Parser::printHelpOptions(const InternalData &data) {
         if (o.isMutualExDefault) { descStr.append(" (default)"); }
 
         auto optPartLength = optStr.length();
-#ifdef ARGLITE_ENABLE_FORMATTER
         optPartLength -= ANSI_CODE_LENGTH;
-#endif
         // the option string is too long, start a new line
         // -2: two separeting spaces after the type name
         if (optPartLength > descriptionIndent_ - 2) {

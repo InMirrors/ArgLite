@@ -12,30 +12,43 @@
 #define FILENO fileno
 #endif
 
-#ifndef ARGLITE_ENABLE_FORMATTER
-#define ARGLITE_ENABLE_FORMATTER
-#endif
-
 namespace ArgLite {
 
 class Formatter {
 public:
-    static std::string red(std::string_view str, const std::ostream &os = std::cerr) {
-        return format(str, ANSI_RED, os);
+    static auto red(std::string_view sv, const std::ostream &os = std::cerr) {
+#ifdef ARGLITE_ENABLE_FORMATTER
+        return format(sv, ANSI_RED, os);
+#else
+        return sv;
+#endif
     }
 
-    static std::string yellow(std::string_view str, const std::ostream &os = std::cerr) {
-        return format(str, ANSI_YELLOW, os);
+    static auto yellow(std::string_view sv, const std::ostream &os = std::cerr) {
+#ifdef ARGLITE_ENABLE_FORMATTER
+        return format(sv, ANSI_YELLOW, os);
+#else
+        return sv;
+#endif
     }
 
-    static std::string bold(std::string_view str, const std::ostream &os = std::cout) {
-        return format(str, ANSI_BOLD, os);
+    static auto bold(std::string_view sv, const std::ostream &os = std::cout) {
+#ifdef ARGLITE_ENABLE_FORMATTER
+        return format(sv, ANSI_BOLD, os);
+#else
+        return sv;
+#endif
     }
 
-    static std::string boldUnderline(std::string_view str, const std::ostream &os = std::cout) {
-        return format(str, ANSI_BOLD_UNDERLINE, os);
+    static auto boldUnderline(std::string_view sv, const std::ostream &os = std::cout) {
+#ifdef ARGLITE_ENABLE_FORMATTER
+        return format(sv, ANSI_BOLD_UNDERLINE, os);
+#else
+        return sv;
+#endif
     }
 
+#ifdef ARGLITE_ENABLE_FORMATTER
 private:
     static constexpr std::string_view ANSI_RESET          = "\x1b[0m";
     static constexpr std::string_view ANSI_RED            = "\x1b[91m";
@@ -43,13 +56,13 @@ private:
     static constexpr std::string_view ANSI_BOLD           = "\x1b[1m";
     static constexpr std::string_view ANSI_BOLD_UNDERLINE = "\x1b[1m\x1b[4m";
 
-    static std::string format(std::string_view str, std::string_view code, const std::ostream &os = std::cout) {
+    static std::string format(std::string_view sv, std::string_view code, const std::ostream &os = std::cout) {
         std::string result;
-        result.reserve(str.size());
+        result.reserve(sv.size());
         if (shouldFormat(os)) {
-            result.append(code).append(str).append(ANSI_RESET);
+            result.append(code).append(sv).append(ANSI_RESET);
         } else {
-            result.append(str);
+            result.append(sv);
         }
 
         return result;
@@ -61,6 +74,7 @@ private:
         if (buf == std::cerr.rdbuf()) return static_cast<bool>(ISATTY(FILENO(stderr)));
         return false; // default
     }
+#endif
 };
 
 }; // namespace ArgLite

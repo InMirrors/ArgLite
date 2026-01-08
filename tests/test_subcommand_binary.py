@@ -56,7 +56,7 @@ def main():
 
     all_tests_passed &= test_case(
         "Commit subcommand: mutual exclusive flags, no positional arguments",
-        ["commit", "-s", "--no-signoff"],
+        ["commit", "-m", "msg", "-s", "--no-signoff"],
         expected_output_substrings=[
             "Commit command is active.",
             "signoff : false", # --no-signoff should override -s

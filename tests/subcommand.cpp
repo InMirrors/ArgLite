@@ -1,4 +1,3 @@
-#include "ArgLite/Formatter.hpp"
 #define ARGLITE_ENABLE_FORMATTER
 
 #include "ArgLite/Core.hpp"
@@ -40,7 +39,7 @@ int main(int argc, char **argv) {
         false,
     });
     commit.insertOptHeader("Options");
-    auto commitMsg      = commit.get<string>("m,message", "Use the given <msg> as the commit message.").get();
+    auto commitMsg      = commit.get<string>("m,message", "Use the given <msg> as the commit message.").required().get();
     auto commitFile     = commit.get<string>("F,file", "Take the commit message from the given file.").get();
     auto commitDate     = commit.get<int>("date", "Override the author date used in the commit.").get();
     auto commitPathSpec = commit.getRemainingPositionals("pathspec", " When pathspec is given on the command line, ...", false);

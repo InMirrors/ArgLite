@@ -1,9 +1,11 @@
 #pragma once
 
 #include "Core.hpp"
+#include "Formatter.hpp"
 #include "GetTemplate.hpp" // IWYU pragma: keep
 #include <algorithm>
 #include <cstddef>
+#include <iostream>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -123,23 +125,11 @@ class Parser::OptValHelper {
 
         std::string errorStr;
         errorStr += "Invalid value for option '";
-#ifdef ARGLITE_ENABLE_FORMATTER
-        errorStr += Formatter::bold(parseOptName(optName));
-#else
-        errorStr += parseOptName(optName);
-#endif
+        errorStr += Formatter::bold(parseOptName(optName), std::cerr);
         errorStr += "'. Expected a ";
-#ifdef ARGLITE_ENABLE_FORMATTER
-        errorStr += Formatter::bold(typeName);
-#else
-        errorStr += typeName;
-#endif
+        errorStr += Formatter::bold(typeName, std::cerr);
         errorStr += ", but got '";
-#ifdef ARGLITE_ENABLE_FORMATTER
         errorStr += Formatter::yellow(valueStr);
-#else
-        errorStr += valueStr;
-#endif
         errorStr += "'.";
         data.errorMessages.push_back(std::move(errorStr));
     }
@@ -149,11 +139,7 @@ class Parser::OptValHelper {
 
         std::string errorStr;
         errorStr += "Option '";
-#ifdef ARGLITE_ENABLE_FORMATTER
         errorStr += Formatter::bold(parseOptName(optName));
-#else
-        errorStr += parseOptName(optName);
-#endif
         errorStr += "' is required, you cannot run this command without it.";
         data.errorMessages.push_back(std::move(errorStr));
     }
@@ -166,11 +152,7 @@ class Parser::OptValHelper {
             if (it.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
                 hasNoValOpt = true;
                 std::string msg("Option '");
-#ifdef ARGLITE_ENABLE_FORMATTER
                 msg.append(Formatter::bold(parseOptName(optName)));
-#else
-                msg.append(parseOptName(optName));
-#endif
                 msg.append("' requires a value.");
                 errorMessages.push_back(std::move(msg));
             }
@@ -484,11 +466,7 @@ inline std::vector<std::string> Parser::getRemainingPositionals_(
 inline void Parser::appendPosValErrorMsg(
     InternalData &data, std::string_view posName, std::string errorMsg) {
 
-#ifdef ARGLITE_ENABLE_FORMATTER
     errorMsg.append(Formatter::bold(posName));
-#else
-    errorMsg.append(posName);
-#endif
     errorMsg.append("'.");
     data.errorMessages.push_back(std::move(errorMsg));
 }

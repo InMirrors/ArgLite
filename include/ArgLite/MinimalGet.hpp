@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Formatter.hpp"
 #include "Minimal.hpp"
 #include <cctype>
 #include <sstream>
@@ -178,34 +179,18 @@ inline void Parser::appendOptValErrorMsg(
 
     std::string errorStr;
     errorStr += "Invalid value for option '";
-#ifdef ARGLITE_ENABLE_FORMATTER
-    errorStr += Formatter::bold(parseOptName(optName));
-#else
-    errorStr += parseOptName(optName);
-#endif
+    errorStr += Formatter::bold(parseOptName(optName), std::cerr);
     errorStr += "'. Expected a ";
-#ifdef ARGLITE_ENABLE_FORMATTER
-    errorStr += Formatter::bold(typeName);
-#else
-    errorStr += typeName;
-#endif
+    errorStr += Formatter::bold(typeName, std::cerr);
     errorStr += ", but got '";
-#ifdef ARGLITE_ENABLE_FORMATTER
-    errorStr += Formatter::bold(valueStr);
-#else
-    errorStr += valueStr;
-#endif
+    errorStr += Formatter::yellow(valueStr, std::cerr);
     errorStr += "'.";
     data.errorMessages.push_back(std::move(errorStr));
 }
 
 inline void Parser::appendPosValErrorMsg(InternalData &data, std::string_view posName, std::string_view errorMsg) {
     std::string msg(errorMsg);
-#ifdef ARGLITE_ENABLE_FORMATTER
     msg.append(Formatter::bold(posName));
-#else
-    msg.append(posName);
-#endif
     msg.append("'.");
     data.errorMessages.push_back(std::move(msg));
 }
@@ -295,11 +280,7 @@ inline std::pair<bool, std::string> Parser::getValueStr(std::string_view optName
 
         if (optInfo.argvIndex < 0) { // It's treated as a flag, indicating that it has no value
             std::string msg("Option '");
-#ifdef ARGLITE_ENABLE_FORMATTER
             msg.append(Formatter::bold(parseOptName(optName)));
-#else
-            msg.append(parseOptName(optName));
-#endif
             msg.append("' requires a value.");
             data.errorMessages.push_back(std::move(msg));
             return {false, ""};

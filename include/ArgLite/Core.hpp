@@ -11,9 +11,7 @@
 #include <utility>
 #include <vector>
 
-#ifdef ARGLITE_ENABLE_FORMATTER
-#include "Formatter.hpp"
-#endif
+#include "Formatter.hpp" // IWYU pragma: keep
 
 namespace ArgLite {
 
@@ -338,12 +336,15 @@ private:
         data_.optionHelpEntries.push_back({std::move(header), "", "", "", "", false, false, true});
     }
 
+    // Formatter-related
 #ifdef ARGLITE_ENABLE_FORMATTER
-    static inline const std::string ERROR_STR = Formatter::red("Error: ");
+    constexpr static int            ANSI_CODE_LENGTH = 8; // 4 + 4 (\x1b[1m + \x1b[0m))
+    static inline const std::string ERROR_STR        = Formatter::red("Error: ");
 #else
-    static inline const std::string ERROR_STR = "Error: ";
+    constexpr static int            ANSI_CODE_LENGTH = 0;
+    static inline const std::string ERROR_STR        = "Error: ";
 #endif
-};
+}; // class Parser
 
 class SubParser {
     friend Parser;
