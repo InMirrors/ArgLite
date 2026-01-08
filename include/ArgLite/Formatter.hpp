@@ -16,7 +16,7 @@ namespace ArgLite {
 
 class Formatter {
 public:
-    static auto red(std::string_view sv, const std::ostream &os = std::cerr) {
+    static auto red(std::string_view sv, [[maybe_unused]] const std::ostream &os = std::cerr) {
 #ifdef ARGLITE_ENABLE_FORMATTER
         return format(sv, ANSI_RED, os);
 #else
@@ -24,7 +24,7 @@ public:
 #endif
     }
 
-    static auto yellow(std::string_view sv, const std::ostream &os = std::cerr) {
+    static auto yellow(std::string_view sv, [[maybe_unused]] const std::ostream &os = std::cerr) {
 #ifdef ARGLITE_ENABLE_FORMATTER
         return format(sv, ANSI_YELLOW, os);
 #else
@@ -32,7 +32,7 @@ public:
 #endif
     }
 
-    static auto bold(std::string_view sv, const std::ostream &os = std::cout) {
+    static auto bold(std::string_view sv, [[maybe_unused]] const std::ostream &os = std::cout) {
 #ifdef ARGLITE_ENABLE_FORMATTER
         return format(sv, ANSI_BOLD, os);
 #else
@@ -40,7 +40,7 @@ public:
 #endif
     }
 
-    static auto boldUnderline(std::string_view sv, const std::ostream &os = std::cout) {
+    static auto boldUnderline(std::string_view sv, [[maybe_unused]] const std::ostream &os = std::cout) {
 #ifdef ARGLITE_ENABLE_FORMATTER
         return format(sv, ANSI_BOLD_UNDERLINE, os);
 #else

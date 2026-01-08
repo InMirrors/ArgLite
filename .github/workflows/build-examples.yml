@@ -35,8 +35,14 @@ jobs:
     - name: Compile examples on Linux/macOS
       if: runner.os != 'Windows'
       shell: bash
-      run: |
-        ${{ matrix.cpp_compiler }} -std=c++17 -Iinclude -Wall -Wextra -Wpedantic -Werror -Wno-missing-field-initializers examples/${{ matrix.example }}.cpp -o build/example_${{ matrix.example }}
+      run: >
+        ${{ matrix.cpp_compiler }}
+        -std=c++17
+        -Iinclude
+        -Wall -Wextra -Wpedantic -Werror
+        -Wno-missing-field-initializers
+        examples/${{ matrix.example }}.cpp
+        -o build/example_${{ matrix.example }}
 
     - name: Setup MSVC
       if: runner.os == 'Windows'
@@ -45,5 +51,10 @@ jobs:
     - name: Compile examples on Windows
       if: runner.os == 'Windows'
       shell: cmd
-      run: |
-        call cl /std:c++17 /Iinclude /W4 /WX /EHsc examples\${{ matrix.example }}.cpp /Fe:build\example_${{ matrix.example }}.exe
+      run: >
+        call cl
+        /std:c++17
+        /Iinclude
+        /W4 /WX /EHsc
+        examples\${{ matrix.example }}.cpp
+        /Fe:build\example_${{ matrix.example }}.exe
