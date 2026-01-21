@@ -369,7 +369,7 @@ public:
      * @brief Checks if this subcommand is active.
      * @return True if this subcommand is active, false otherwise.
      */
-    bool isActive() { return Parser::activeSubCmd_ == this; }
+    bool isActive() const { return Parser::activeSubCmd_ == this; }
 
     /**
      * @brief Sets which short options that require a value.
@@ -389,7 +389,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
-    bool hasFlag(std::string_view optName, std::string description) {
+    bool hasFlag(std::string_view optName, std::string description) const {
         if (!isActive()) { return false; }
         return Parser::hasFlag_(optName, std::move(description), Parser::data_);
     }
@@ -400,7 +400,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns the number of times the option appears in the command line.
      */
-    unsigned countFlag(std::string_view optName, std::string description) {
+    unsigned countFlag(std::string_view optName, std::string description) const {
         if (!isActive()) { return 0; }
         return Parser::countFlag_(optName, std::move(description), Parser::data_);
     }
@@ -411,7 +411,7 @@ public:
      * @return True if the first option is present and the second is not, or vice versa;
                defaultValue if neither option is present.
      */
-    bool hasMutualExFlag(Parser::HasMutualExArgs args) {
+    bool hasMutualExFlag(Parser::HasMutualExArgs args) const {
         if (!isActive()) { return false; }
         return Parser::hasMutualExFlag_(std::move(args), Parser::data_);
     }
@@ -423,7 +423,7 @@ public:
      * @return A OptValBuilder object that can be used to parse the option value.
      */
     template <typename T>
-    Parser::OptValBuilder<T> get(std::string_view optName, std::string description) {
+    Parser::OptValBuilder<T> get(std::string_view optName, std::string description) const {
         // This class is responsible for checking the currently active command
         return Parser::OptValBuilder<T>(optName, std::move(description), Parser::data_, this);
     }
@@ -441,7 +441,7 @@ public:
      */
     std::string getPositional(
         const std::string &posName, std::string description,
-        bool required = true, std::string defaultValue = "") {
+        bool required = true, std::string defaultValue = "") const {
 
         if (!isActive()) { return ""; }
         return Parser::getPositional_(posName, std::move(description), required, std::move(defaultValue), Parser::data_);
@@ -460,7 +460,7 @@ public:
      */
     std::vector<std::string> getRemainingPositionals(
         const std::string &posName, std::string description,
-        bool required = true, const std::vector<std::string> &defaultValue = {}) {
+        bool required = true, const std::vector<std::string> &defaultValue = {}) const {
 
         if (!isActive()) { return {}; }
         return Parser::getRemainingPositionals_(posName, std::move(description), required, defaultValue, Parser::data_);
@@ -471,7 +471,7 @@ public:
      * @details See the README for details.
      * @param header The option header text.
      */
-    void insertOptHeader(std::string header) {
+    void insertOptHeader(std::string header) const {
         if (!isActive()) { return; }
         Parser::insertOptHeader_(std::move(header));
     }
@@ -481,7 +481,7 @@ public:
      * @details See the README for details.
      * @param msg The error message text.
      */
-    void pushBackErrorMsg(std::string msg) {
+    void pushBackErrorMsg(std::string msg) const {
         if (!isActive()) { return; }
         Parser::data_.errorMessages.push_back(std::move(msg));
     }
@@ -491,7 +491,7 @@ public:
      * @details See the README for details.
      * @param footer The help footer text.
      */
-    void setHelpFooter(std::string_view footer) {
+    void setHelpFooter(std::string_view footer) const {
         if (!isActive()) { return; }
         Parser::data_.helpFooter = footer;
     }
