@@ -273,7 +273,7 @@ public:
     using Helper = OptValHelper;
 
     OptValBuilder(std::string_view optName, std::string description,
-                  InternalData &data, SubParser *passedSubCmd)
+                  InternalData &data, const SubParser *passedSubCmd)
         : optName_(optName),
           description_(std::move(description)),
           data_(data),
@@ -402,7 +402,7 @@ private:
     std::string      description_;
     std::string      typeName_;
     InternalData    &data_;
-    SubParser       *passedSubCmd_{nullptr};
+    const SubParser *passedSubCmd_{nullptr};
     T                defaultValue_{};
     bool             isRequied_{false};
 };
