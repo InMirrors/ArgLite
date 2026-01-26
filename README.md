@@ -4,6 +4,7 @@
     - [Minimal Version Features](#minimal-version-features)
     - [Full Version Features](#full-version-features)
 - [Usage](#usage)
+  - [Basic Usage](#basic-usage)
   - [Workflow](#workflow)
   - [Formatted Output](#formatted-output)
   - [API Reference](#api-reference)
@@ -20,6 +21,7 @@
     - [Option Grouping](#option-grouping)
     - [Subcommands](#subcommands)
   - [Other Features](#other-features)
+- [Examples](#examples)
 - [Benchmarks](#benchmarks)
   - [Compilation Time \& Binary Size](#compilation-time--binary-size)
   - [Runtime Memory Consumption](#runtime-memory-consumption)
@@ -51,7 +53,7 @@ ArgLite comes in two versions: **Minimal** and **Full**. Simply `#include "ArgLi
 The **Minimal** version maintains extreme lightness with basic functionality. The **Full** version supports advanced features; it's more complex but still lighter than most alternatives. While the Full version doesn't match the breadth of "kitchen-sink" libraries like CLI11, it adheres to the C++ philosophy of "You don't pay for what you don't use" to a certain extent.
 
 - **Minimal**: Low overhead, basic features, intuitive API. Ideal for simple needs.
-- **Full**: Extends the core with advanced features at low overhead. Ideal for moderately complex programs.
+- **Full**: Extended with key advanced features at low overhead. Ideal for moderately complex programs.
 
 ### Minimal Version Features
 
@@ -93,7 +95,11 @@ Includes all Minimal features, plus:
 
 # Usage
 
-Here is how to use the Minimal version. The interfaces for both versions are very similar, making migration easy.
+## Basic Usage
+
+This project provides well-encapsulated examples, enabling you to complete command-line argument parsing tasks by modifying them, without needing to delve deeply into the specific usage of the library. For a quick start, we recommend checking out [simple_wrapped.cpp](./examples/simple_wrapped.cpp). More details can be found in the [Examples](#examples) section.
+
+This section provides a concise overview of how to use the Minimal version. The interfaces for both versions are very similar, making migration easy. This example is only for basic usage demonstration; please refer to the [API Reference](#api-reference) section for specific usages of these APIs.
 
 ```cpp
 #include "ArgLite/Minimal.hpp"
@@ -160,9 +166,7 @@ Input files:
 
 The API is designed to be self-explanatory. You set program info, preprocess, retrieve values into variables, and then post-process. After post-processing, you have all the values you need, so use them as you like.
 
-**Key Difference**: Unlike other libraries where you register options and *then* parse/fetch, ArgLite lets you get the value immediately upon registration. `hasFlag` and `getXxx` define the option and return its value simultaneously.
-
-Please refer to the [API Reference](#api-reference) section for specific usages of these APIs.
+**Key Difference**: Unlike other libraries where you register options and *then* parse/fetch, ArgLite allows you get the value immediately upon registration. `hasFlag` and `getXxx` both register the option and return its value simultaneously. We call this "**Register and Get**".
 
 Although the above example uses variables to store the return values, you can actually use constants as well. Because all functions return an rvalue. This is a feature of ArgLite. Other libraries typically can't directly store parsing results in constants; you usually have to store the result in a variable first, and then use that variable to initialize the constant.
 
@@ -174,6 +178,8 @@ const auto number = Parser::getInt("number", "Number of iterations.");
 The **Full version** is similar but replaces `getType()` with `get<T>()`, supporting more types and a fluent interface. See [Getting Values](#getting-values-options) for details.
 
 ## Workflow
+
+If you're only interested in using this library and not its working details, feel free to skip this section. This project offers well-encapsulated examples that you can easily copy, paste, and adapt. Check out the [Examples](#examples) section for more information.
 
 Certain interfaces require a specific order. Below is a standard, safe workflow (using the Full version syntax):
 
@@ -240,7 +246,7 @@ Thinking this way might help you understand this library: `preprocess()` is like
 
 Define this macro to enable ANSI color sequences for terminals (bold, colors). These sequences are automatically suppressed if output is redirected to a pipe or file.
 
-Most C++ libraries ignore this, but ArgLite (even the Minimal version) supports it out of the box.
+Most C++ libraries ignore this, but ArgLite (even the Minimal version) supports it out of the box. However, due to the simple implementation, it will print ANSI sequences directly instead of formatted text on the old Windows terminal. Therefore, if you are building applications for older Windows platforms, it might be better not to enable this feature.
 
 Screenshots:
 
@@ -249,7 +255,9 @@ Screenshots:
 
 ## API Reference
 
-All interfaces are provided as static functions within `ArgLite::Parser`. The Full version adds `ArgLite::SubParser` for subcommands. An interface that is only available in a specific version will be noted. If there is no note, it means the interface is available in both versions and the usage is the same, although the internal implementation may differ.
+All external interfaces are documented with Doxygen comments. This readme and the comments complement each other, meaning the documentation may omit some details that are present in the comments. If you've read the documentation and still have questions about how to use a particular interface, please refer to the comments.
+
+All needed interfaces are provided as static functions within `ArgLite::Parser` if you don't use subcommands. The Full version adds `ArgLite::SubParser` for subcommands. An interface that is only available in a specific version will be noted. If there is no note, it means the interface is available in both versions and the usage is the same, although the internal implementation may differ.
 
 All `optName` parameters are short option names or long option names (without the `-` or `--` prefixes). It can also be both (short option name first, followed by the long option name, separated by a `,`), for example, `o`, `output`, `o,output`. All `description` parameters are used for display in help messages.
 
@@ -427,10 +435,13 @@ Error: Invalid value for option '--color'. Expected 'auto', always' or 'never', 
 If you need finely formatted text like ArgLite's output, you can call the interfaces under `ArgLite::Formatter`. There are `red()`, `yellow()`, `bold()`, and `boldUnderline()` functions, with similar signatures.
 
 ```cpp
-std::string red(std::string_view str, const std::ostream &os = std::cerr);
+std::string_view red(std::string_view str, const std::ostream &os = std::cerr);
+std::string red(std::string_view str, const std::ostream &os = std::cerr); // #ifdef ARGLITE_ENABLE_FORMATTER
 ```
 
-They return a formatted string and do not add ANSI sequences when outputting to a file or pipe. The second parameter is the output stream used for detection; the function determines whether it is outputting to a terminal based on this stream. The default value of the second parameter for `bold()` and `boldUnderline()` is `std::cout`, but error messages are output to `std::cerr`, so you need to pass `std::cerr` as the second parameter when using them here. You can also uniformly pass `std::cerr` as the second parameter to avoid remembering their default values.
+When the `ARGLITE_ENABLE_FORMATTER` macro is not defined, these functions directly return a view of the input string. When the macro is defined, they return a formatted string and do not add ANSI sequences when outputting to a file or pipe.
+
+The second parameter is the output stream used for detection; the function determines whether it is outputting to a terminal based on this stream. The default value of the second parameter for `bold()` and `boldUnderline()` is `std::cout`, but error messages are output to `std::cerr`, so you need to pass `std::cerr` as the second parameter when using them here. You can also uniformly pass `std::cerr` as the second parameter to avoid remembering their default values.
 
 Writing it like in the [subcommand example](./examples/subcommand.cpp#L62-L70) will produce this output:
 
@@ -808,6 +819,26 @@ Include:
 ```
 
 If the arguments cannot be handled by a single fixed delimiter, you can use this feature to dynamically control the delimiter and select one that is appropriate for the current arguments.
+
+# Examples
+
+**[simple.cpp](./examples/simple.cpp)**
+
+A basic example demonstrating the basic usage of the Minimal version.
+
+**[subcommand.cpp](./examples/subcommand.cpp)**
+
+A complex example that uses subcommands and showcases almost all the features of the Full version, mimicking Git's argument parsing to demonstrate how ArgLite can handle sophisticated command-line parsing tasks.
+
+**[option_grouping.cpp](./examples/option_grouping.cpp)**
+
+Demonstrates how to use the option grouping feature to create help messages similar to ripgrep's.
+
+**[simple_wrapped.cpp](./examples/simple_wrapped.cpp)** & **[subcommand_wrapped.cpp](./examples/subcommand_wrapped.cpp)**
+
+The preceding examples focus on demonstrating the library's features and may not be ideal as practical application templates. These two examples showcase a more robust approach by wrapping parameters in a class, allowing parsing results to be accessed through an object. By leveraging C++ class initialization order and the singleton pattern, this approach enforces the correct workflow, ensuring that API calls are made in the required order and that parsing occurs only once. This design pattern makes adding new parameters and subcommands as simple as modifying a configuration file.
+
+You can simply copy the template code, modify the program information, parameters, and subcommands to suit your needs, without needing to worry about the library's internal workflow. With these examples, you can become a productive "copy-paste" programmer.
 
 # Benchmarks
 
