@@ -1,33 +1,34 @@
-[简体中文](./README-zh.md)
+中文文档👉 [简体中文](./README-zh.md)
 
-- [Overview](#overview)
-    - [Minimal Version Features](#minimal-version-features)
-    - [Full Version Features](#full-version-features)
-- [Usage](#usage)
-  - [Basic Usage](#basic-usage)
+- [👀 Overview](#-overview)
+- [✨ Features](#-features)
+  - [Minimal Version Features](#minimal-version-features)
+  - [Full Version Features](#full-version-features)
+- [🚀 Quick Start](#-quick-start)
+- [📖 Usage](#-usage)
   - [Workflow](#workflow)
   - [Formatted Output](#formatted-output)
-  - [API Reference](#api-reference)
-    - [Program Info](#program-info)
-    - [Preprocessing](#preprocessing)
-    - [Getting Flag Options](#getting-flag-options)
-    - [Getting Values Options](#getting-values-options)
-      - [`OptValBuilder<T>`](#optvalbuildert)
-      - [Parsing Custom Types](#parsing-custom-types)
-    - [Getting Positional Arguments](#getting-positional-arguments)
-    - [Post-processing](#post-processing)
-      - [Help Printing](#help-printing)
-      - [Error Handling](#error-handling)
-    - [Option Grouping](#option-grouping)
-    - [Subcommands](#subcommands)
+- [📚 API Reference](#-api-reference)
+  - [Program Info](#program-info)
+  - [Preprocessing](#preprocessing)
+  - [Getting Flag Options](#getting-flag-options)
+  - [Getting Values Options](#getting-values-options)
+    - [`OptValBuilder<T>`](#optvalbuildert)
+    - [Parsing Custom Types](#parsing-custom-types)
+  - [Getting Positional Arguments](#getting-positional-arguments)
+  - [Post-processing](#post-processing)
+    - [Help Printing](#help-printing)
+    - [Error Handling](#error-handling)
+  - [Option Grouping](#option-grouping)
+  - [Subcommands](#subcommands)
+- [💡 Examples](#-examples)
   - [Other Features](#other-features)
-- [Examples](#examples)
-- [Benchmarks](#benchmarks)
+- [📊 Benchmarks](#-benchmarks)
   - [Compilation Time \& Binary Size](#compilation-time--binary-size)
   - [Runtime Memory Consumption](#runtime-memory-consumption)
   - [Summary](#summary)
 
-# Overview
+# 👀 Overview
 
 Why create another command-line argument parsing library when there are already so many? Because I wanted a library that is both lightweight and easy to use, but I couldn't find one that met my needs.
 
@@ -37,7 +38,7 @@ Why create another command-line argument parsing library when there are already 
 - [argh](https://github.com/adishavit/argh): Lightweight enough but too primitive; it doesn't even generate help messages automatically.
 - [argparse](https://github.com/morrisfranken/argparse): Lightweight, easy to use, and cleverly implemented. It was my favorite, but its help message format is unconventional, and it lacks support for syntax like `-n123`.
 
-So, I wrote **ArgLite**: a truly lightweight, easy-to-use, and feature-rich library that produces modern, aesthetically pleasing help and error messages. See the [Benchmarks](#benchmarks) section for details on its weight. Regarding "ease of use," it follows standard intuitions:
+So, I wrote **ArgLite**: a truly lightweight, easy-to-use, and feature-rich library that produces modern, aesthetically pleasing help and error messages. See the [Benchmarks](#-benchmarks) section for details on its weight. Regarding "ease of use," it follows standard intuitions:
 
 1.  **Clear Naming**: Use clearly named functions to add and retrieve arguments, not overloaded operators.
 2.  **Concise**: Retrieve an argument in a single statement. Unlike most libraries where you declare a variable, bind it, and then parse, or register and then fetch, (often requiring code changes in multiple places to add one argument), ArgLite does it all in one go.
@@ -55,7 +56,9 @@ The **Minimal** version maintains extreme lightness with basic functionality. Th
 - **Minimal**: Low overhead, basic features, intuitive API. Ideal for simple needs.
 - **Full**: Extended with key advanced features at low overhead. Ideal for moderately complex programs.
 
-### Minimal Version Features
+# ✨ Features
+
+## Minimal Version Features
 
 - Positional arguments: `arg1 arg2 ...`
 - Flags: `-v`, `--verbose`
@@ -78,14 +81,13 @@ The **Minimal** version maintains extreme lightness with basic functionality. Th
 - Option grouping in help messages.
 - **Formatted Output**: Colored and bold text for better-looking help and error messages.
 
-### Full Version Features
+## Full Version Features
 
 Includes all Minimal features, plus:
 
 - Subcommands.
 - Flag counting: `-vvv`.
 - Multi-value options: `-f file1 -f file2`, `-f file1,file2`.
--
 - `std::optional` support to distinguish between "not provided" and "default value".
 - Custom value type names in help.
 - Mandatory options.
@@ -93,13 +95,11 @@ Includes all Minimal features, plus:
 
 **Recommendation**: The Full version offers more features but has a smaller advantage over existing libraries compared to the Minimal version. If you are considering this library, I strongly recommend looking at the **Minimal** version. It is arguably the lightest library available that provides both parameter parsing and help generation. It is perfect for small programs where you want easy-to-use parsing with minimal cost. Yes, there are indeed some lighter libraries (such as argh mentioned above), but their functionality is quite basic, and you may need to write more code related to command-line argument parsing.
 
-# Usage
+# 🚀 Quick Start
 
-## Basic Usage
+This project provides well-encapsulated examples, enabling you to complete command-line argument parsing tasks by modifying them, without needing to delve deeply into the specific usage of the library. For a quick start, we recommend checking out [simple_wrapped.cpp](./examples/simple_wrapped.cpp). More details can be found in the [Examples](#-examples) section.
 
-This project provides well-encapsulated examples, enabling you to complete command-line argument parsing tasks by modifying them, without needing to delve deeply into the specific usage of the library. For a quick start, we recommend checking out [simple_wrapped.cpp](./examples/simple_wrapped.cpp). More details can be found in the [Examples](#examples) section.
-
-This section provides a concise overview of how to use the Minimal version. The interfaces for both versions are very similar, making migration easy. This example is only for basic usage demonstration; please refer to the [API Reference](#api-reference) section for specific usages of these APIs.
+This section provides a concise overview of how to use the Minimal version. The interfaces for both versions are very similar, making migration easy. This example is only for basic usage demonstration; please refer to the [API Reference](#-api-reference) section for specific usages of these APIs.
 
 ```cpp
 #include "ArgLite/Minimal.hpp"
@@ -177,9 +177,11 @@ const auto number = Parser::getInt("number", "Number of iterations.");
 
 The **Full version** is similar but replaces `getType()` with `get<T>()`, supporting more types and a fluent interface. See [Getting Values](#getting-values-options) for details.
 
+# 📖 Usage
+
 ## Workflow
 
-If you're only interested in using this library and not its working details, feel free to skip this section. This project offers well-encapsulated examples that you can easily copy, paste, and adapt. Check out the [Examples](#examples) section for more information.
+If you're only interested in using this library and not its working details, feel free to skip this section. This project offers well-encapsulated examples that you can easily copy, paste, and adapt. Check out the [Examples](#-examples) section for more information.
 
 Certain interfaces require a specific order. Below is a standard, safe workflow (using the Full version syntax):
 
@@ -253,7 +255,7 @@ Screenshots:
 ![](https://raw.githubusercontent.com/InMirrors/images/main/ArgLite/formatter-help.png)
 ![](https://raw.githubusercontent.com/InMirrors/images/main/ArgLite/formatter-error.png)
 
-## API Reference
+# 📚 API Reference
 
 All external interfaces are documented with Doxygen comments. This readme and the comments complement each other, meaning the documentation may omit some details that are present in the comments. If you've read the documentation and still have questions about how to use a particular interface, please refer to the comments.
 
@@ -261,7 +263,7 @@ All needed interfaces are provided as static functions within `ArgLite::Parser` 
 
 All `optName` parameters are short option names or long option names (without the `-` or `--` prefixes). It can also be both (short option name first, followed by the long option name, separated by a `,`), for example, `o`, `output`, `o,output`. All `description` parameters are used for display in help messages.
 
-### Program Info
+## Program Info
 
 Usually called at the beginning, but valid anytime before post-processing.
 
@@ -278,7 +280,7 @@ void setVersion(std::string versionStr);
 ```
 Sets the version and enables `-V` and `--version`.
 
-### Preprocessing
+## Preprocessing
 
 ```cpp
 void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr);
@@ -304,7 +306,7 @@ void preprocess(int argc, const char *const *argv);
 ```
 **Required**. The entry point for the library. Must be called before getting values.
 
-### Getting Flag Options
+## Getting Flag Options
 
 ```cpp
 bool hasFlag(std::string_view optName, std::string description);
@@ -349,7 +351,7 @@ unsigned countFlag(std::string_view optName, std::string description);
 ```
 **Full Version Only**. Counts occurrences (e.g., `-vvv` returns 3), incrementing the counter by 1 for both long and short options.
 
-### Getting Values Options
+## Getting Values Options
 
 ```cpp
 // Minimal Version
@@ -368,7 +370,7 @@ OptValBuilder<T> get(std::string_view optName, std::string description);
 - True: `1`, `true`, `yes`, `on`
 - False: `0`, `false`, `no`, `off`
 
-#### `OptValBuilder<T>`
+### `OptValBuilder<T>`
 
 **Full Version Only**.
 
@@ -386,7 +388,7 @@ Methods available on the builder object:
     - `-f file1 -f file2` -> `[file1, file2]`
     - With `getVec(',')`: `-f file1,file2` -> `[file1, file2]`
 
-#### Parsing Custom Types
+### Parsing Custom Types
 
 **Full Version Only**.
 
@@ -484,7 +486,7 @@ auto grepColor = grep.get<string>("color", "When to use colors.")
                           When to use colors. [default: auto]
 ```
 
-### Getting Positional Arguments
+## Getting Positional Arguments
 
 ```cpp
 std::string getPositional(
@@ -513,9 +515,9 @@ Both interfaces have an optional `required` parameter. Only the last positional 
 
 Since most applications use string types for positional arguments, ArgLite only supports parsing them as strings to keep it lightweight and simple. If you need other types, consider using valued options instead or using another library. If you must use positional arguments for other types with this library, you can get the string and convert it manually. Alternatively, you could modify the source code to expose `ArgLite::Parser::convertType<T>()`, which supports `bool`, `char`, and `std::optional`, types not supported by standard library conversions.
 
-### Post-processing
+## Post-processing
 
-#### Help Printing
+### Help Printing
 
 ```cpp
 void changeDescriptionIndent(size_t indent);
@@ -523,7 +525,7 @@ void changeDescriptionIndent(size_t indent);
 
 Adjusts the indentation of option descriptions in the help message, with a default of 25. This is useful for fine-tuning the help message's appearance.
 
-For example, if many of your option names are slightly too long, their descriptions will wrap to the next line. By increasing the indent, you can make these descriptions align on the same line, resulting in a cleaner look. The simple example in the [Usage](#usage) section is a case in point; setting the indent to 27 would align everything on a single line.
+For example, if many of your option names are slightly too long, their descriptions will wrap to the next line. By increasing the indent, you can make these descriptions align on the same line, resulting in a cleaner look. The simple example in the [Quick Start](#-quick-start) section is a case in point; setting the indent to 27 would align everything on a single line.
 
 ---
 
@@ -618,7 +620,7 @@ When printing the help message, subsequent lines will be indented, ensuring that
 
 While automatic description splitting would be better, an intelligent implementation would introduce a lot of code, which is inconsistent with the lightweight positioning of the library. Moreover, manually adding a newline character is not complicated and can make the code's display more closely resemble the help output. Therefore, this library adopts this less intelligent implementation.
 
-#### Error Handling
+### Error Handling
 
 ```cpp
 bool tryToPrintInvalidOpts(bool notExit = false);
@@ -639,7 +641,7 @@ Typically, you just need to call `runAllPostprocess()`. The functions it calls w
 
 This library does not throw exceptions; it uses return values to indicate errors. Since errors in a lightweight library like this are typically due to incorrect command-line arguments that require the user to re-enter them, return values are sufficient and align with the lightweight design.
 
-### Option Grouping
+## Option Grouping
 
 ```cpp
 void insertOptHeader(std::string header);
@@ -706,7 +708,7 @@ Options:
 
 You might find this implementation a bit crude, as it doesn't truly bundle options into groups but simply inserts a help entry. In reality, grouping in counterparts generally only affects the display in the help message; the storage and usage of individual options are not fundamentally different from when they are not grouped. You don't access them like `args["group"]["opt"]`. Since this library aims to be lightweight, it implements features in the simplest way possible, even if the method is unconventional.
 
-### Subcommands
+## Subcommands
 
 **Full Version Only**. Define subcommands by creating `SubParser` objects.
 
@@ -737,6 +739,26 @@ Checks if the subcommand is active. Since registering an option returns a value 
 ---
 
 The `SubParser` object also has methods like `setShortNonFlagOptsStr`, `hasFlag`, `countFlag`, `hasMutualExFlag`, `get`, `getPositional`, and `getRemainingPositionals`. Their usage is identical to the versions in `Parser`, but they only take effect when the subcommand is active.
+
+# 💡 Examples
+
+**[simple.cpp](./examples/simple.cpp)**
+
+A basic example demonstrating the basic usage of the Minimal version.
+
+**[subcommand.cpp](./examples/subcommand.cpp)**
+
+A complex example that uses subcommands and showcases almost all the features of the Full version, mimicking Git's argument parsing to demonstrate how ArgLite can handle sophisticated command-line parsing tasks.
+
+**[option_grouping.cpp](./examples/option_grouping.cpp)**
+
+Demonstrates how to use the option grouping feature to create help messages similar to ripgrep's.
+
+**[simple_wrapped.cpp](./examples/simple_wrapped.cpp)** & **[subcommand_wrapped.cpp](./examples/subcommand_wrapped.cpp)**
+
+The preceding examples focus on demonstrating the library's features and may not be ideal as practical application templates. These two examples showcase a more robust approach by wrapping parameters in a class, allowing parsing results to be accessed through an object. By leveraging C++ class initialization order and the singleton pattern, this approach enforces the correct workflow, ensuring that API calls are made in the required order and that parsing occurs only once. This design pattern makes adding new parameters and subcommands as simple as modifying a configuration file.
+
+You can simply copy the template code, modify the program information, parameters, and subcommands to suit your needs, without needing to worry about the library's internal workflow. With these examples, you can become a productive "copy-paste" programmer.
 
 ## Other Features
 
@@ -820,27 +842,7 @@ Include:
 
 If the arguments cannot be handled by a single fixed delimiter, you can use this feature to dynamically control the delimiter and select one that is appropriate for the current arguments.
 
-# Examples
-
-**[simple.cpp](./examples/simple.cpp)**
-
-A basic example demonstrating the basic usage of the Minimal version.
-
-**[subcommand.cpp](./examples/subcommand.cpp)**
-
-A complex example that uses subcommands and showcases almost all the features of the Full version, mimicking Git's argument parsing to demonstrate how ArgLite can handle sophisticated command-line parsing tasks.
-
-**[option_grouping.cpp](./examples/option_grouping.cpp)**
-
-Demonstrates how to use the option grouping feature to create help messages similar to ripgrep's.
-
-**[simple_wrapped.cpp](./examples/simple_wrapped.cpp)** & **[subcommand_wrapped.cpp](./examples/subcommand_wrapped.cpp)**
-
-The preceding examples focus on demonstrating the library's features and may not be ideal as practical application templates. These two examples showcase a more robust approach by wrapping parameters in a class, allowing parsing results to be accessed through an object. By leveraging C++ class initialization order and the singleton pattern, this approach enforces the correct workflow, ensuring that API calls are made in the required order and that parsing occurs only once. This design pattern makes adding new parameters and subcommands as simple as modifying a configuration file.
-
-You can simply copy the template code, modify the program information, parameters, and subcommands to suit your needs, without needing to worry about the library's internal workflow. With these examples, you can become a productive "copy-paste" programmer.
-
-# Benchmarks
+# 📊 Benchmarks
 
 In this section, the `argparse` library tested is not the common [p-ranav/argparse](https://github.com/p-ranav/argparse), but [morrisfranken/argparse](https://github.com/morrisfranken/argparse). The former has an API similar to Python's argparse and cxxopts, using strings to query parsing results. This approach is convenient for dynamically typed languages like Python but not for statically typed languages like C++, which require extra code to retrieve results and lack autocompletion support. Therefore, only the more well-known cxxopts of a similar type was tested here. morrisfranken/argparse just shares the name but has vastly different external APIs and internal implementations, offering a more user-friendly interface.
 
