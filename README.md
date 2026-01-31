@@ -285,10 +285,11 @@ Sets the version and enables `-V` and `--version`.
 ```cpp
 void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr);
 ```
-**Optional**. Use this only if you need to support the syntax `-n123` where `n` is an option that takes a value. If you're new to this library, it's recommended to ignore this.
 
-During preprocessing, the library doesn't know if `-n123` means `-n -1 -2 -3` (flags) or `-n 123` (value). It defaults to flags. To treat `n` as taking a value, you must register it here string of characters (e.g., `"n"`).
-*Note: Do not include flag options here.*
+**Optional**. Use this only if you need to support the syntax `-n123`, where `n` is an option that takes a value. If you're new to this library, it's recommended to ignore this.
+
+During preprocessing, the library doesn't know if `-n123` means `-n -1 -2 -3` (flags) or `-n 123` (value). It defaults to flags. To treat `n` as taking a value, you must register it here by passing a string containing all such short options (e.g., `"n"`).
+*Note: Only include short options that take values. Do not include flag options.*
 
 This is the least elegant part of the library, but necessary for this specific syntax. To avoid missing any, you can use Regex to find them in your code:
 
@@ -298,6 +299,8 @@ This is the least elegant part of the library, but necessary for this specific s
 // Subcommand (replace `subcmd` with the subcommand variable name)
 (?<=subcmd\.get.+?\(").(?=[,"])
 ```
+
+In editors or IDEs that support multi-cursor editing, you can typically use these patterns to select all short options that take values. Since the standard space-separated syntax (`-n 123`) works fine even without updating `setShortNonFlagOptsStr()`, you don't need to update it every time you add an option. It is recommended to batch this process: wait until you finish a unit of work (e.g., before a commit), use the RegEx to select all relevant options, and update the string in one go. You can also take it a step further by using a script to automate this modification.
 
 ---
 
