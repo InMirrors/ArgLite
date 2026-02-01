@@ -183,6 +183,7 @@ int mainCmd(const AppConfig::MainConfig &config) {
 }
 
 int statusCmd(const AppConfig::StatusConfig &config) {
+    (void)config;
     cout << ArgLite::Formatter::bold("Status") << " command is active." << '\n';
     return 0;
 }

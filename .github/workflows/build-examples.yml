@@ -11,8 +11,13 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        example: [simple, option_grouping, subcommand]
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
+        example:
+          - simple
+          - option_grouping
+          - subcommand
+          - simple_wrapped
+          - subcommand_wrapped
         include:
           - os: ubuntu-latest
             cpp_compiler: g++
@@ -24,37 +29,37 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Create build directory
-      run: |
-        mkdir build
-      shell: bash
+      - name: Create build directory
+        run: |
+          mkdir build
+        shell: bash
 
-    - name: Compile examples on Linux/macOS
-      if: runner.os != 'Windows'
-      shell: bash
-      run: >
-        ${{ matrix.cpp_compiler }}
-        -std=c++17
-        -Iinclude
-        -Wall -Wextra -Wpedantic -Werror
-        -Wno-missing-field-initializers
-        examples/${{ matrix.example }}.cpp
-        -o build/example_${{ matrix.example }}
+      - name: Compile examples on Linux/macOS
+        if: runner.os != 'Windows'
+        shell: bash
+        run: >
+          ${{ matrix.cpp_compiler }}
+          -std=c++17
+          -Iinclude
+          -Wall -Wextra -Wpedantic -Werror
+          -Wno-missing-field-initializers
+          examples/${{ matrix.example }}.cpp
+          -o build/example_${{ matrix.example }}
 
-    - name: Setup MSVC
-      if: runner.os == 'Windows'
-      uses: ilammy/msvc-dev-cmd@v1
+      - name: Setup MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
 
-    - name: Compile examples on Windows
-      if: runner.os == 'Windows'
-      shell: cmd
-      run: >
-        call cl
-        /std:c++17
-        /Iinclude
-        /W4 /WX /EHsc
-        examples\${{ matrix.example }}.cpp
-        /Fe:build\example_${{ matrix.example }}.exe
+      - name: Compile examples on Windows
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: >
+          call cl
+          /std:c++17
+          /Iinclude
+          /W4 /WX /EHsc
+          examples\${{ matrix.example }}.cpp
+          /Fe:build\example_${{ matrix.example }}.exe

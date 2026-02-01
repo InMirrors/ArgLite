@@ -16,7 +16,7 @@ public:
     // If you only need to implement basic command-line argument parsing, simply add your arguments here
     bool verbose = Parser::hasFlag("v,verbose", "Enable verbose output.");
 
-    int    number     = Parser::getInt("n,number", "Number of iterations.");
+    int    number     = getInt("n,number", "Number of iterations.");
     double rate       = Parser::getDouble("r", "Rate.", 123.0);
     string outputPath = Parser::getString("o,out-path", "Output file Path.", ".");
 
@@ -37,6 +37,11 @@ private:
 
     Config(const Config &)            = delete;
     Config &operator=(const Config &) = delete;
+
+    // Wrapper that gets an int instead of a long long. Use it to avoid "narrowing conversion" warnings.
+    static int getInt(std::string_view optName, const std::string &description, int defaultValue = 0) {
+        return static_cast<int>(Parser::getInt(optName, description, defaultValue));
+    }
 };
 
 int main(int argc, char **argv) {
