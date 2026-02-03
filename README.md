@@ -291,7 +291,9 @@ void setShortNonFlagOptsStr(std::string shortNonFlagOptsStr);
 During preprocessing, the library doesn't know if `-n123` means `-n -1 -2 -3` (flags) or `-n 123` (value). It defaults to flags. To treat `n` as taking a value, you must register it here by passing a string containing all such short options (e.g., `"n"`).
 *Note: Only include short options that take values. Do not include flag options.*
 
-This is the least elegant part of the library, but necessary for this specific syntax. To avoid missing any, you can use Regex to find them in your code:
+This is the least elegant part of the library, but necessary for this specific syntax. You can use a script to automate this modification. This project provides a script example, see the [Examples](#-examples) section for details.
+
+If you don't want to introduce a script, it is recommended to wait until you finish a unit of work (e.g., before a commit), then update the string in one go. You don't need to update `setShortNonFlagOptsStr()` every time you add an option, because the standard space-separated syntax (`-n 123`) works fine without it. In editors or IDEs that support multi-cursor editing, you can typically use the following RegEx to select all short options that take values, and then construct the appropriate string.
 
 ```js
 // Main command
@@ -299,8 +301,6 @@ This is the least elegant part of the library, but necessary for this specific s
 // Subcommand (replace `subcmd` with the subcommand variable name)
 (?<=subcmd\.get.+?\(").(?=[,"])
 ```
-
-In editors or IDEs that support multi-cursor editing, you can typically use these patterns to select all short options that take values. Since the standard space-separated syntax (`-n 123`) works fine even without updating `setShortNonFlagOptsStr()`, you don't need to update it every time you add an option. It is recommended to batch this process: wait until you finish a unit of work (e.g., before a commit), use the RegEx to select all relevant options, and update the string in one go. You can also take it a step further by using a script to automate this modification.
 
 ---
 
@@ -762,6 +762,27 @@ Demonstrates how to use the option grouping feature to create help messages simi
 The preceding examples focus on demonstrating the library's features and may not be ideal as practical application templates. These two examples showcase a more robust approach by wrapping parameters in a class, allowing parsing results to be accessed through an object. By leveraging C++ class initialization order and the singleton pattern, this approach enforces the correct workflow, ensuring that API calls are made in the required order and that parsing occurs only once. This design pattern makes adding new parameters and subcommands as simple as modifying a configuration file.
 
 You can simply copy the template code, modify the program information, parameters, and subcommands to suit your needs, without needing to worry about the library's internal workflow. With these examples, you can become a productive "copy-paste" programmer.
+
+**[update_short_opts.py](./examples/update_short_opts.py)**
+
+This script is designed to address the pain point of "needing to update `setShortNonFlagOptsStr()`".
+
+The script uses RegEx to find and modify the function's parameter string and is adapted to the two wrapped examples. If you use them as templates and only change the actual parameters, you just need to:
+
+-   Modify the `DEFAULT_FILES` list at the beginning of the script to your actual files.
+-   Make adjustments based on the version you are using:
+    -   If using the *Minimal* version, select the correct `MAIN_PARSER_GETTER_PATTERN` as indicated in the script's comments, and clear the `SUBCOMMAND_NAMES` list.
+    -   If using the *Full* version, no RegEx modifications are needed.
+        -   If *not* using subcommands, clear the `SUBCOMMAND_NAMES` list.
+        -   If using subcommands, modify `SUBCOMMAND_NAMES` to the actual subcommand names. Note that subcommand-related naming in the C++ code should follow the rules in the template to avoid matching failures.
+
+Otherwise, you may need to adjust the relevant RegEx to fit your project.
+
+Once configured, the script can be used without any command-line arguments. You can also process specific files by passing them as positional arguments.
+
+Since the script relies on an existing `setShortNonFlagOptsStr()` to locate its position, you need to write a line like `setShortNonFlagOptsStr("")` first, passing an empty string. The script will not guess where to insert the line and add it for you; you must write it yourself.
+
+With this script, ArgLite truly achieves a one-to-one correspondence between a single statement and an option, without you having to worry about code in other places.
 
 ## Other Features
 
