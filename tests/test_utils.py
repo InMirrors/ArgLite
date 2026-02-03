@@ -35,7 +35,7 @@ def error(text, end='\n', file=sys.stderr):
     colored_print(text, color="red", end=end, file=file)
 
 def warn(text, end='\n', file=sys.stderr):
-    colored_print(text, color="yellow", end=end, file=sys.stderr)
+    colored_print(text, color="yellow", end=end, file=file)
 
 def success(text, end='\n', file=sys.stdout):
     colored_print(text, color="green", end=end, file=file)
