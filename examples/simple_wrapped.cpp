@@ -24,7 +24,7 @@ public:
     vector<string> inputFiles = Parser::getRemainingPositionals("input-files", "The input files to process.");
 
     // You can ignore the following
-    static Config &get(int argc, char **argv) {
+    static const Config &get(int argc, char **argv) {
         static Config config(argc, argv);
         return config;
     }
@@ -46,7 +46,7 @@ private:
 
 int main(int argc, char **argv) {
     // Get the config object and use it
-    auto &config = Config::get(argc, argv);
+    const auto &config = Config::get(argc, argv);
 
     cout << "Verbose    : " << boolalpha << config.verbose << '\n';
     cout << "Number     : " << config.number << '\n';
