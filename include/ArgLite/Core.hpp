@@ -365,6 +365,9 @@ public:
         Parser::subCmdPtrs_.push_back(this);
     };
 
+    SubParser(const SubParser &)            = delete;
+    SubParser &operator=(const SubParser &) = delete;
+
     /**
      * @brief Checks if this subcommand is active.
      * @return True if this subcommand is active, false otherwise.
