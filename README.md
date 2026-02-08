@@ -34,9 +34,9 @@ Why create another command-line argument parsing library when there are already 
 
 - [CLI11](https://github.com/CLIUtils/CLI11): Comprehensive and easy to use, but too heavy.
 - [cxxopts](https://github.com/jarro2783/cxxopts): Claims to be lightweight but is actually quite heavy, and the API is clumsy.
-- [args](https://github.com/Taywee/args): Very lightweight, but the API is not user-friendly.
-- [argh](https://github.com/adishavit/argh): Lightweight enough but too primitive; it doesn't even generate help messages automatically.
-- [argparse](https://github.com/morrisfranken/argparse): Lightweight, easy to use, and cleverly implemented. It was my favorite, but its help message format is unconventional, and it lacks support for syntax like `-n123`.
+- [args](https://github.com/Taywee/args): Lightweight, but the API is not user-friendly.
+- [argh](https://github.com/adishavit/argh): Super lightweight enough but too primitive; it doesn't even generate help messages automatically.
+- [argparse](https://github.com/morrisfranken/argparse): Very lightweight, easy to use, and cleverly implemented. It was my favorite, but its help message format is unconventional, and it lacks support for syntax like `-n123`.
 
 So, I wrote **ArgLite**: a truly lightweight, easy-to-use, and feature-rich library that produces modern, aesthetically pleasing help and error messages. See the [Benchmarks](#-benchmarks) section for details on its weight. Regarding "ease of use," it follows standard intuitions:
 
@@ -401,13 +401,15 @@ If you need comprehensive support for custom types, please choose another librar
 
 This section explains how to use the limited support to handle custom types.
 
+For unknown types, `get<T>()` will attempt to initialize the type with the parsed string. If your custom type can be initialized from a string, you can theoretically use it to get the parsing result. However, it cannot provide validation, and the help and error messages cannot provide relevant information. Therefore, the following method getting basic types then handling them manually is more recommended.
+
 ---
 
 **Setting Error Messages**
 
-For unknown types, `get<T>()` will attempt to initialize the type with the parsed string. If your custom type can be initialized from a string, you can theoretically use it to get the parsing result. However, it cannot provide validation, and the help and error messages cannot provide relevant information. Therefore, the following method using `get<std::string>()` is more recommended.
+This example uses `get<std::string>()`; the process is the same for other basic types.
 
-First, get the raw string of the argument, then write your parsing and validation logic. If validation fails, call this function to insert an error message.
+First, get the option's value as a basic type, then write your parsing and validation logic. If validation fails, call this function to insert an error message.
 
 ```cpp
 void pushBackErrorMsg(std::string msg);
@@ -713,15 +715,15 @@ You might find this implementation a bit crude, as it doesn't truly bundle optio
 
 ## Subcommands
 
-**Full Version Only**. Define subcommands by creating `SubParser` objects.
+**Full Version Only**. Subcommands are defined by creating `SubParser` objects.
+
+For detailed usage, see the [example](examples/subcommand.cpp), which also demonstrates most of the Full version's features. This section offers supplementary explanations only. To understand how to use the subcommand feature, please refer to the example code provided in conjunction with this section.
 
 ArgLite follows a simple rule: **"Static methods for the main command, member methods for subcommands."** This means you won't create any objects unless you're using subcommands. Most counterparts require creating an object to parse command-line arguments, but ArgLite uses a static-first design for lightness and ease of use. Since most applications parse arguments only once, static methods and data are sufficient.
 
-ArgLite supports only a single level of subcommands, not nested ones. Programs requiring multiple levels of subcommands are not the target audience for this lightweight library.
+ArgLite supports only a single level of subcommands, not nested ones. Programs requiring multiple levels of subcommands are not the target audience for this lightweight library. However, this project provides an example that demonstrates the potential of ArgLite for building multi-level subcommand programs, see the [Examples](#-examples) section for details.
 
 Why only one level? The class structure itself has a hierarchy: static members are at the bottom level (one instance), while member instances are at a higher level (multiple instances). This structure perfectly mirrors a single-level subcommand system, making it easy to implement. The `Parser` and `SubParser` objects themselves have no hierarchical relationship; they leverage language features to create a two-level tree structure at a low cost. Implementing higher-level subcommands would significantly increase the library's complexity and size. Therefore, multi-level subcommands are not currently supported and likely won't be in the future.
-
-For detailed usage, see the [example](examples/subcommand.cpp), which also demonstrates most of the Full version's features.
 
 ---
 
@@ -744,6 +746,8 @@ Checks if the subcommand is active. Since registering an option returns a value 
 The `SubParser` object also has methods like `setShortNonFlagOptsStr`, `hasFlag`, `countFlag`, `hasMutualExFlag`, `get`, `getPositional`, and `getRemainingPositionals`. Their usage is identical to the versions in `Parser`, but they only take effect when the subcommand is active.
 
 # 💡 Examples
+
+This chapter will give you a quick overview of each example and help you understand their usage or the ideas behind them.
 
 **[simple.cpp](./examples/simple.cpp)**
 
@@ -783,6 +787,14 @@ Once configured, the script can be used without any command-line arguments. You 
 Since the script relies on an existing `setShortNonFlagOptsStr()` to locate its position, you need to write a line like `setShortNonFlagOptsStr("")` first, passing an empty string. The script will not guess where to insert the line and add it for you; you must write it yourself.
 
 With this script, ArgLite truly achieves a one-to-one correspondence between a single statement and an option, without you having to worry about code in other places.
+
+**[nested_subcommand.cpp](./examples/nested_subcommand.cpp)**
+
+This example is just a demonstration of implementing a multi-level subcommand application and it is not recommended to build such applications with ArgLite. Because ArgLite was not designed to implement multi-level subcommands at all, this example only proves its feasibility and has not undergone reliability testing.
+
+The implementation idea is simple: since it can support single-level subcommands, adding subcommands to a first-level subcommand can add a level to the tree structure. Theoretically, you can keep adding more two-level trees to build a complex tree. Of course, manually building a complex tree requires a lot of code and is difficult to maintain, but real applications will not have a very complex subcommand structure, so this solution is not a big problem.
+
+Since ArgLite is designed for one-time parsing, when calling ArgLite's interfaces, you need to manually determine the currently active command first, then call ArgLite's interfaces in that branch, and return in that branch. You cannot execute the main command's parsing logic first, then use `subcommand.isActive()` to check, and then execute the subcommand's parsing logic. Multiple parsings are not only less efficient, but also very easy to get wrong results.
 
 ## Other Features
 
