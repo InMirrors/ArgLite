@@ -23,7 +23,7 @@ class Parser {
 public:
     /**
      * @brief Sets the program description, used for the first line of the help message.
-     * @param description The program's description text.
+     * @param description Program's description, used for the help message..
      */
     static void setDescription(std::string description) { programDescription_ = std::move(description); }
 
@@ -54,7 +54,8 @@ public:
 
     /**
      * @brief Checks if a flag option exists.
-     * @param names Option names (e.g., "v", "verbose" or "v,verbose").
+     * @param optName The short name, long name, or a comma-separated list of both
+                      (e.g., `v`, `verbose` or `v,verbose`).
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
@@ -65,7 +66,8 @@ public:
 
     /**
      * @brief Counts the number of times a flag option appears.
-     * @param names Option names (e.g., "v", "verbose" or "v,verbose").
+     * @param optName The short name, long name, or a comma-separated list of both
+                      (e.g., `v`, `verbose` or `v,verbose`).
      * @param description Option description, used for the help message.
      * @return Returns the number of times the option appears in the command line.
      */
@@ -98,10 +100,11 @@ public:
     class OptValBuilder;
 
     /**
-     * @brief Gets the value of an integer option.
-     * @param names Option names (e.g., "n", "count" or "n,count").
-     * @param description Option description.
-     * @return A OptValBuilder object that can be used to parse the option value.
+     * @brief Creates a builder for a generic typed option.
+     * @tparam T Target type to which the option value will be parsed.
+     * @param optName The short name, long name, or a comma-separated list of both
+     * @param description Option description, used for the help message.
+     * @return An `OptValBuilder` object that can be used to parse the option value.
      */
     template <typename T>
     static OptValBuilder<T> get(std::string_view optName, std::string description) {
@@ -113,12 +116,13 @@ public:
      * @brief Gets a positional argument.
      * @details Must be called after all get/hasFlag calls. Should be called in order.
      * @param name Argument name, used for the help message (e.g., "input-file").
-     * @param description Argument description.
+     * @param description Positional argument description, used for the help message.
      * @param required If true and the user does not provide the argument,
                        the program will report an error and exit.
      * @param defaultValue The default value to return if the argument
                             is not provided and not required.
-     * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
+     * @return The string value of the argument. If the argument is not required
+               and not provided, returns an empty string.
      */
     static std::string getPositional(
         const std::string &posName, std::string description,
@@ -130,9 +134,9 @@ public:
 
     /**
      * @brief Gets all remaining positional arguments.
-     * @details Must be called after all getPositional calls.
+     * @details Must be called after all `getPositional()` calls.
      * @param name Argument name, used for the help message (e.g., "extra-files").
-     * @param description Argument description.
+     * @param description Positional arguments description, used for the help message..
      * @param required If true and there are no remaining arguments,
                        the program will report an error and exit.
      * @param defaultValue The default value to return if the argument
@@ -388,7 +392,7 @@ public:
 
     /**
      * @brief Checks if a flag option exists.
-     * @param names Option names (e.g., "v", "verbose" or "v,verbose").
+     * @param optName The short name, long name, or a comma-separated list of both (e.g., "v", "verbose" or "v,verbose").
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
@@ -399,7 +403,7 @@ public:
 
     /**
      * @brief Counts the number of times a flag option appears.
-     * @param names Option names (e.g., "v", "verbose" or "v,verbose").
+     * @param optName The short name, long name, or a comma-separated list of both (e.g., "v", "verbose" or "v,verbose").
      * @param description Option description, used for the help message.
      * @return Returns the number of times the option appears in the command line.
      */
@@ -420,10 +424,11 @@ public:
     }
 
     /**
-     * @brief Gets the value of an integer option.
-     * @param names Option names (e.g., "n", "count" or "n,count").
-     * @param description Option description.
-     * @return A OptValBuilder object that can be used to parse the option value.
+     * @brief Creates a builder for a generic typed option.
+     * @tparam T Target type to which the option value will be parsed.
+     * @param optName The short name, long name, or a comma-separated list of both (e.g., "n", "count" or "n,count").
+     * @param description Option description, used for the help message.
+     * @return An `OptValBuilder` object that can be used to parse the option value.
      */
     template <typename T>
     Parser::OptValBuilder<T> get(std::string_view optName, std::string description) const {
@@ -435,7 +440,7 @@ public:
      * @brief Gets a positional argument.
      * @details Must be called after all get/hasFlag calls. Should be called in order.
      * @param name Argument name, used for the help message (e.g., "input-file").
-     * @param description Argument description.
+     * @param description Positional argument description, used for the help message..
      * @param required If true and the user does not provide the argument,
                        the program will report an error and exit.
      * @param defaultValue The default value to return if the argument
@@ -454,7 +459,7 @@ public:
      * @brief Gets all remaining positional arguments.
      * @details Must be called after all getPositional calls.
      * @param name Argument name, used for the help message (e.g., "extra-files").
-     * @param description Argument description.
+     * @param description Positional arguments description, used for the help message..
      * @param required If true and there are no remaining arguments,
                        the program will report an error and exit.
      * @param defaultValue The default value to return if the argument

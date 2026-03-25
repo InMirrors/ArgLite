@@ -32,11 +32,13 @@ int main(int argc, char **argv) {
     auto commitAll     = commit.hasFlag("a,all", "Commit all changes.");
     auto commitSquash  = commit.hasFlag("squash", "Squash all changes into one commit.");
     auto commitSignOff = commit.hasMutualExFlag({
-        "s,signoff",
-        "Add a Signed-off-by trailer by the committer at the end of the commit log message.",
-        "no-signoff",
-        "Do not add a Signed-off-by trailer by the committer at the end of the commit log message.",
-        false,
+        .trueOptName      = "s,signoff",
+        .trueDescription  = "Add a Signed-off-by trailer by the committer at the\n"
+                            "end of the commit log message.",
+        .falseOptName     = "no-signoff",
+        .falseDescription = "Do not add a Signed-off-by trailer by the committer\n"
+                            "at the end of the commit log message.",
+        .defaultValue     = false,
     });
     commit.insertOptHeader("Options");
     auto commitMsg      = commit.get<string>("m,message", "Use the given <msg> as the commit message.").required().get();

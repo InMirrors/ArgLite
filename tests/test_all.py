@@ -89,7 +89,7 @@ def main():
         TestTarget(source="other_features.cpp", description="Test other features",
                    test_script="test_other_features.py"),
         TestTarget(source="subcommand.cpp", description="Test subcommands",
-                   test_script="test_subcommand_binary.py"),
+                   test_script="test_subcommand_binary.py", extra_compile_args=["-std=c++20"]),
         TestTarget(source="test_get_pos.cpp", description="Test positional argument logic (Minimal)",
                    suffix="_minimal", extra_compile_args=["-DMINIMAL"]),
         TestTarget(source="test_get_pos.cpp", description="Test positional argument logic (Full)",

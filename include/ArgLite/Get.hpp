@@ -284,7 +284,7 @@ public:
     /**
      * @brief Sets the default value for the option.
      * @param defaultValue The value to be used as the default.
-     * @return A reference to the current OptValBuilder instance for chaining.
+     * @return A reference to the current `OptValBuilder` instance for chaining.
      */
     OptValBuilder<T> &setDefault(T defaultValue) {
         defaultValue_ = defaultValue;
@@ -294,7 +294,7 @@ public:
     /**
      * @brief Sets the type name used for the help message.
      * @param typeName The type name to be used for the help message.
-     * @return A reference to the current OptValBuilder instance for chaining.
+     * @return A reference to the current `OptValBuilder` instance for chaining.
      */
     OptValBuilder<T> &setTypeName(std::string typeName) {
         typeName_ = std::move(typeName);
@@ -303,7 +303,7 @@ public:
 
     /**
      * @brief Make this option required, the program must be launched with this option.
-     * @return A reference to the current OptValBuilder instance for chaining.
+     * @return A reference to the current `OptValBuilder` instance for chaining.
      */
     OptValBuilder<T> &required() {
         isRequied_ = true;
@@ -348,15 +348,16 @@ public:
     /**
      * @brief Retrieves the option's value as a vector of type T.
      *
-     * @details This function is used to retrieve the value of an option that,
-     *          expects multiple arguments, which are then converted to a vector<T>.
+     * @details This function is used to retrieve the value of an option that
+     *          expects multiple arguments,
+     *          which are then converted to a `vector<T>`.
      *          It handles the parsing and conversion of the option's value,
      *          splitting it into individual elements based on the provided delimiter.
      * @param delimiter The delimiter character used to split the option's value string into
      *                  individual elements.
      *                  If `\0` is provided (the default), the value is not split,
      *                  and the entire value string is treated as a single element.
-     * @return A vector of type T containing the parsed values of the option's arguments.
+     * @return A vector of type `T` containing the parsed values of the option's arguments.
      *         Returns an empty vector if the option is not found or if an error occurs
      *         during value conversion.
      */
