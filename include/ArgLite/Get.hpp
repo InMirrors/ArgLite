@@ -286,6 +286,7 @@ public:
      * @param defaultValue The value to be used as the default.
      * @return A reference to the current `OptValBuilder` instance for chaining.
      */
+    [[nodiscard]]
     OptValBuilder<T> &setDefault(T defaultValue) {
         defaultValue_ = defaultValue;
         return *this;
@@ -296,6 +297,7 @@ public:
      * @param typeName The type name to be used for the help message.
      * @return A reference to the current `OptValBuilder` instance for chaining.
      */
+    [[nodiscard]]
     OptValBuilder<T> &setTypeName(std::string typeName) {
         typeName_ = std::move(typeName);
         return *this;
@@ -305,6 +307,7 @@ public:
      * @brief Make this option required, the program must be launched with this option.
      * @return A reference to the current `OptValBuilder` instance for chaining.
      */
+    [[nodiscard]]
     OptValBuilder<T> &required() {
         isRequied_ = true;
         return *this;
@@ -315,6 +318,7 @@ public:
      * @return The parsed value of the option,
                or the default value if the option is not found or its value is invalid.
      */
+    [[nodiscard]]
     T get() {
         if (passedSubCmd_ != activeSubCmd_) { return defaultValue_; }
 
@@ -361,6 +365,7 @@ public:
      *         Returns an empty vector if the option is not found or if an error occurs
      *         during value conversion.
      */
+    [[nodiscard]]
     std::vector<T> getVec(char delimiter = '\0') {
         if (passedSubCmd_ != activeSubCmd_) { return {}; }
 

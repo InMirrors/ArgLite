@@ -59,6 +59,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
+    [[nodiscard]]
     static bool hasFlag(std::string_view optName, std::string description) {
         if (!isMainCmdActive()) { return false; }
         return hasFlag_(optName, std::move(description), data_);
@@ -71,6 +72,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns the number of times the option appears in the command line.
      */
+    [[nodiscard]]
     static unsigned countFlag(std::string_view optName, std::string description) {
         if (!isMainCmdActive()) { return 0; }
         return countFlag_(optName, std::move(description), data_);
@@ -91,6 +93,7 @@ public:
      * @return True if the first option is present and the second is not, or vice versa;
                defaultValue if neither option is present.
      */
+    [[nodiscard]]
     static bool hasMutualExFlag(HasMutualExArgs args) {
         if (!isMainCmdActive()) { return false; }
         return hasMutualExFlag_(std::move(args), data_);
@@ -107,6 +110,7 @@ public:
      * @return An `OptValBuilder` object that can be used to parse the option value.
      */
     template <typename T>
+    [[nodiscard]]
     static OptValBuilder<T> get(std::string_view optName, std::string description) {
         // This class is responsible for checking the currently active command
         return OptValBuilder<T>(optName, std::move(description), data_, nullptr);
@@ -124,6 +128,7 @@ public:
      * @return The string value of the argument. If the argument is not required
                and not provided, returns an empty string.
      */
+    [[nodiscard]]
     static std::string getPositional(
         const std::string &posName, std::string description,
         bool required = true, std::string defaultValue = "") {
@@ -143,6 +148,7 @@ public:
                             is not provided and not required.
      * @return A string vector containing all remaining arguments.
      */
+    [[nodiscard]]
     static std::vector<std::string> getRemainingPositionals(
         const std::string &posName, const std::string &description,
         bool required = true, const std::vector<std::string> &defaultValue = {}) {
@@ -228,6 +234,7 @@ public:
      * @brief Checks if the main command is active.
      * @return True if the main command is active, false otherwise.
      */
+    [[nodiscard]]
     static bool isMainCmdActive() { return activeSubCmd_ == nullptr; }
 
 private:
@@ -376,6 +383,7 @@ public:
      * @brief Checks if this subcommand is active.
      * @return True if this subcommand is active, false otherwise.
      */
+    [[nodiscard]]
     bool isActive() const { return Parser::activeSubCmd_ == this; }
 
     /**
@@ -396,6 +404,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns true if the option appears in the command line, false otherwise.
      */
+    [[nodiscard]]
     bool hasFlag(std::string_view optName, std::string description) const {
         if (!isActive()) { return false; }
         return Parser::hasFlag_(optName, std::move(description), Parser::data_);
@@ -407,6 +416,7 @@ public:
      * @param description Option description, used for the help message.
      * @return Returns the number of times the option appears in the command line.
      */
+    [[nodiscard]]
     unsigned countFlag(std::string_view optName, std::string description) const {
         if (!isActive()) { return 0; }
         return Parser::countFlag_(optName, std::move(description), Parser::data_);
@@ -418,6 +428,7 @@ public:
      * @return True if the first option is present and the second is not, or vice versa;
                defaultValue if neither option is present.
      */
+    [[nodiscard]]
     bool hasMutualExFlag(Parser::HasMutualExArgs args) const {
         if (!isActive()) { return false; }
         return Parser::hasMutualExFlag_(std::move(args), Parser::data_);
@@ -431,6 +442,7 @@ public:
      * @return An `OptValBuilder` object that can be used to parse the option value.
      */
     template <typename T>
+    [[nodiscard]]
     Parser::OptValBuilder<T> get(std::string_view optName, std::string description) const {
         // This class is responsible for checking the currently active command
         return Parser::OptValBuilder<T>(optName, std::move(description), Parser::data_, this);
@@ -447,6 +459,7 @@ public:
                             is not provided and not required.
      * @return The string value of the argument. If the argument is not required and not provided, returns an empty string.
      */
+    [[nodiscard]]
     std::string getPositional(
         const std::string &posName, std::string description,
         bool required = true, std::string defaultValue = "") const {
@@ -466,6 +479,7 @@ public:
                             is not provided and not required.
      * @return A string vector containing all remaining arguments.
      */
+    [[nodiscard]]
     std::vector<std::string> getRemainingPositionals(
         const std::string &posName, std::string description,
         bool required = true, const std::vector<std::string> &defaultValue = {}) const {
