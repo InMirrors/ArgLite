@@ -40,7 +40,9 @@ struct AppConfig {
     private:
         // Only AppConfig can access the private constructor
         friend struct AppConfig;
+#ifndef ENABLE_TESTING
         StatusConfig() = default;
+#endif
     }; // struct StatusConfig
 
     struct CommitConfig {
@@ -63,7 +65,9 @@ struct AppConfig {
 
     private:
         friend struct AppConfig;
+#ifndef ENABLE_TESTING
         CommitConfig() = default;
+#endif
     }; // struct CommitConfig
 
     struct GrepConfig {
@@ -82,6 +86,7 @@ struct AppConfig {
 
     private:
         friend struct AppConfig;
+#ifndef ENABLE_TESTING
         GrepConfig() {
             // Validation
             if (color != "auto" && color != "always" && color != "never") {
@@ -93,6 +98,7 @@ struct AppConfig {
                 grepCmd().pushBackErrorMsg(errorMsg);
             }
         }
+#endif
     }; // struct GrepConfig
 
     struct MvConfig {
@@ -102,7 +108,9 @@ struct AppConfig {
 
     private:
         friend struct AppConfig;
+#ifndef ENABLE_TESTING
         MvConfig() = default;
+#endif
     }; // struct MvConfig
 
     // ===== Main Command Config =====
@@ -116,7 +124,9 @@ struct AppConfig {
 
     private:
         friend struct AppConfig;
+#ifndef ENABLE_TESTING
         MainConfig() = default;
+#endif
     }; // struct MainConfig
 
     // Command objects
