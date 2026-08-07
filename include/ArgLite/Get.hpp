@@ -117,8 +117,12 @@ std::pair<std::string, std::string> Parser::parseOptNameAsPair(std::string_view 
 }
 
 class Parser::OptValHelper {
+public:
     template <typename T> friend class OptValBuilder;
 
+    OptValHelper() = delete;
+
+private:
     static void appendOptValErrorMsg(
         InternalData    &data,
         std::string_view optName, const std::string &typeName, const std::string &valueStr) {

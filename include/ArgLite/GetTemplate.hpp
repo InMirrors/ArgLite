@@ -1,20 +1,18 @@
 #pragma once
 
 #include "Core.hpp"
+#include <limits>
 #include <sstream>
 #include <type_traits>
 
 namespace ArgLite {
 
-template <> inline std::string        Parser::convertType(const std::string &valueStr) { return valueStr; }
-template <> inline int                Parser::convertType(const std::string &valueStr) { return std::stoi(valueStr); }
-template <> inline long               Parser::convertType(const std::string &valueStr) { return std::stol(valueStr); }
-template <> inline long long          Parser::convertType(const std::string &valueStr) { return std::stoll(valueStr); }
-template <> inline unsigned int       Parser::convertType(const std::string &valueStr) { return std::stoul(valueStr); }
-template <> inline unsigned long      Parser::convertType(const std::string &valueStr) { return std::stoul(valueStr); }
-template <> inline unsigned long long Parser::convertType(const std::string &valueStr) { return std::stoull(valueStr); }
-template <> inline float              Parser::convertType(const std::string &valueStr) { return std::stof(valueStr); }
-template <> inline double             Parser::convertType(const std::string &valueStr) { return std::stod(valueStr); }
+template <> inline std::string Parser::convertType(const std::string &valueStr) { return valueStr; }
+template <> inline int         Parser::convertType(const std::string &valueStr) { return std::stoi(valueStr); }
+template <> inline long        Parser::convertType(const std::string &valueStr) { return std::stol(valueStr); }
+template <> inline long long   Parser::convertType(const std::string &valueStr) { return std::stoll(valueStr); }
+template <> inline float       Parser::convertType(const std::string &valueStr) { return std::stof(valueStr); }
+template <> inline double      Parser::convertType(const std::string &valueStr) { return std::stod(valueStr); }
 
 template <> inline bool Parser::convertType(const std::string &valueStr) {
     auto valStrCopy = valueStr;
@@ -41,7 +39,21 @@ template <> inline char Parser::convertType(const std::string &valueStr) {
 }
 
 template <typename T> inline T Parser::convertType(const std::string &valueStr) {
-    if constexpr (isOptionalType<T>::value) {
+    // Unsigned integer types
+    if constexpr (std::is_unsigned_v<T>) {
+        auto firstNonSpace = valueStr.find_first_not_of(" \n\r\t\v\f");
+        if (firstNonSpace != std::string::npos && valueStr[firstNonSpace] == '-') {
+            throw std::invalid_argument("Cannot convert negative string to unsigned type: " + valueStr);
+        }
+
+        unsigned long long val = std::stoull(valueStr);
+        if (val > std::numeric_limits<T>::max()) {
+            throw std::out_of_range("Value out of range for target unsigned type: " + valueStr);
+        }
+        return static_cast<T>(val);
+    }
+    // std::optional
+    else if constexpr (isOptionalType<T>::value) {
         return convertType<typename T::value_type>(valueStr);
     } else {
         return T(valueStr); // remaining types
